@@ -71,8 +71,6 @@ void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
 
         emit centerChanged(m_lat, m_lon);
 
-        qDebug() << "New Lat:" << m_lat << "New Lon:" << m_lon;
-
         remap();
     }
 }
@@ -149,13 +147,25 @@ void SlippyMapWidget::remap()
                 qDebug() << "Requesting tile:" << tile_path;
                 QNetworkRequest req(tile_path);
                 QNetworkReply *reply = m_net->get(req);
+                tile->setPendingReply(reply);
                 connect(reply, &QNetworkReply::finished, [=]() {
+                  if (tile->isDiscarded()) {
+                    delete tile;
+                  }
+                  else {
+                    if (reply->error() != QNetworkReply::NoError) {
+                      // handle error
+                      return;
+                    }
+
                     QByteArray data = reply->readAll();
                     QPixmap pixmap;
                     pixmap.loadFromData(data);
                     tile->setPixmap(pixmap);
-                    reply->deleteLater();
                     repaint();
+                  }
+
+                  reply->deleteLater();
                 });
             }
             else {
@@ -169,6 +179,12 @@ void SlippyMapWidget::remap()
 
     while (deleteList.length() > 0) {
         Tile *todelete = deleteList.takeFirst();
+
+        if (todelete->pendingReply()->isRunning()) {
+          todelete->discard();
+          todelete->pendingReply()->abort();
+        }
+
         m_tileSet->removeOne(todelete);
         delete todelete;
     }

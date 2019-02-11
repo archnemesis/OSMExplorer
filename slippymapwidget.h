@@ -54,6 +54,8 @@ private:
         QPixmap pixmap() { return m_pixmap; }
         void setPoint(QPoint point) { m_point = point; }
         void setPixmap(QPixmap pixmap) { m_pixmap = pixmap; m_loaded = true; }
+        void setPendingReply(QNetworkReply *reply) { m_pendingReply = reply; }
+        QNetworkReply *pendingReply() { return m_pendingReply; }
     private:
         qint32 m_x;
         qint32 m_y;
@@ -62,6 +64,7 @@ private:
         QPoint m_point;
         QPixmap m_pixmap;
         QMutex m_pixmapMutex;
+        QNetworkReply *m_pendingReply = nullptr;
     };
 
     qint32 long2tilex(double lon, int z);
