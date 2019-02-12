@@ -34,6 +34,7 @@ public:
     QString tileServer();
 
     void addMarker(double latitude, double longitude);
+    void addMarker(double latitude, double longitude, QString label);
 
 public slots:
     void setCenter(double latitude, double longitude);
@@ -105,17 +106,25 @@ private:
 
     class Marker {
     public:
+        Marker(double latitude, double longitude, QString label) {
+            m_label = label;
+            m_latitude = latitude;
+            m_longitude = longitude;
+        }
         Marker(double latitude, double longitude) {
             m_latitude = latitude;
             m_longitude = longitude;
         }
         void setLatitude(double latitude) { m_latitude = latitude; }
         void setLongitude(double longitude) { m_longitude = longitude; }
+        void setLabel(QString label) { m_label = label; }
         double latitude() { return m_latitude; }
         double longitude() { return m_longitude; }
+        QString label() { return m_label; }
     private:
         double m_latitude;
         double m_longitude;
+        QString m_label;
     };
 
     qint32 long2tilex(double lon, int z);
@@ -164,11 +173,16 @@ private:
     QList<Marker*> m_markers;
     QBrush m_markerBrush;
     QPen m_markerPen;
+    QBrush m_markerLabelBrush;
+    QPen m_markerLabelPen;
+    QBrush m_markerLabelTextBrush;
+    QPen m_markerLabelTextPen;
 
     QMenu *m_contextMenu;
     QAction *m_coordAction;
     QAction *m_addMarkerAction;
     QAction *m_deleteMarkerAction;
+    QAction *m_setMarkerLabelAction;
 };
 
 #endif // SLIPPYMAPWIDGET_H

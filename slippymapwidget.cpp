@@ -29,6 +29,7 @@
 #include <QPushButton>
 #include <QLineEdit>
 #include <QPainterPath>
+#include <QFontMetrics>
 
 SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
 {
@@ -113,6 +114,13 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_markerBrush.setStyle(Qt::SolidPattern);
     m_markerBrush.setColor(systemPalette.highlight().color());
     m_markerPen.setStyle(Qt::NoPen);
+    m_markerLabelBrush.setStyle(Qt::SolidPattern);
+    m_markerLabelBrush.setColor(systemPalette.background().color());
+    m_markerLabelPen.setStyle(Qt::SolidLine);
+    m_markerLabelPen.setColor(systemPalette.dark().color());
+    m_markerLabelTextBrush.setStyle(Qt::NoBrush);
+    m_markerLabelTextPen.setStyle(Qt::SolidLine);
+    m_markerLabelTextPen.setColor(systemPalette.text().color());
 
     m_coordAction = new QAction();
     m_coordAction->setEnabled(false);
@@ -121,6 +129,8 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_addMarkerAction->setText(tr("Add marker here"));
     m_deleteMarkerAction = new QAction();
     m_deleteMarkerAction->setText(tr("Delete marker"));
+    m_setMarkerLabelAction = new QAction();
+    m_setMarkerLabelAction->setText(tr("Set label..."));
 
     m_contextMenu = new QMenu(this);
     m_contextMenu->addAction(m_coordAction);
@@ -175,6 +185,11 @@ QString SlippyMapWidget::tileServer()
 void SlippyMapWidget::addMarker(double latitude, double longitude)
 {
     m_markers.append(new Marker(latitude, longitude));
+}
+
+void SlippyMapWidget::addMarker(double latitude, double longitude, QString label)
+{
+    m_markers.append(new Marker(latitude, longitude, label));
 }
 
 void SlippyMapWidget::setCenter(double latitude, double longitude)
@@ -272,7 +287,7 @@ void SlippyMapWidget::setTextLocation(QString location)
 
     setCenter(lat, lon);
     m_searchBar->setText(latLonToString(lat, lon));
-    addMarker(lat, lon);
+    addMarker(lat, lon, latLonToString(lat, lon));
 
     return;
 
@@ -356,8 +371,30 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
             if (marker->longitude() > left_deg && marker->longitude() < (left_deg + width_deg)) {
                 if (marker->latitude() > top_deg && marker->latitude() < (top_deg + height_deg)) {
                     qint32 x = (qint32)((marker->longitude() - left_deg) / deg_per_pixel);
-                    qint32 y = (qint32)((marker->latitude() - top_deg) / deg_per_pixel_y);
-                    painter.drawEllipse(QPoint(x, height() - y), 5, 5);
+                    qint32 y = height() - (qint32)((marker->latitude() - top_deg) / deg_per_pixel_y);
+                    painter.drawEllipse(QPoint(x, y), 5, 5);
+
+                    QFontMetrics metrics(painter.font());
+                    if (marker->label().length() > 0) {
+                        qint32 label_w = metrics.width(marker->label());
+                        qint32 label_h = metrics.height();
+                        qint32 label_x = x - (label_w / 2);
+                        qint32 label_y = y - (label_h + 15);
+                        painter.setBrush(m_markerLabelBrush);
+                        painter.setPen(m_markerLabelPen);
+                        painter.drawRoundRect(
+                                    label_x - 5,
+                                    label_y - 5,
+                                    label_w + 10,
+                                    label_h + 10,
+                                    5, 5);
+                        painter.setBrush(m_markerLabelTextBrush);
+                        painter.setPen(m_markerLabelTextPen);
+                        painter.drawText(
+                                    label_x,
+                                    label_y + (label_h / 2) + 5,
+                                    marker->label());
+                    }
                 }
             }
         }
@@ -449,6 +486,26 @@ void SlippyMapWidget::resizeEvent(QResizeEvent *event)
 void SlippyMapWidget::contextMenuEvent(QContextMenuEvent *event)
 {
     m_coordAction->setText(latLonToString(widgetY2lat(event->y()), widgetX2long(event->x())));
+
+    m_addMarkerAction->setVisible(true);
+    m_deleteMarkerAction->setVisible(false);
+    m_setMarkerLabelAction->setVisible(false);
+
+    Marker *selectedMarker = nullptr;
+    for (Marker *marker : m_markers) {
+        qint32 marker_x = long2widgetX(marker->longitude());
+        qint32 marker_y = lat2widgety(marker->latitude());
+        qDebug() << "Marker is at:" << marker_x << marker_y;
+        if (event->x() > (marker_x - 5) && event->x() < (marker_x + 5)) {
+            if (event->y() > (marker_y - 5) && event->y() < (marker_y + 5)) {
+                m_addMarkerAction->setVisible(false);
+                m_setMarkerLabelAction->setVisible(true);
+                m_deleteMarkerAction->setVisible(true);
+                break;
+            }
+        }
+    }
+
     m_contextMenu->exec(event->globalPos());
 }
 
@@ -475,7 +532,21 @@ double SlippyMapWidget::tiley2lat(qint32 y, qint32 z)
 
 qint32 SlippyMapWidget::long2widgetX(double lon)
 {
+    double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
+    double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
+    double width_deg = deg_per_pixel * width();
+    double left_deg = m_lon - (width_deg / 2);
+    return (qint32)((lon - left_deg) / deg_per_pixel);
+}
 
+qint32 SlippyMapWidget::lat2widgety(double lat)
+{
+    double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
+    double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
+    double deg_per_pixel_y = deg_per_pixel / scale_factor;
+    double height_deg = deg_per_pixel_y * height();
+    double top_deg = m_lat - (height_deg / 2);
+    return (qint32)((lat - top_deg) / deg_per_pixel_y);
 }
 
 double SlippyMapWidget::widgetX2long(qint32 x)
