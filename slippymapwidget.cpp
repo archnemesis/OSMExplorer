@@ -3,6 +3,8 @@
 #include <math.h>
 
 #include <QDebug>
+#include <QGuiApplication>
+#include <QPalette>
 
 #include <QPainter>
 #include <QPaintEvent>
@@ -103,6 +105,11 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     QFont searchFont;
     searchFont.setPixelSize(18);
     m_searchBar->setFont(searchFont);
+
+    QPalette systemPalette = QGuiApplication::palette();
+    m_markerBrush.setStyle(Qt::SolidPattern);
+    m_markerBrush.setColor(systemPalette.highlight().color());
+    m_markerPen.setStyle(Qt::NoPen);
 }
 
 SlippyMapWidget::~SlippyMapWidget()
@@ -146,6 +153,11 @@ void SlippyMapWidget::setTileServer(QString server)
 QString SlippyMapWidget::tileServer()
 {
     return m_tileServer;
+}
+
+void SlippyMapWidget::addMarker(double latitude, double longitude)
+{
+    m_markers.append(new Marker(latitude, longitude));
 }
 
 void SlippyMapWidget::setCenter(double latitude, double longitude)
@@ -243,6 +255,7 @@ void SlippyMapWidget::setTextLocation(QString location)
 
     setCenter(lat, lon);
     m_searchBar->setText(latLonToString(lat, lon));
+    addMarker(lat, lon);
 
     return;
 
@@ -309,21 +322,51 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
     int searchBarWidth = width() - (55 + 10);
     m_searchBar->setMinimumWidth(searchBarWidth);
     m_searchBar->setMaximumWidth(searchBarWidth);
+
+    if (m_markers.length() > 0) {
+        double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
+        double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
+        double deg_per_pixel_y = deg_per_pixel / scale_factor;
+        double width_deg = deg_per_pixel * width();
+        double height_deg = deg_per_pixel_y * height();
+        double left_deg = m_lon - (width_deg / 2);
+        double top_deg = m_lat - (height_deg / 2);
+
+        painter.setBrush(m_markerBrush);
+        painter.setPen(m_markerPen);
+
+        for (Marker *marker : m_markers) {
+            if (marker->longitude() > left_deg && marker->longitude() < (left_deg + width_deg)) {
+                if (marker->latitude() > top_deg && marker->latitude() < (top_deg + height_deg)) {
+                    qint32 x = (qint32)((marker->longitude() - left_deg) / deg_per_pixel);
+                    qint32 y = (qint32)((marker->latitude() - top_deg) / deg_per_pixel_y);
+                    painter.drawEllipse(QPoint(x, height() - y), 5, 5);
+                }
+            }
+        }
+    }
 }
 
 void SlippyMapWidget::mousePressEvent(QMouseEvent *event)
 {
     m_dragging = true;
     m_dragStart = event->pos();
+    m_dragButton = event->button();
 }
 
 void SlippyMapWidget::mouseReleaseEvent(QMouseEvent *event)
 {
     m_dragging = false;
+
+    if (event->pos() == m_dragStart) {
+
+    }
 }
 
 void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
 {
+    if (m_dragButton != Qt::LeftButton) return;
+
     double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
     double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
     double deg_per_pixel_y = deg_per_pixel / scale_factor;
@@ -404,7 +447,12 @@ double SlippyMapWidget::tilex2long(qint32 x, qint32 z)
 double SlippyMapWidget::tiley2lat(qint32 y, qint32 z)
 {
     double n = M_PI - 2.0 * M_PI * y / pow(2.0, z);
-        return 180.0 / M_PI * atan(0.5 * (exp(n) - exp(-n)));
+    return 180.0 / M_PI * atan(0.5 * (exp(n) - exp(-n)));
+}
+
+qint32 SlippyMapWidget::long2widgetX(double lon)
+{
+
 }
 
 void SlippyMapWidget::remap()

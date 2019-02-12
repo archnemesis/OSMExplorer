@@ -30,6 +30,8 @@ public:
     void setTileServer(QString server);
     QString tileServer();
 
+    void addMarker(double latitude, double longitude);
+
 public slots:
     void setCenter(double latitude, double longitude);
     void setZoomLevel(int zoom);
@@ -97,15 +99,33 @@ private:
         QNetworkReply *m_pendingReply = nullptr;
     };
 
+    class Marker {
+    public:
+        Marker(double latitude, double longitude) {
+            m_latitude = latitude;
+            m_longitude = longitude;
+        }
+        void setLatitude(double latitude) { m_latitude = latitude; }
+        void setLongitude(double longitude) { m_longitude = longitude; }
+        double latitude() { return m_latitude; }
+        double longitude() { return m_longitude; }
+    private:
+        double m_latitude;
+        double m_longitude;
+    };
+
     qint32 long2tilex(double lon, int z);
     qint32 lat2tiley(double lat, int z);
     double tilex2long(qint32 x, qint32 z);
     double tiley2lat(qint32 y, qint32 z);
+    qint32 long2widgetX(double lon);
+    qint32 lat2widgety(double lat);
 
     void remap();
 
     bool m_dragging = false;
     QPoint m_dragStart;
+    Qt::MouseButton m_dragButton;
     int m_zoomLevel = 0;
     int m_tileX = 0;
     int m_tileY = 0;
@@ -134,6 +154,10 @@ private:
 
     QRegularExpression m_locationParser;
     QCompleter *m_locationCompleter;
+
+    QList<Marker*> m_markers;
+    QBrush m_markerBrush;
+    QPen m_markerPen;
 };
 
 #endif // SLIPPYMAPWIDGET_H
