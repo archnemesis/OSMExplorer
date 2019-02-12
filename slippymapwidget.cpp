@@ -18,6 +18,7 @@
 
 #include <QRegularExpressionMatch>
 
+#include <QCompleter>
 #include <QMessageBox>
 #include <QPixmap>
 #include <QPoint>
@@ -88,6 +89,15 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_scaleTextFont.setBold(true);
 
     m_locationParser.setPattern("^(\\-?\\d*\\.?\\d*)\\s*(N|W|E|S*)\\s*\\,?\\s*(\\-?\\d*\\.?\\d*)\\s*(N|W|E|S*)$");
+
+    QStringList testWords;
+    testWords << "Africa";
+    testWords << "Asia";
+    testWords << "Asiaface";
+    testWords << "TheMoon";
+    m_locationCompleter = new QCompleter(testWords, this);
+    m_locationCompleter->setCaseSensitivity(Qt::CaseInsensitive);
+    m_searchBar->setCompleter(m_locationCompleter);
 }
 
 SlippyMapWidget::~SlippyMapWidget()
@@ -256,6 +266,7 @@ void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
         m_lon = m_lon - (deg_per_pixel * diff.x());
 
         emit centerChanged(m_lat, m_lon);
+        m_searchBar->setText(latLonToString(m_lat, m_lon));
         remap();
     }
 

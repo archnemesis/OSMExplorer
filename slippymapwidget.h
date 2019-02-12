@@ -18,6 +18,7 @@ class QMouseEvent;
 class QWheelEvent;
 class QPushButton;
 class QLineEdit;
+class QCompleter;
 
 class SlippyMapWidget : public QWidget
 {
@@ -129,6 +130,7 @@ private:
     int m_scaleBarMarginBottom = 10;
 
     QRegularExpression m_locationParser;
+    QCompleter *m_locationCompleter;
 };
 
 #endif // SLIPPYMAPWIDGET_H
