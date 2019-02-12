@@ -41,20 +41,24 @@ public:
         void setLatitude(double latitude) { m_latitude = latitude; }
         void setLongitude(double longitude) { m_longitude = longitude; }
         void setLabel(QString label) { m_label = label; }
+        void setColor(QColor color) { m_color = color; }
         double latitude() { return m_latitude; }
         double longitude() { return m_longitude; }
         QString label() { return m_label; }
+        QColor color() { return m_color; }
     private:
         double m_latitude;
         double m_longitude;
         QString m_label;
+        QColor m_color;
     };
 
     explicit SlippyMapWidget(QWidget *parent = nullptr);
     virtual ~SlippyMapWidget();
-    QString latLonToString(double lat, double lon);
+    static QString latLonToString(double lat, double lon);
     void setTileServer(QString server);
     QString tileServer();
+    QList<Marker*> markerList();
 
     void addMarker(double latitude, double longitude);
     void addMarker(double latitude, double longitude, QString label);
@@ -73,6 +77,9 @@ protected slots:
     void addMarkerActionTriggered();
     void deleteMarkerActionTriggered();
     void setMarkerLabelActionTriggered();
+    void centerMapActionTriggered();
+    void zoomInHereActionTriggered();
+    void zoomOutHereActionTriggered();
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -93,6 +100,11 @@ signals:
     void cursorPositionChanged(double latitude, double longitude);
     void cursorLeft();
     void cursorEntered();
+    void markerActivated(Marker *marker);
+    void markerDeactivated(Marker *marker);
+    void markerAdded(Marker *marker);
+    void markerDeleted(Marker *marker);
+    void markerUpdated(Marker *marker);
 
 private:
     class Tile {
@@ -190,6 +202,9 @@ private:
     QAction *m_addMarkerAction;
     QAction *m_deleteMarkerAction;
     QAction *m_setMarkerLabelAction;
+    QAction *m_centerMapAction;
+    QAction *m_zoomInHereMapAction;
+    QAction *m_zoomOutHereMapAction;
     QPoint m_contextMenuLocation;
 };
 

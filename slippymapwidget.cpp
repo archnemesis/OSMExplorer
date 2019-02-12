@@ -127,15 +127,24 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_coordAction->setEnabled(false);
 
     m_addMarkerAction = new QAction();
-    m_addMarkerAction->setText(tr("Add marker here"));
+    m_addMarkerAction->setText(tr("Add Marker"));
     m_deleteMarkerAction = new QAction();
-    m_deleteMarkerAction->setText(tr("Delete marker"));
+    m_deleteMarkerAction->setText(tr("Delete Marker"));
     m_setMarkerLabelAction = new QAction();
-    m_setMarkerLabelAction->setText(tr("Set label..."));
+    m_setMarkerLabelAction->setText(tr("Set Label..."));
+    m_centerMapAction = new QAction();
+    m_centerMapAction->setText(tr("Center Here"));
+    m_zoomInHereMapAction = new QAction();
+    m_zoomInHereMapAction->setText(tr("Zoom In"));
+    m_zoomOutHereMapAction = new QAction();
+    m_zoomOutHereMapAction->setText(tr("Zoom Out"));
 
     connect(m_addMarkerAction, &QAction::triggered, this, &SlippyMapWidget::addMarkerActionTriggered);
     connect(m_deleteMarkerAction, &QAction::triggered, this, &SlippyMapWidget::deleteMarkerActionTriggered);
     connect(m_setMarkerLabelAction, &QAction::triggered, this, &SlippyMapWidget::setMarkerLabelActionTriggered);
+    connect(m_zoomInHereMapAction, &QAction::triggered, this, &SlippyMapWidget::zoomInHereActionTriggered);
+    connect(m_zoomOutHereMapAction, &QAction::triggered, this, &SlippyMapWidget::zoomOutHereActionTriggered);
+    connect(m_centerMapAction, &QAction::triggered, this, &SlippyMapWidget::centerMapActionTriggered);
 
     m_contextMenu = new QMenu(this);
     m_contextMenu->addAction(m_coordAction);
@@ -143,6 +152,10 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_contextMenu->addAction(m_addMarkerAction);
     m_contextMenu->addAction(m_deleteMarkerAction);
     m_contextMenu->addAction(m_setMarkerLabelAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_centerMapAction);
+    m_contextMenu->addAction(m_zoomInHereMapAction);
+    m_contextMenu->addAction(m_zoomOutHereMapAction);
 }
 
 SlippyMapWidget::~SlippyMapWidget()
@@ -188,21 +201,31 @@ QString SlippyMapWidget::tileServer()
     return m_tileServer;
 }
 
+QList<SlippyMapWidget::Marker *> SlippyMapWidget::markerList()
+{
+    return m_markers;
+}
+
 void SlippyMapWidget::addMarker(double latitude, double longitude)
 {
-    m_markers.append(new Marker(latitude, longitude));
+    Marker *marker = new Marker(latitude, longitude);
+    m_markers.append(marker);
     update();
+    emit markerAdded(marker);
 }
 
 void SlippyMapWidget::addMarker(double latitude, double longitude, QString label)
 {
-    m_markers.append(new Marker(latitude, longitude, label));
+    Marker *marker = new Marker(latitude, longitude, label);
+    m_markers.append(marker);
     update();
+    emit markerAdded(marker);
 }
 
 void SlippyMapWidget::addMarker(SlippyMapWidget::Marker *marker)
 {
     m_markers.append(marker);
+    emit markerAdded(marker);
 }
 
 void SlippyMapWidget::deleteMarker(SlippyMapWidget::Marker *marker)
@@ -334,8 +357,9 @@ void SlippyMapWidget::deleteMarkerActionTriggered()
     if (m_activeMarker != nullptr) {
         m_markers.removeOne(m_activeMarker);
         delete m_activeMarker;
-        m_activeMarker = nullptr;
         update();
+        emit markerDeleted(m_activeMarker);
+        m_activeMarker = nullptr;
     }
 }
 
@@ -351,8 +375,32 @@ void SlippyMapWidget::setMarkerLabelActionTriggered()
         if (label.length() > 0) {
             m_activeMarker->setLabel(label);
             update();
+            emit markerUpdated(m_activeMarker);
         }
     }
+}
+
+void SlippyMapWidget::centerMapActionTriggered()
+{
+    double lat = widgetY2lat(m_contextMenuLocation.y());
+    double lon = widgetX2long(m_contextMenuLocation.x());
+    setCenter(lat, lon);
+}
+
+void SlippyMapWidget::zoomInHereActionTriggered()
+{
+    double lat = widgetY2lat(m_contextMenuLocation.y());
+    double lon = widgetX2long(m_contextMenuLocation.x());
+    setCenter(lat, lon);
+    increaseZoomLevel();
+}
+
+void SlippyMapWidget::zoomOutHereActionTriggered()
+{
+    double lat = widgetY2lat(m_contextMenuLocation.y());
+    double lon = widgetX2long(m_contextMenuLocation.x());
+    setCenter(lat, lon);
+    decreaseZoomLevel();
 }
 
 void SlippyMapWidget::paintEvent(QPaintEvent *event)
@@ -468,8 +516,6 @@ void SlippyMapWidget::mouseReleaseEvent(QMouseEvent *event)
     m_dragging = false;
 
     if (event->button() == Qt::LeftButton && event->pos() == m_dragRealStart) {
-        m_activeMarker = nullptr;
-
         for (Marker *marker : m_markers) {
             qint32 marker_x = long2widgetX(marker->longitude());
             qint32 marker_y = lat2widgety(marker->latitude());
@@ -480,10 +526,16 @@ void SlippyMapWidget::mouseReleaseEvent(QMouseEvent *event)
 
             if (marker_box.contains(event->pos())) {
                 m_activeMarker = marker;
-                break;
+                emit markerActivated(marker);
+                update();
+                return;
             }
         }
+    }
 
+    if (m_activeMarker != nullptr) {
+        emit markerDeactivated(m_activeMarker);
+        m_activeMarker = nullptr;
         update();
     }
 }
@@ -535,6 +587,7 @@ void SlippyMapWidget::wheelEvent(QWheelEvent *event)
     if (deg.y() > 0) {
         if (m_zoomLevel < m_maxZoom) {
             m_zoomLevel++;
+            setCenter(widgetY2lat(event->y()), widgetX2long(event->x()));
             remap();
             emit zoomLevelChanged(m_zoomLevel);
         }

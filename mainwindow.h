@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QMap>
+#include "slippymapwidget.h"
 
 namespace Ui {
 class MainWindow;
@@ -9,6 +11,7 @@ class MainWindow;
 
 class QComboBox;
 class QLabel;
+class QListWidgetItem;
 
 class MainWindow : public QMainWindow
 {
@@ -23,6 +26,7 @@ private:
     int m_requestCount = 0;
     QLabel *m_statusBarPositionLabel;
     QLabel *m_statusBarStatusLabel;
+    QMap<SlippyMapWidget::Marker*,QListWidgetItem*> m_markerListItemMap;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -32,8 +36,12 @@ protected slots:
     void onSlippyMapCursorPositionChanged(double latitude, double longitude);
     void onSlippyMapCursorEntered();
     void onSlippyMapCursorLeft();
+    void onSlippyMapMarkerAdded(SlippyMapWidget::Marker *marker);
+    void onSlippyMapMarkerDeleted(SlippyMapWidget::Marker *marker);
+    void onSlippyMapMarkerUpdated(SlippyMapWidget::Marker *marker);
 private slots:
     void on_actionNewMarker_triggered();
+    void on_actionViewSidebar_toggled(bool arg1);
 };
 
 #endif // MAINWINDOW_H
