@@ -12,6 +12,7 @@ class QPaintEvent;
 class QPixmap;
 class QMouseEvent;
 class QWheelEvent;
+class QPushButton;
 
 class SlippyMapWidget : public QWidget
 {
@@ -22,6 +23,9 @@ public:
 
 public slots:
     void setCenter(double latitude, double longitude);
+    void setZoomLevel(int zoom);
+    void increaseZoomLevel();
+    void decreaseZoomLevel();
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -85,11 +89,16 @@ private:
     int m_zoomLevel = 0;
     int m_tileX = 0;
     int m_tileY = 0;
+    int m_maxZoom = 18;
+    int m_minZoom = 0;
     double m_lat;
     double m_lon;
     QMutex m_tileMutex;
     QNetworkAccessManager *m_net;
     QList<Tile*> *m_tileSet;
+    QPushButton *m_zoomInButton;
+    QPushButton *m_zoomOutButton;
+    QPushButton *m_currentLocationButton;
 };
 
 #endif // SLIPPYMAPWIDGET_H

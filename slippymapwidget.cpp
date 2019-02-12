@@ -19,6 +19,7 @@
 #include <QMessageBox>
 #include <QPixmap>
 #include <QPoint>
+#include <QPushButton>
 
 SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
 {
@@ -29,6 +30,33 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_lat = 45.541460;
     m_lon = -122.999700;
     emit centerChanged(m_lat, m_lon);
+
+    m_zoomInButton = new QPushButton(this);
+    m_zoomInButton->setText("➕");
+    m_zoomInButton->move(10, 10);
+    m_zoomInButton->setMaximumWidth(35);
+    m_zoomInButton->setMinimumWidth(35);
+    m_zoomInButton->setMaximumHeight(35);
+    m_zoomInButton->setMinimumHeight(35);
+
+    m_zoomOutButton = new QPushButton(this);
+    m_zoomOutButton->setText("➖");
+    m_zoomOutButton->move(10, 45);
+    m_zoomOutButton->setMaximumWidth(35);
+    m_zoomOutButton->setMinimumWidth(35);
+    m_zoomOutButton->setMaximumHeight(35);
+    m_zoomOutButton->setMinimumHeight(35);
+
+    m_currentLocationButton = new QPushButton(this);
+    m_currentLocationButton->setText("☼");
+    m_currentLocationButton->move(10, 90);
+    m_currentLocationButton->setMaximumWidth(35);
+    m_currentLocationButton->setMinimumWidth(35);
+    m_currentLocationButton->setMaximumHeight(35);
+    m_currentLocationButton->setMinimumHeight(35);
+
+    connect(m_zoomInButton, &QPushButton::pressed, this, &SlippyMapWidget::increaseZoomLevel);
+    connect(m_zoomOutButton, &QPushButton::pressed, this, &SlippyMapWidget::decreaseZoomLevel);
 }
 
 SlippyMapWidget::~SlippyMapWidget()
@@ -41,6 +69,30 @@ void SlippyMapWidget::setCenter(double latitude, double longitude)
     m_lat = latitude;
     m_lon = longitude;
     remap();
+}
+
+void SlippyMapWidget::setZoomLevel(int zoom)
+{
+    if (zoom >= m_minZoom && zoom <= m_maxZoom) {
+        m_zoomLevel = zoom;
+        remap();
+    }
+}
+
+void SlippyMapWidget::increaseZoomLevel()
+{
+    if (m_zoomLevel < m_maxZoom) {
+        m_zoomLevel++;
+        remap();
+    }
+}
+
+void SlippyMapWidget::decreaseZoomLevel()
+{
+    if (m_zoomLevel > m_minZoom) {
+        m_zoomLevel--;
+        remap();
+    }
 }
 
 void SlippyMapWidget::paintEvent(QPaintEvent *event)
@@ -89,14 +141,14 @@ void SlippyMapWidget::wheelEvent(QWheelEvent *event)
     QPoint deg = event->angleDelta();
 
     if (deg.y() > 0) {
-        if (m_zoomLevel < 14) {
+        if (m_zoomLevel < m_maxZoom) {
             m_zoomLevel++;
             remap();
             emit zoomLevelChanged(m_zoomLevel);
         }
     }
     else if (deg.y() < 0) {
-        if (m_zoomLevel > 0) {
+        if (m_zoomLevel > m_minZoom) {
             m_zoomLevel--;
             remap();
             emit zoomLevelChanged(m_zoomLevel);

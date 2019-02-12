@@ -27,7 +27,7 @@ void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
 
 void MainWindow::onSlippyMapZoomLevelChanged(int zoom)
 {
-    ui->cboZoomLevel->setCurrentIndex(zoom);
+
 }
 
 void MainWindow::on_btnGo_clicked()
