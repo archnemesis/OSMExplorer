@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "slippymapwidget.h"
 
+#include <math.h>
 #include <QComboBox>
 #include <QMessageBox>
 #include <QLabel>
