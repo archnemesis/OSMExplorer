@@ -30,6 +30,7 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
 {
     setMouseTracking(true);
 
+    m_tileServer = "10.1.1.150";
     m_net = new QNetworkAccessManager(this);
     m_zoomLevel = 14;
     m_tileSet = new QList<Tile*>();
@@ -98,6 +99,10 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_locationCompleter = new QCompleter(testWords, this);
     m_locationCompleter->setCaseSensitivity(Qt::CaseInsensitive);
     m_searchBar->setCompleter(m_locationCompleter);
+
+    QFont searchFont;
+    searchFont.setPixelSize(18);
+    m_searchBar->setFont(searchFont);
 }
 
 SlippyMapWidget::~SlippyMapWidget()
@@ -131,6 +136,16 @@ QString SlippyMapWidget::latLonToString(double lat, double lon)
             .arg(dir_lon);
 
     return ret;
+}
+
+void SlippyMapWidget::setTileServer(QString server)
+{
+    m_tileServer = server;
+}
+
+QString SlippyMapWidget::tileServer()
+{
+    return m_tileServer;
 }
 
 void SlippyMapWidget::setCenter(double latitude, double longitude)
@@ -277,6 +292,8 @@ void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
     double xpos = left_deg + (deg_per_pixel * event->pos().x());
     double ypos = top_deg - (deg_per_pixel_y * event->pos().y());
     emit cursorPositionChanged(ypos, xpos);
+
+    qDebug() << "Got position:" << ypos << xpos;
 }
 
 void SlippyMapWidget::enterEvent(QEvent *event)
@@ -393,7 +410,8 @@ void SlippyMapWidget::remap()
                 tile = new Tile(this_x, this_y, point);
                 m_tileSet->append(tile);
 
-                QString tile_path = QString("http://10.1.1.150/osm_tiles/%1/%2/%3.png")
+                QString tile_path = QString("http://%1/osm_tiles/%2/%3/%4.png")
+                        .arg(m_tileServer)
                         .arg(m_zoomLevel)
                         .arg(this_x)
                         .arg(this_y);
@@ -418,7 +436,7 @@ void SlippyMapWidget::remap()
                         pixmap.loadFromData(data);
                         tile->setPixmap(pixmap);
                         tile->setPendingReply(nullptr);
-                        repaint();
+                        update();
                     }
 
                     reply->deleteLater();
@@ -428,7 +446,7 @@ void SlippyMapWidget::remap()
                 QPoint old = tile->point();
                 tile->setPoint(point);
                 deleteList.removeOne(tile);
-                if (old != point) repaint();
+                if (old != point) update();
             }
         }
     }

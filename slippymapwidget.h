@@ -118,6 +118,7 @@ private:
     QPushButton *m_zoomOutButton;
     QPushButton *m_currentLocationButton;
     QLineEdit *m_searchBar;
+    QString m_tileServer;
 
     QBrush m_scaleBrush;
     QPen m_scalePen;

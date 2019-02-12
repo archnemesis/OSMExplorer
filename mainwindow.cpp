@@ -32,8 +32,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
 {
-    ui->lneLatitude->setText(QString("%1").arg(latitude, 7, 'f', 4, QLatin1Char('0')));
-    ui->lneLongitude->setText(QString("%1").arg(longitude, 7, 'f', 4, QLatin1Char('0')));
+
 }
 
 void MainWindow::onSlippyMapZoomLevelChanged(int zoom)
@@ -72,17 +71,17 @@ void MainWindow::onSlippyMapCursorPositionChanged(double latitude, double longit
     QString lat;
 
     if (latitude > 0) {
-        lat = tpl.arg(abs(latitude), 8, 'f', 4, '0').arg("N");
+        lat = tpl.arg(fabs(latitude), 8, 'f', 4, '0').arg("N");
     }
     else {
-        lat = tpl.arg(abs(latitude), 8, 'f', 4, '0').arg("S");
+        lat = tpl.arg(fabs(latitude), 8, 'f', 4, '0').arg("S");
     }
 
     if (longitude < 0) {
-        lon = tpl.arg(abs(longitude), 8, 'f', 4, '0').arg("W");
+        lon = tpl.arg(fabs(longitude), 8, 'f', 4, '0').arg("W");
     }
     else {
-        lon = tpl.arg(abs(longitude), 8, 'f', 4, '0').arg("E");
+        lon = tpl.arg(fabs(longitude), 8, 'f', 4, '0').arg("E");
     }
 
     m_statusBarPositionLabel->setText(
@@ -98,22 +97,4 @@ void MainWindow::onSlippyMapCursorEntered()
 void MainWindow::onSlippyMapCursorLeft()
 {
     m_statusBarPositionLabel->setText("");
-}
-
-void MainWindow::on_btnGo_clicked()
-{
-    bool oklat = false;
-    bool oklon = false;
-    double lat = ui->lneLatitude->text().toDouble(&oklat);
-    double lon = ui->lneLongitude->text().toDouble(&oklon);
-
-    if (!(oklat && oklon)) {
-        QMessageBox::critical(
-                    this,
-                    tr("Invalid Input"),
-                    tr("Please input latitude and longitude in degree decimal format."));
-        return;
-    }
-
-    ui->slippyMap->setCenter(lat, lon);
 }

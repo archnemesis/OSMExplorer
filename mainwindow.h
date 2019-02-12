@@ -32,8 +32,6 @@ protected slots:
     void onSlippyMapCursorPositionChanged(double latitude, double longitude);
     void onSlippyMapCursorEntered();
     void onSlippyMapCursorLeft();
-private slots:
-    void on_btnGo_clicked();
 };
 
 #endif // MAINWINDOW_H
