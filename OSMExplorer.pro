@@ -27,14 +27,17 @@ CONFIG += c++11
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    slippymapwidget.cpp
+    slippymapwidget.cpp \
+    markerdialog.cpp
 
 HEADERS += \
         mainwindow.h \
-    slippymapwidget.h
+    slippymapwidget.h \
+    markerdialog.h
 
 FORMS += \
-        mainwindow.ui
+        mainwindow.ui \
+    markerdialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

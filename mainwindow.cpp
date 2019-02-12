@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "slippymapwidget.h"
+#include "markerdialog.h"
 
 #include <math.h>
 #include <QComboBox>
@@ -98,4 +99,12 @@ void MainWindow::onSlippyMapCursorEntered()
 void MainWindow::onSlippyMapCursorLeft()
 {
     m_statusBarPositionLabel->setText("");
+}
+
+void MainWindow::on_actionNewMarker_triggered()
+{
+    SlippyMapWidget::Marker *marker = MarkerDialog::getNewMarker(this, tr("New Marker"));
+    if (marker != nullptr) {
+        ui->slippyMap->addMarker(marker);
+    }
 }

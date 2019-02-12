@@ -36,8 +36,75 @@
      <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuMarker">
+    <property name="title">
+     <string>Marker</string>
+    </property>
+    <addaction name="actionNewMarker"/>
+    <addaction name="actionNewMarkerCurrentLocation"/>
+    <addaction name="actionMarkerProperties"/>
+    <addaction name="actionMarkerDelete"/>
+    <addaction name="separator"/>
+    <addaction name="actionMarkerExport"/>
+    <addaction name="actionMarkerImport"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuMarker"/>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionNewMarker">
+   <property name="text">
+    <string>New...</string>
+   </property>
+  </action>
+  <action name="actionNewMarkerCurrentLocation">
+   <property name="text">
+    <string>New at current location</string>
+   </property>
+  </action>
+  <action name="actionMarkerProperties">
+   <property name="text">
+    <string>Properties...</string>
+   </property>
+  </action>
+  <action name="actionMarkerDelete">
+   <property name="text">
+    <string>Delete</string>
+   </property>
+  </action>
+  <action name="actionMarkerExport">
+   <property name="text">
+    <string>Export...</string>
+   </property>
+  </action>
+  <action name="actionMarkerImport">
+   <property name="text">
+    <string>Import...</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About...</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>

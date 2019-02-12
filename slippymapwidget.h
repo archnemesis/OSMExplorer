@@ -27,6 +27,29 @@ class SlippyMapWidget : public QWidget
 {
     Q_OBJECT
 public:
+    class Marker {
+    public:
+        Marker(double latitude, double longitude, QString label) {
+            m_label = label;
+            m_latitude = latitude;
+            m_longitude = longitude;
+        }
+        Marker(double latitude, double longitude) {
+            m_latitude = latitude;
+            m_longitude = longitude;
+        }
+        void setLatitude(double latitude) { m_latitude = latitude; }
+        void setLongitude(double longitude) { m_longitude = longitude; }
+        void setLabel(QString label) { m_label = label; }
+        double latitude() { return m_latitude; }
+        double longitude() { return m_longitude; }
+        QString label() { return m_label; }
+    private:
+        double m_latitude;
+        double m_longitude;
+        QString m_label;
+    };
+
     explicit SlippyMapWidget(QWidget *parent = nullptr);
     virtual ~SlippyMapWidget();
     QString latLonToString(double lat, double lon);
@@ -35,6 +58,8 @@ public:
 
     void addMarker(double latitude, double longitude);
     void addMarker(double latitude, double longitude, QString label);
+    void addMarker(Marker *marker);
+    void deleteMarker(Marker *marker);
 
 public slots:
     void setCenter(double latitude, double longitude);
@@ -45,6 +70,9 @@ public slots:
 
 protected slots:
     void searchBarReturnPressed();
+    void addMarkerActionTriggered();
+    void deleteMarkerActionTriggered();
+    void setMarkerLabelActionTriggered();
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -104,29 +132,6 @@ private:
         QNetworkReply *m_pendingReply = nullptr;
     };
 
-    class Marker {
-    public:
-        Marker(double latitude, double longitude, QString label) {
-            m_label = label;
-            m_latitude = latitude;
-            m_longitude = longitude;
-        }
-        Marker(double latitude, double longitude) {
-            m_latitude = latitude;
-            m_longitude = longitude;
-        }
-        void setLatitude(double latitude) { m_latitude = latitude; }
-        void setLongitude(double longitude) { m_longitude = longitude; }
-        void setLabel(QString label) { m_label = label; }
-        double latitude() { return m_latitude; }
-        double longitude() { return m_longitude; }
-        QString label() { return m_label; }
-    private:
-        double m_latitude;
-        double m_longitude;
-        QString m_label;
-    };
-
     qint32 long2tilex(double lon, int z);
     qint32 lat2tiley(double lat, int z);
     double tilex2long(qint32 x, qint32 z);
@@ -139,6 +144,7 @@ private:
     void remap();
 
     bool m_dragging = false;
+    QPoint m_dragRealStart;
     QPoint m_dragStart;
     Qt::MouseButton m_dragButton;
     int m_zoomLevel = 0;
@@ -171,6 +177,7 @@ private:
     QCompleter *m_locationCompleter;
 
     QList<Marker*> m_markers;
+    Marker* m_activeMarker = nullptr;
     QBrush m_markerBrush;
     QPen m_markerPen;
     QBrush m_markerLabelBrush;
@@ -183,6 +190,7 @@ private:
     QAction *m_addMarkerAction;
     QAction *m_deleteMarkerAction;
     QAction *m_setMarkerLabelAction;
+    QPoint m_contextMenuLocation;
 };
 
 #endif // SLIPPYMAPWIDGET_H
