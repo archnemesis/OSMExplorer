@@ -16,9 +16,12 @@ class QPaintEvent;
 class QPixmap;
 class QMouseEvent;
 class QWheelEvent;
+class QContextMenuEvent;
 class QPushButton;
 class QLineEdit;
 class QCompleter;
+class QMenu;
+class QAction;
 
 class SlippyMapWidget : public QWidget
 {
@@ -51,6 +54,7 @@ protected:
     void leaveEvent(QEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
 
 signals:
     void centerChanged(double latitude, double longitude);
@@ -120,6 +124,8 @@ private:
     double tiley2lat(qint32 y, qint32 z);
     qint32 long2widgetX(double lon);
     qint32 lat2widgety(double lat);
+    double widgetX2long(qint32 x);
+    double widgetY2lat(qint32 y);
 
     void remap();
 
@@ -158,6 +164,11 @@ private:
     QList<Marker*> m_markers;
     QBrush m_markerBrush;
     QPen m_markerPen;
+
+    QMenu *m_contextMenu;
+    QAction *m_coordAction;
+    QAction *m_addMarkerAction;
+    QAction *m_deleteMarkerAction;
 };
 
 #endif // SLIPPYMAPWIDGET_H

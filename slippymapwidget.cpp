@@ -12,6 +12,7 @@
 #include <QDragLeaveEvent>
 #include <QDragMoveEvent>
 #include <QWheelEvent>
+#include <QContextMenuEvent>
 
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -19,7 +20,8 @@
 #include <QUrl>
 
 #include <QRegularExpressionMatch>
-
+#include <QMenu>
+#include <QAction>
 #include <QCompleter>
 #include <QMessageBox>
 #include <QPixmap>
@@ -91,6 +93,7 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_scaleTextFont.setPixelSize(12);
     m_scaleTextFont.setBold(true);
 
+    //^(\-?\d+\.?\d*)\s*(N|W|E|S*)\s*\,?\s*(\-?\d*\.?\d*)\s*(N|W|E|S*)$
     m_locationParser.setPattern("^(\\-?\\d*\\.?\\d*)\\s*(N|W|E|S*)\\s*\\,?\\s*(\\-?\\d*\\.?\\d*)\\s*(N|W|E|S*)$");
 
     QStringList testWords;
@@ -110,6 +113,20 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_markerBrush.setStyle(Qt::SolidPattern);
     m_markerBrush.setColor(systemPalette.highlight().color());
     m_markerPen.setStyle(Qt::NoPen);
+
+    m_coordAction = new QAction();
+    m_coordAction->setEnabled(false);
+
+    m_addMarkerAction = new QAction();
+    m_addMarkerAction->setText(tr("Add marker here"));
+    m_deleteMarkerAction = new QAction();
+    m_deleteMarkerAction->setText(tr("Delete marker"));
+
+    m_contextMenu = new QMenu(this);
+    m_contextMenu->addAction(m_coordAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_addMarkerAction);
+    m_contextMenu->addAction(m_deleteMarkerAction);
 }
 
 SlippyMapWidget::~SlippyMapWidget()
@@ -429,6 +446,12 @@ void SlippyMapWidget::resizeEvent(QResizeEvent *event)
     remap();
 }
 
+void SlippyMapWidget::contextMenuEvent(QContextMenuEvent *event)
+{
+    m_coordAction->setText(latLonToString(widgetY2lat(event->y()), widgetX2long(event->x())));
+    m_contextMenu->exec(event->globalPos());
+}
+
 qint32 SlippyMapWidget::long2tilex(double lon, int z)
 {
     return (qint32)(floor((lon + 180.0) / 360.0 * pow(2.0, z)));
@@ -453,6 +476,27 @@ double SlippyMapWidget::tiley2lat(qint32 y, qint32 z)
 qint32 SlippyMapWidget::long2widgetX(double lon)
 {
 
+}
+
+double SlippyMapWidget::widgetX2long(qint32 x)
+{
+    double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
+    double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
+    double width_deg = deg_per_pixel * width();
+    double left_deg = m_lon - (width_deg / 2);
+    double xpos = left_deg + (deg_per_pixel * x);
+    return xpos;
+}
+
+double SlippyMapWidget::widgetY2lat(qint32 y)
+{
+    double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
+    double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
+    double deg_per_pixel_y = deg_per_pixel / scale_factor;
+    double height_deg = deg_per_pixel_y * height();
+    double top_deg = m_lat - (height_deg / 2);
+    double ypos = top_deg - (deg_per_pixel_y * y);
+    return ypos;
 }
 
 void SlippyMapWidget::remap()
