@@ -79,7 +79,7 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
 
     m_scaleBrush.setStyle(Qt::SolidPattern);
     m_scaleBrush.setColor(QColor(0,0,0,128));
-    m_scalePen.setColor(Qt::NoPen);
+    m_scalePen.setStyle(Qt::NoPen);
 
     m_scaleTextBrush.setStyle(Qt::SolidPattern);
     m_scaleTextBrush.setColor(Qt::black);
@@ -152,6 +152,7 @@ void SlippyMapWidget::setCenter(double latitude, double longitude)
 {
     m_lat = latitude;
     m_lon = longitude;
+
     remap();
 }
 
@@ -190,13 +191,67 @@ void SlippyMapWidget::setTextLocation(QString location)
         return;
     }
 
-    QString lat = match.captured(1);
-    QString lat_card = match.captured(2);
-    QString lon = match.captured(3);
-    QString lon_card = match.captured(4);
+    QString match_lat = match.captured(1);
+    QString match_lat_card = match.captured(2);
+    QString match_lon = match.captured(3);
+    QString match_lon_card = match.captured(4);
 
-    qDebug() << "Lat:" << lat << lat_card;
-    qDebug() << "Lon:" << lon << lon_card;
+    double lat;
+    double lon;
+
+    if (match_lat.length() > 0) {
+        bool ok;
+        lat = match_lat.toFloat(&ok);
+
+        if (!ok) {
+            goto parseError;
+        }
+
+        if (match_lat_card.length() == 1) {
+            if (match_lat_card == "N") {
+                lat = fabs(lat);
+            }
+            else {
+                lat = -1 * fabs(lat);
+            }
+        }
+    }
+    else {
+        goto parseError;
+    }
+
+    if (match_lon.length() > 0) {
+        bool ok;
+        lon = match_lon.toFloat(&ok);
+
+        if (!ok) {
+            goto parseError;
+        }
+
+        if (match_lon_card.length() == 1) {
+            if (match_lon_card == "E") {
+                lon = fabs(lon);
+            }
+            else {
+                lon = -1 * fabs(lon);
+            }
+        }
+    }
+    else {
+        goto parseError;
+    }
+
+    setCenter(lat, lon);
+    m_searchBar->setText(latLonToString(lat, lon));
+
+    return;
+
+parseError:
+    QMessageBox::critical(
+                this,
+                tr("Location Error"),
+                tr("Unable to parse location. Please try again."));
+    return;
 }
 
 void SlippyMapWidget::searchBarReturnPressed()
@@ -281,7 +336,6 @@ void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
         m_lon = m_lon - (deg_per_pixel * diff.x());
 
         emit centerChanged(m_lat, m_lon);
-        m_searchBar->setText(latLonToString(m_lat, m_lon));
         remap();
     }
 
@@ -292,8 +346,6 @@ void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
     double xpos = left_deg + (deg_per_pixel * event->pos().x());
     double ypos = top_deg - (deg_per_pixel_y * event->pos().y());
     emit cursorPositionChanged(ypos, xpos);
-
-    qDebug() << "Got position:" << ypos << xpos;
 }
 
 void SlippyMapWidget::enterEvent(QEvent *event)
