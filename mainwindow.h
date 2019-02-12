@@ -8,6 +8,7 @@ class MainWindow;
 }
 
 class QComboBox;
+class QLabel;
 
 class MainWindow : public QMainWindow
 {
@@ -19,10 +20,18 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    int m_requestCount = 0;
+    QLabel *m_statusBarPositionLabel;
+    QLabel *m_statusBarStatusLabel;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
     void onSlippyMapZoomLevelChanged(int zoom);
+    void onSlippyMapTileRequestStarted();
+    void onSlippyMapTileRequestFinished();
+    void onSlippyMapCursorPositionChanged(double latitude, double longitude);
+    void onSlippyMapCursorEntered();
+    void onSlippyMapCursorLeft();
 private slots:
     void on_btnGo_clicked();
 };

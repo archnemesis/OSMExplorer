@@ -5,6 +5,10 @@
 #include <QPoint>
 #include <QMap>
 #include <QMutex>
+#include <QBrush>
+#include <QPen>
+#include <QFont>
+#include <QRegularExpression>
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -13,6 +17,7 @@ class QPixmap;
 class QMouseEvent;
 class QWheelEvent;
 class QPushButton;
+class QLineEdit;
 
 class SlippyMapWidget : public QWidget
 {
@@ -20,24 +25,36 @@ class SlippyMapWidget : public QWidget
 public:
     explicit SlippyMapWidget(QWidget *parent = nullptr);
     virtual ~SlippyMapWidget();
+    QString latLonToString(double lat, double lon);
 
 public slots:
     void setCenter(double latitude, double longitude);
     void setZoomLevel(int zoom);
     void increaseZoomLevel();
     void decreaseZoomLevel();
+    void setTextLocation(QString location);
+
+protected slots:
+    void searchBarReturnPressed();
 
 protected:
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
+    void enterEvent(QEvent *event) override;
+    void leaveEvent(QEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
 signals:
     void centerChanged(double latitude, double longitude);
     void zoomLevelChanged(int zoom);
+    void tileRequestInitiated();
+    void tileRequestFinished();
+    void cursorPositionChanged(double latitude, double longitude);
+    void cursorLeft();
+    void cursorEntered();
 
 private:
     class Tile {
@@ -99,6 +116,19 @@ private:
     QPushButton *m_zoomInButton;
     QPushButton *m_zoomOutButton;
     QPushButton *m_currentLocationButton;
+    QLineEdit *m_searchBar;
+
+    QBrush m_scaleBrush;
+    QPen m_scalePen;
+    QBrush m_scaleTextBrush;
+    QPen m_scaleTextPen;
+    QColor m_scaleBarColor;
+    QFont m_scaleTextFont;
+    int m_scaleBarHeight = 10;
+    int m_scaleBarMarginRight = 10;
+    int m_scaleBarMarginBottom = 10;
+
+    QRegularExpression m_locationParser;
 };
 
 #endif // SLIPPYMAPWIDGET_H

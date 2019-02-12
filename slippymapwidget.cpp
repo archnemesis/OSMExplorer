@@ -16,13 +16,19 @@
 #include <QNetworkRequest>
 #include <QUrl>
 
+#include <QRegularExpressionMatch>
+
 #include <QMessageBox>
 #include <QPixmap>
 #include <QPoint>
 #include <QPushButton>
+#include <QLineEdit>
+#include <QPainterPath>
 
 SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
 {
+    setMouseTracking(true);
+
     m_net = new QNetworkAccessManager(this);
     m_zoomLevel = 14;
     m_tileSet = new QList<Tile*>();
@@ -55,13 +61,66 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_currentLocationButton->setMaximumHeight(35);
     m_currentLocationButton->setMinimumHeight(35);
 
+    m_searchBar = new QLineEdit(this);
+    m_searchBar->setText(latLonToString(m_lat, m_lon));
+    m_searchBar->move(55, 10);
+    m_searchBar->setMinimumHeight(35);
+    m_searchBar->setMaximumHeight(35);
+
+    int searchBarWidth = width() - (55 + 10);
+    m_searchBar->setMinimumWidth(searchBarWidth);
+    m_searchBar->setMaximumWidth(searchBarWidth);
+
     connect(m_zoomInButton, &QPushButton::pressed, this, &SlippyMapWidget::increaseZoomLevel);
     connect(m_zoomOutButton, &QPushButton::pressed, this, &SlippyMapWidget::decreaseZoomLevel);
+    connect(m_searchBar, &QLineEdit::returnPressed, this, &SlippyMapWidget::searchBarReturnPressed);
+
+    m_scaleBrush.setStyle(Qt::SolidPattern);
+    m_scaleBrush.setColor(QColor(0,0,0,128));
+    m_scalePen.setColor(Qt::NoPen);
+
+    m_scaleTextBrush.setStyle(Qt::SolidPattern);
+    m_scaleTextBrush.setColor(Qt::black);
+    m_scaleTextPen.setStyle(Qt::SolidLine);
+    m_scaleTextPen.setColor(Qt::white);
+    m_scaleTextPen.setWidth(1);
+    m_scaleTextFont.setPixelSize(12);
+    m_scaleTextFont.setBold(true);
+
+    m_locationParser.setPattern("^(\\-?\\d*\\.?\\d*)\\s*(N|W|E|S*)\\s*\\,?\\s*(\\-?\\d*\\.?\\d*)\\s*(N|W|E|S*)$");
 }
 
 SlippyMapWidget::~SlippyMapWidget()
 {
 
+}
+
+QString SlippyMapWidget::latLonToString(double lat, double lon)
+{
+    char dir_lat;
+    char dir_lon;
+
+    if (lat > 0) {
+        dir_lat = 'N';
+    }
+    else {
+        dir_lat = 'S';
+    }
+
+    if (lon > 0) {
+        dir_lon = 'E';
+    }
+    else {
+        dir_lon = 'W';
+    }
+
+    QString ret = QString("%1 %2 %3 %4")
+            .arg(lat, 8, 'f', 4, '0')
+            .arg(dir_lat)
+            .arg(lon, 8, 'f', 4, '0')
+            .arg(dir_lon);
+
+    return ret;
 }
 
 void SlippyMapWidget::setCenter(double latitude, double longitude)
@@ -95,9 +154,35 @@ void SlippyMapWidget::decreaseZoomLevel()
     }
 }
 
+void SlippyMapWidget::setTextLocation(QString location)
+{
+    QRegularExpressionMatch match = m_locationParser.match(location);
+    if (!match.hasMatch()) {
+        QMessageBox::critical(
+                    this,
+                    tr("Location Error"),
+                    tr("Unable to parse location. Please try again."));
+        return;
+    }
+
+    QString lat = match.captured(1);
+    QString lat_card = match.captured(2);
+    QString lon = match.captured(3);
+    QString lon_card = match.captured(4);
+
+    qDebug() << "Lat:" << lat << lat_card;
+    qDebug() << "Lon:" << lon << lon_card;
+}
+
+void SlippyMapWidget::searchBarReturnPressed()
+{
+    setTextLocation(m_searchBar->text());
+}
+
 void SlippyMapWidget::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
+    painter.setRenderHints(QPainter::TextAntialiasing | QPainter::Antialiasing);
 
     for (int i = 0; i < m_tileSet->size(); i++) {
         Tile *t = m_tileSet->at(i);
@@ -105,6 +190,45 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
             painter.drawPixmap(t->point(), t->pixmap());
         }
     }
+
+    double C = 40075016.686;
+    double S = C * cos(m_lat * (M_PI/180.0)) / pow(2.0, m_zoomLevel + 8);
+    double len = S * 100;
+
+    if (len < 100.0) {
+        len = floor((len + 5) / 10) * 10;
+    }
+    else if (len < 1000.0) {
+        len = floor((len + 50) / 100) * 100;
+    }
+    else if (len < 10000.0) {
+        len = floor((len + 500) / 1000) * 1000;
+    }
+    else if (len < 100000.0) {
+        len = floor((len + 5000) / 10000) * 10000;
+    }
+    else if (len < 1000000.0) {
+        len = floor((len + 50000) / 100000) * 100000;
+    }
+
+    qint32 pixlen = (qint32)(len / S);
+    int left = width() - m_scaleBarMarginRight - pixlen;
+    int top = height() - m_scaleBarMarginBottom - m_scaleBarHeight;
+
+    painter.setPen(m_scalePen);
+    painter.setBrush(m_scaleBrush);
+    painter.drawRect(left, top, pixlen, m_scaleBarHeight);
+
+    QPainterPath textPath;
+    textPath.addText(QPoint(left, (top - 10)), m_scaleTextFont, tr("%1 m").arg(len));
+
+    painter.setBrush(m_scaleTextBrush);
+    painter.setPen(m_scaleTextPen);
+    painter.drawPath(textPath);
+
+    int searchBarWidth = width() - (55 + 10);
+    m_searchBar->setMinimumWidth(searchBarWidth);
+    m_searchBar->setMaximumWidth(searchBarWidth);
 }
 
 void SlippyMapWidget::mousePressEvent(QMouseEvent *event)
@@ -120,20 +244,40 @@ void SlippyMapWidget::mouseReleaseEvent(QMouseEvent *event)
 
 void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
 {
+    double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
+    double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
+    double deg_per_pixel_y = deg_per_pixel / scale_factor;
+
     if (m_dragging) {
         QPoint pos = event->pos();
         QPoint diff = pos - m_dragStart;
         m_dragStart = pos;
-
-        double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
-        double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
-        double deg_per_pixel_y = deg_per_pixel / scale_factor;
         m_lat = m_lat + (deg_per_pixel_y * diff.y());
         m_lon = m_lon - (deg_per_pixel * diff.x());
 
         emit centerChanged(m_lat, m_lon);
         remap();
     }
+
+    double width_deg = deg_per_pixel * width();
+    double height_deg = deg_per_pixel_y * height();
+    double left_deg = m_lon - (width_deg / 2);
+    double top_deg = m_lat - (height_deg / 2);
+    double xpos = left_deg + (deg_per_pixel * event->pos().x());
+    double ypos = top_deg - (deg_per_pixel_y * event->pos().y());
+    emit cursorPositionChanged(ypos, xpos);
+}
+
+void SlippyMapWidget::enterEvent(QEvent *event)
+{
+    (void)event;
+    emit cursorEntered();
+}
+
+void SlippyMapWidget::leaveEvent(QEvent *event)
+{
+    (void)event;
+    emit cursorLeft();
 }
 
 void SlippyMapWidget::wheelEvent(QWheelEvent *event)
@@ -243,27 +387,30 @@ void SlippyMapWidget::remap()
                         .arg(this_x)
                         .arg(this_y);
                 QNetworkRequest req(tile_path);
+                emit tileRequestInitiated();
                 QNetworkReply *reply = m_net->get(req);
                 tile->setPendingReply(reply);
                 connect(reply, &QNetworkReply::finished, [=]() {
-                  if (tile->isDiscarded()) {
-                    delete tile;
-                  }
-                  else {
-                    if (reply->error() != QNetworkReply::NoError) {
-                      // handle error
-                      return;
+                    emit tileRequestFinished();
+
+                    if (tile->isDiscarded()) {
+                        delete tile;
+                    }
+                    else {
+                        if (reply->error() != QNetworkReply::NoError) {
+                          // handle error
+                          return;
+                        }
+
+                        QByteArray data = reply->readAll();
+                        QPixmap pixmap;
+                        pixmap.loadFromData(data);
+                        tile->setPixmap(pixmap);
+                        tile->setPendingReply(nullptr);
+                        repaint();
                     }
 
-                    QByteArray data = reply->readAll();
-                    QPixmap pixmap;
-                    pixmap.loadFromData(data);
-                    tile->setPixmap(pixmap);
-                    tile->setPendingReply(nullptr);
-                    repaint();
-                  }
-
-                  reply->deleteLater();
+                    reply->deleteLater();
                 });
             }
             else {
