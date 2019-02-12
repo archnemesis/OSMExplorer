@@ -27,6 +27,8 @@ public:
     explicit SlippyMapWidget(QWidget *parent = nullptr);
     virtual ~SlippyMapWidget();
     QString latLonToString(double lat, double lon);
+    void setTileServer(QString server);
+    QString tileServer();
 
 public slots:
     void setCenter(double latitude, double longitude);
