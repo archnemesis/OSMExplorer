@@ -11,6 +11,7 @@ class QNetworkReply;
 class QPaintEvent;
 class QPixmap;
 class QMouseEvent;
+class QWheelEvent;
 
 class SlippyMapWidget : public QWidget
 {
@@ -19,15 +20,20 @@ public:
     explicit SlippyMapWidget(QWidget *parent = nullptr);
     virtual ~SlippyMapWidget();
 
+public slots:
+    void setCenter(double latitude, double longitude);
+
 protected:
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
 signals:
     void centerChanged(double latitude, double longitude);
+    void zoomLevelChanged(int zoom);
 
 private:
     class Tile {
@@ -77,6 +83,8 @@ private:
     bool m_dragging = false;
     QPoint m_dragStart;
     int m_zoomLevel = 0;
+    int m_tileX = 0;
+    int m_tileY = 0;
     double m_lat;
     double m_lon;
     QMutex m_tileMutex;

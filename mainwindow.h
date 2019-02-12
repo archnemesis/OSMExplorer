@@ -22,6 +22,9 @@ private:
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
+    void onSlippyMapZoomLevelChanged(int zoom);
+private slots:
+    void on_btnGo_clicked();
 };
 
 #endif // MAINWINDOW_H

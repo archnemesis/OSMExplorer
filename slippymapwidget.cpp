@@ -9,6 +9,7 @@
 #include <QDragEnterEvent>
 #include <QDragLeaveEvent>
 #include <QDragMoveEvent>
+#include <QWheelEvent>
 
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -33,6 +34,13 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
 SlippyMapWidget::~SlippyMapWidget()
 {
 
+}
+
+void SlippyMapWidget::setCenter(double latitude, double longitude)
+{
+    m_lat = latitude;
+    m_lon = longitude;
+    remap();
 }
 
 void SlippyMapWidget::paintEvent(QPaintEvent *event)
@@ -65,13 +73,34 @@ void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
         QPoint diff = pos - m_dragStart;
         m_dragStart = pos;
 
-        double deg_per_pixel = 360.0 / pow(2.0, m_zoomLevel) / 256.0;
-        m_lat = m_lat + (deg_per_pixel * diff.y());
+        double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
+        double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
+        double deg_per_pixel_y = deg_per_pixel / scale_factor;
+        m_lat = m_lat + (deg_per_pixel_y * diff.y());
         m_lon = m_lon - (deg_per_pixel * diff.x());
 
         emit centerChanged(m_lat, m_lon);
-
         remap();
+    }
+}
+
+void SlippyMapWidget::wheelEvent(QWheelEvent *event)
+{
+    QPoint deg = event->angleDelta();
+
+    if (deg.y() > 0) {
+        if (m_zoomLevel < 14) {
+            m_zoomLevel++;
+            remap();
+            emit zoomLevelChanged(m_zoomLevel);
+        }
+    }
+    else if (deg.y() < 0) {
+        if (m_zoomLevel > 0) {
+            m_zoomLevel--;
+            remap();
+            emit zoomLevelChanged(m_zoomLevel);
+        }
     }
 }
 
@@ -110,16 +139,33 @@ void SlippyMapWidget::remap()
     qint32 tiles_high = (qint32)ceil((double)height() / 256.0);
     if ((tiles_high % 2) == 0) tiles_high++;
 
-    qint32 centerX = width() / 2;
-    qint32 centerY = height() / 2;
-
-    qint32 startX = centerX - 128 - ((tiles_wide / 2) * 256);
-    qint32 startY = centerY - 128 - ((tiles_high / 2) * 256);
+    tiles_wide += 2;
+    tiles_high += 2;
 
     qint32 tile_x = long2tilex(m_lon, m_zoomLevel);
     qint32 tile_y = lat2tiley(m_lat, m_zoomLevel);
     qint32 tile_x_start = tile_x - (tiles_wide - 1) / 2;
     qint32 tile_y_start = tile_y - (tiles_high - 1) / 2;
+
+    m_tileX = tile_x;
+    m_tileY = tile_y;
+
+    double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
+    double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
+    double deg_per_pixel_y = deg_per_pixel / scale_factor;
+    double snapped_lon = tilex2long(long2tilex(m_lon, m_zoomLevel), m_zoomLevel);
+    double diff_lon = snapped_lon - m_lon;
+    double snapped_lat = tiley2lat(lat2tiley(m_lat, m_zoomLevel), m_zoomLevel);
+    double diff_lat = snapped_lat - m_lat;
+
+    qint32 diff_pix_x = 255 + (qint32)(diff_lon / deg_per_pixel) - 128;
+    qint32 diff_pix_y = (qint32)(diff_lat / deg_per_pixel_y) - 128;
+
+    qint32 centerX = width() / 2;
+    qint32 centerY = height() / 2;
+
+    qint32 startX = centerX - 128 - ((tiles_wide / 2) * 256) + diff_pix_x;
+    qint32 startY = centerY - 128 - ((tiles_high / 2) * 256) - diff_pix_y;
 
     QList<Tile*> deleteList(*m_tileSet);
 
@@ -144,7 +190,6 @@ void SlippyMapWidget::remap()
                         .arg(m_zoomLevel)
                         .arg(this_x)
                         .arg(this_y);
-                qDebug() << "Requesting tile:" << tile_path;
                 QNetworkRequest req(tile_path);
                 QNetworkReply *reply = m_net->get(req);
                 tile->setPendingReply(reply);
@@ -162,6 +207,7 @@ void SlippyMapWidget::remap()
                     QPixmap pixmap;
                     pixmap.loadFromData(data);
                     tile->setPixmap(pixmap);
+                    tile->setPendingReply(nullptr);
                     repaint();
                   }
 
@@ -172,7 +218,7 @@ void SlippyMapWidget::remap()
                 QPoint old = tile->point();
                 tile->setPoint(point);
                 deleteList.removeOne(tile);
-                repaint();
+                if (old != point) repaint();
             }
         }
     }
@@ -180,12 +226,15 @@ void SlippyMapWidget::remap()
     while (deleteList.length() > 0) {
         Tile *todelete = deleteList.takeFirst();
 
-        if (todelete->pendingReply()->isRunning()) {
-          todelete->discard();
-          todelete->pendingReply()->abort();
+        if (todelete->pendingReply() != nullptr && todelete->pendingReply()->isRunning()) {
+            m_tileSet->removeOne(todelete);
+            todelete->discard();
+            todelete->pendingReply()->abort();
+        }
+        else {
+            m_tileSet->removeOne(todelete);
+            delete todelete;
         }
 
-        m_tileSet->removeOne(todelete);
-        delete todelete;
     }
 }
