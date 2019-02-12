@@ -79,7 +79,7 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
 
     m_scaleBrush.setStyle(Qt::SolidPattern);
     m_scaleBrush.setColor(QColor(0,0,0,128));
-    m_scalePen.setColor(Qt::NoPen);
+    m_scalePen.setStyle(Qt::NoPen);
 
     m_scaleTextBrush.setStyle(Qt::SolidPattern);
     m_scaleTextBrush.setColor(Qt::black);
