@@ -148,6 +148,9 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_copyLongitudeAction = new QAction();
     m_copyLongitudeAction->setText(tr("Copy Longitude"));
 
+    m_contextMenu = new QMenu();
+    setupContextMenu();
+
     connect(m_addMarkerAction, &QAction::triggered, this, &SlippyMapWidget::addMarkerActionTriggered);
     connect(m_deleteMarkerAction, &QAction::triggered, this, &SlippyMapWidget::deleteMarkerActionTriggered);
     connect(m_setMarkerLabelAction, &QAction::triggered, this, &SlippyMapWidget::setMarkerLabelActionTriggered);
@@ -157,21 +160,6 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     connect(m_copyCoordinatesAction, &QAction::triggered, this, &SlippyMapWidget::copyCoordinatesActionTriggered);
     connect(m_copyLatitudeAction, &QAction::triggered, this, &SlippyMapWidget::copyLatitudeActionTriggered);
     connect(m_copyLongitudeAction, &QAction::triggered, this, &SlippyMapWidget::copyLongitudeActionTriggered);
-
-    m_contextMenu = new QMenu(this);
-    m_contextMenu->addAction(m_coordAction);
-    m_contextMenu->addSeparator();
-    m_contextMenu->addAction(m_addMarkerAction);
-    m_contextMenu->addAction(m_deleteMarkerAction);
-    m_contextMenu->addAction(m_setMarkerLabelAction);
-    m_contextMenu->addSeparator();
-    m_contextMenu->addAction(m_centerMapAction);
-    m_contextMenu->addAction(m_zoomInHereMapAction);
-    m_contextMenu->addAction(m_zoomOutHereMapAction);
-    m_contextMenu->addSeparator();
-    m_contextMenu->addAction(m_copyCoordinatesAction);
-    m_contextMenu->addAction(m_copyLatitudeAction);
-    m_contextMenu->addAction(m_copyLongitudeAction);
 }
 
 SlippyMapWidget::~SlippyMapWidget()
@@ -261,6 +249,24 @@ void SlippyMapWidget::addLineSet(SlippyMapWidget::LineSet *lineSet)
 
     m_lineSetPaths[lineSet] = lines;
     m_lineSets.append(lineSet);
+}
+
+void SlippyMapWidget::removeLineSet(SlippyMapWidget::LineSet *lineSet)
+{
+    m_lineSets.removeOne(lineSet);
+    m_lineSetPaths.remove(lineSet);
+}
+
+void SlippyMapWidget::addContextMenuAction(QAction *action)
+{
+    m_contextMenuActions.append(action);
+    setupContextMenu();
+}
+
+void SlippyMapWidget::removeContextMenuAction(QAction *action)
+{
+    m_contextMenuActions.removeOne(action);
+    setupContextMenu();
 }
 
 void SlippyMapWidget::setCenter(double latitude, double longitude)
@@ -656,13 +662,7 @@ void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
         remap();
     }
 
-    double width_deg = deg_per_pixel * width();
-    double height_deg = deg_per_pixel_y * height();
-    double left_deg = m_lon - (width_deg / 2);
-    double top_deg = m_lat - (height_deg / 2);
-    double xpos = left_deg + (deg_per_pixel * event->pos().x());
-    double ypos = top_deg - (deg_per_pixel_y * event->pos().y());
-    emit cursorPositionChanged(widgetY2lat(event->pos().y()), xpos);
+    emit cursorPositionChanged(widgetY2lat(event->pos().y()), widgetX2long(event->pos().x()));
 }
 
 void SlippyMapWidget::enterEvent(QEvent *event)
@@ -729,6 +729,7 @@ void SlippyMapWidget::contextMenuEvent(QContextMenuEvent *event)
     }
 
     update();
+    emit contextMenuActivated(widgetY2lat(event->y()), widgetX2long(event->x()));
     m_contextMenu->exec(event->globalPos());
 }
 
@@ -925,5 +926,30 @@ void SlippyMapWidget::remap()
             delete todelete;
         }
 
+    }
+}
+
+void SlippyMapWidget::setupContextMenu()
+{
+    m_contextMenu->clear();
+    m_contextMenu->addAction(m_coordAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_addMarkerAction);
+    m_contextMenu->addAction(m_deleteMarkerAction);
+    m_contextMenu->addAction(m_setMarkerLabelAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_centerMapAction);
+    m_contextMenu->addAction(m_zoomInHereMapAction);
+    m_contextMenu->addAction(m_zoomOutHereMapAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_copyCoordinatesAction);
+    m_contextMenu->addAction(m_copyLatitudeAction);
+    m_contextMenu->addAction(m_copyLongitudeAction);
+
+    if (m_contextMenuActions.length() > 0) {
+        m_contextMenu->addSeparator();
+        for (QAction *action : m_contextMenuActions) {
+            m_contextMenu->addAction(action);
+        }
     }
 }

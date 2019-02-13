@@ -18,12 +18,40 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QAction>
+#include <QSettings>
+#include <QTimer>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    connect(ui->splitter, &QSplitter::splitterMoved, this, &MainWindow::onSplitterMoved);
+
+    QSettings settings;
+
+    if (settings.contains("view/sidebarWidth")) {
+        double ratio = settings.value("view/sidebarWidth").toDouble();
+        int sidebar_width = (int)((double)width() * ratio);
+        int map_width = width() - sidebar_width;
+        QList<int> widths;
+        widths.append(sidebar_width);
+        widths.append(map_width);
+        ui->splitter->setSizes(widths);
+    }
+
+    if (settings.contains("view/sidebarVisible")) {
+        ui->toolBox->setVisible(settings.value("view/sidebarVisible").toBool());
+        ui->actionViewSidebar->setChecked(true);
+    }
+
+    if (settings.contains("view/windowWidth") && settings.contains("view/windowHeight")) {
+        int width = settings.value("view/windowWidth").toInt();
+        int height = settings.value("view/windowHeight").toInt();
+        resize(width, height);
+    }
+
     connect(ui->slippyMap, &SlippyMapWidget::centerChanged, this, &MainWindow::onSlippyMapCenterChanged);
     connect(ui->slippyMap, &SlippyMapWidget::zoomLevelChanged, this, &MainWindow::onSlippyMapZoomLevelChanged);
     connect(ui->slippyMap, &SlippyMapWidget::tileRequestInitiated, this, &MainWindow::onSlippyMapTileRequestStarted);
@@ -34,21 +62,47 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->slippyMap, &SlippyMapWidget::markerAdded, this, &MainWindow::onSlippyMapMarkerAdded);
     connect(ui->slippyMap, &SlippyMapWidget::markerDeleted, this, &MainWindow::onSlippyMapMarkerDeleted);
     connect(ui->slippyMap, &SlippyMapWidget::markerUpdated, this, &MainWindow::onSlippyMapMarkerUpdated);
+    connect(ui->slippyMap, &SlippyMapWidget::contextMenuActivated, this, &MainWindow::onSlippyMapContextMenuActivated);
 
-    m_statusBarPositionLabel = new QLabel(this);
-    m_statusBarStatusLabel = new QLabel(this);
+    m_statusBarPositionLabel = new QLabel();
+    m_statusBarStatusLabel = new QLabel();
 
     statusBar()->addPermanentWidget(m_statusBarPositionLabel);
-    ui->toolBox->hide();
     ui->slippyMap->setFocus(Qt::OtherFocusReason);
 
     QPalette systemPalette = QGuiApplication::palette();
     m_directionLineColor = systemPalette.highlight().color();
+
+    m_directionsFromHereAction = new QAction();
+    m_directionsFromHereAction->setText("Directions From Here");
+    m_directionsToHereAction = new QAction();
+    m_directionsToHereAction->setText("Directions To Here");
+
+    ui->slippyMap->addContextMenuAction(m_directionsFromHereAction);
+    ui->slippyMap->addContextMenuAction(m_directionsToHereAction);
+    connect(m_directionsFromHereAction, &QAction::triggered, this, &MainWindow::onDirectionsFromHereTriggered);
+    connect(m_directionsToHereAction, &QAction::triggered, this, &MainWindow::onDirectionsToHereTriggered);
+
+    m_saveSplitterPosTimer = new QTimer();
+    m_saveSplitterPosTimer->setSingleShot(true);
+    m_saveSplitterPosTimer->setInterval(100);
+    connect(m_saveSplitterPosTimer, &QTimer::timeout, this, &MainWindow::onSplitterPosTimerTimeout);
+
+    m_saveWindowSizeTimer = new QTimer();
+    m_saveWindowSizeTimer->setSingleShot(true);
+    m_saveWindowSizeTimer->setInterval(100);
+    connect(m_saveWindowSizeTimer, &QTimer::timeout, this, &MainWindow::onWindowSizeTimerTimeout);
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+    m_saveWindowSizeTimer->stop();
+    m_saveWindowSizeTimer->start();
 }
 
 void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
@@ -153,6 +207,51 @@ void MainWindow::onSlippyMapMarkerUpdated(SlippyMapWidget::Marker *marker)
     }
 }
 
+void MainWindow::onSlippyMapContextMenuActivated(double latitude, double longitude)
+{
+    m_slippyContextMenuLocation.setX(longitude);
+    m_slippyContextMenuLocation.setY(latitude);
+}
+
+void MainWindow::onDirectionsToHereTriggered()
+{
+    QString latlon = QString("%1,%2")
+            .arg(m_slippyContextMenuLocation.x())
+            .arg(m_slippyContextMenuLocation.y());
+    ui->lneDirectionsFinish->setText(latlon);
+    ui->lneDirectionsStart->setFocus();
+}
+
+void MainWindow::onDirectionsFromHereTriggered()
+{
+    QString latlon = QString("%1,%2")
+            .arg(m_slippyContextMenuLocation.x())
+            .arg(m_slippyContextMenuLocation.y());
+    ui->lneDirectionsStart->setText(latlon);
+    ui->lneDirectionsFinish->setFocus();
+}
+
+void MainWindow::onSplitterMoved(int pos, int index)
+{
+    m_saveSplitterPosTimer->stop();
+    m_saveSplitterPosTimer->start();
+}
+
+void MainWindow::onSplitterPosTimerTimeout()
+{
+    QSettings settings;
+    QList<int> widths = ui->splitter->sizes();
+    double ratio = (double)widths[0] / (double)width();
+    settings.setValue("view/sidebarWidth", ratio);
+}
+
+void MainWindow::onWindowSizeTimerTimeout()
+{
+    QSettings settings;
+    settings.setValue("view/windowWidth", width());
+    settings.setValue("view/windowHeight", height());
+}
+
 void MainWindow::on_actionNewMarker_triggered()
 {
     SlippyMapWidget::Marker *marker = MarkerDialog::getNewMarker(this, tr("New Marker"));
@@ -164,6 +263,8 @@ void MainWindow::on_actionNewMarker_triggered()
 void MainWindow::on_actionViewSidebar_toggled(bool arg1)
 {
     ui->toolBox->setVisible(arg1);
+    QSettings settings;
+    settings.setValue("view/sidebarVisible", arg1);
 }
 
 void MainWindow::on_actionDebugOpenDirectionsFile_triggered()
@@ -197,6 +298,7 @@ void MainWindow::on_actionDebugOpenDirectionsFile_triggered()
 
                         SlippyMapWidget::LineSet *lineSet = new SlippyMapWidget::LineSet(points, 3, m_directionLineColor);
                         ui->slippyMap->addLineSet(lineSet);
+                        m_currentRouteLineSet = lineSet;
                     }
                     else {
                         qDebug() << "Could not find coordinates object";
@@ -225,6 +327,8 @@ void MainWindow::on_actionDebugOpenDirectionsFile_triggered()
                             item->setSizeHint(itemWidget->sizeHint());
                             ui->lstDirections->addItem(item);
                             ui->lstDirections->setItemWidget(item, itemWidget);
+                            m_currentRouteListItem = item;
+                            m_currentRouteListItemWidget = itemWidget;
                         }
                     }
                     else {
@@ -242,5 +346,17 @@ void MainWindow::on_actionDebugOpenDirectionsFile_triggered()
         else {
             qDebug() << "Unable to open file!";
         }
+    }
+}
+
+void MainWindow::on_actionViewClearRoute_triggered()
+{
+    if (m_currentRouteListItem != nullptr) {
+        ui->slippyMap->removeLineSet(m_currentRouteLineSet);
+        ui->lstDirections->removeItemWidget(m_currentRouteListItem);
+        ui->lstDirections->clear();
+        m_currentRouteLineSet = nullptr;
+        m_currentRouteListItem = nullptr;
+        m_currentRouteListItemWidget = nullptr;
     }
 }

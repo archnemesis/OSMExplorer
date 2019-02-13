@@ -77,13 +77,14 @@ public:
     void setTileServer(QString server);
     QString tileServer();
     QList<Marker*> markerList();
-
     void addMarker(double latitude, double longitude);
     void addMarker(double latitude, double longitude, QString label);
     void addMarker(Marker *marker);
     void deleteMarker(Marker *marker);
-
     void addLineSet(LineSet *lineSet);
+    void removeLineSet(LineSet *lineSet);
+    void addContextMenuAction(QAction *action);
+    void removeContextMenuAction(QAction *action);
 
 public slots:
     void setCenter(double latitude, double longitude);
@@ -128,6 +129,7 @@ signals:
     void markerAdded(Marker *marker);
     void markerDeleted(Marker *marker);
     void markerUpdated(Marker *marker);
+    void contextMenuActivated(double latitude, double longitude);
 
 private:
     class Tile {
@@ -180,6 +182,7 @@ private:
     QRectF boundingBoxLatLon();
 
     void remap();
+    void setupContextMenu();
 
     bool m_dragging = false;
     QPoint m_dragRealStart;
@@ -192,6 +195,8 @@ private:
     int m_minZoom = 0;
     double m_lat;
     double m_lon;
+    bool m_positionSelected = false;
+    QPoint m_selectedPosition;
     QMutex m_tileMutex;
     QNetworkAccessManager *m_net;
     QList<Tile*> *m_tileSet;
@@ -240,6 +245,8 @@ private:
 
     QList<LineSet*> m_lineSets;
     QMap<LineSet*,QVector<QLineF>> m_lineSetPaths;
+
+    QList<QAction*> m_contextMenuActions;
 };
 
 #endif // SLIPPYMAPWIDGET_H
