@@ -27,6 +27,7 @@ private:
     QLabel *m_statusBarPositionLabel;
     QLabel *m_statusBarStatusLabel;
     QMap<SlippyMapWidget::Marker*,QListWidgetItem*> m_markerListItemMap;
+    QColor m_directionLineColor;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);

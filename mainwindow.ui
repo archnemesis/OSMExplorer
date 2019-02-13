@@ -50,8 +50,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>380</width>
-          <height>524</height>
+          <width>383</width>
+          <height>510</height>
          </rect>
         </property>
         <attribute name="label">
@@ -68,8 +68,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>380</width>
-          <height>524</height>
+          <width>383</width>
+          <height>510</height>
          </rect>
         </property>
         <attribute name="label">
@@ -112,7 +112,7 @@
           </layout>
          </item>
          <item>
-          <widget class="QListWidget" name="listWidget"/>
+          <widget class="QListWidget" name="lstDirections"/>
          </item>
         </layout>
        </widget>
@@ -135,7 +135,7 @@
      <x>0</x>
      <y>0</y>
      <width>939</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

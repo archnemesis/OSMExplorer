@@ -3,8 +3,11 @@
 #include "slippymapwidget.h"
 #include "markerdialog.h"
 #include "markerlistitemwidget.h"
+#include "directionlistitemwidget.h"
 
 #include <math.h>
+#include <QGuiApplication>
+#include <QPalette>
 #include <QDebug>
 #include <QComboBox>
 #include <QMessageBox>
@@ -38,6 +41,9 @@ MainWindow::MainWindow(QWidget *parent) :
     statusBar()->addPermanentWidget(m_statusBarPositionLabel);
     ui->toolBox->hide();
     ui->slippyMap->setFocus(Qt::OtherFocusReason);
+
+    QPalette systemPalette = QGuiApplication::palette();
+    m_directionLineColor = systemPalette.highlight().color();
 }
 
 MainWindow::~MainWindow()
@@ -187,12 +193,9 @@ void MainWindow::on_actionDebugOpenDirectionsFile_triggered()
                         for (int i = 0; i < coordinates.count(); i++) {
                             QJsonArray tuple = coordinates[i].toArray();
                             points->append(QPointF(tuple[0].toDouble(), tuple[1].toDouble()));
-                            qDebug() << "Got Point:" << QPointF(tuple[0].toDouble(), tuple[1].toDouble());
                         }
 
-                        qDebug() << "Loaded" << points->size() << "points.";
-
-                        SlippyMapWidget::LineSet *lineSet = new SlippyMapWidget::LineSet(points, 3);
+                        SlippyMapWidget::LineSet *lineSet = new SlippyMapWidget::LineSet(points, 3, m_directionLineColor);
                         ui->slippyMap->addLineSet(lineSet);
                     }
                     else {
@@ -201,6 +204,35 @@ void MainWindow::on_actionDebugOpenDirectionsFile_triggered()
                 }
                 else {
                     qDebug() << "Could not find geometry object";
+                }
+
+                if (routes.contains("segments") && routes["segments"].isArray()) {
+                    QJsonArray segments = routes["segments"].toArray();
+                    QJsonObject segment = segments[0].toObject();
+                    if (segment.contains("steps") && segment["steps"].isArray()) {
+                        QJsonArray steps = segment["steps"].toArray();
+
+                        for (int i = 0; i < steps.count(); i++) {
+                            QJsonObject step = steps[i].toObject();
+                            double distance = step["distance"].toDouble();
+                            double duration = step["duration"].toDouble();
+                            QString instruction = step["instruction"].toString();
+                            DirectionListItemWidget *itemWidget = new DirectionListItemWidget();
+                            itemWidget->setInstruction(instruction);
+                            itemWidget->setDistance(distance);
+                            itemWidget->setDuration(duration);
+                            QListWidgetItem *item = new QListWidgetItem();
+                            item->setSizeHint(itemWidget->sizeHint());
+                            ui->lstDirections->addItem(item);
+                            ui->lstDirections->setItemWidget(item, itemWidget);
+                        }
+                    }
+                    else {
+                        qDebug() << "Could not find steps array";
+                    }
+                }
+                else {
+                    qDebug() << "Could not find segments object";
                 }
             }
             else {
