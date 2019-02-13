@@ -187,6 +187,7 @@ void MainWindow::on_actionDebugOpenDirectionsFile_triggered()
                         for (int i = 0; i < coordinates.count(); i++) {
                             QJsonArray tuple = coordinates[i].toArray();
                             points->append(QPointF(tuple[0].toDouble(), tuple[1].toDouble()));
+                            qDebug() << "Got Point:" << QPointF(tuple[0].toDouble(), tuple[1].toDouble());
                         }
 
                         qDebug() << "Loaded" << points->size() << "points.";

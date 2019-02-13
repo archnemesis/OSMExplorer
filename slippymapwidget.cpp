@@ -251,6 +251,15 @@ void SlippyMapWidget::deleteMarker(SlippyMapWidget::Marker *marker)
 
 void SlippyMapWidget::addLineSet(SlippyMapWidget::LineSet *lineSet)
 {
+    QVector<QLineF> lines;
+
+    for (int i = 0; i < (lineSet->segments()->length() - 1); i++) {
+        QPointF p1 = lineSet->segments()->at(i);
+        QPointF p2 = lineSet->segments()->at(i+1);
+        lines.append(QLineF(p1, p2));
+    }
+
+    m_lineSetPaths[lineSet] = lines;
     m_lineSets.append(lineSet);
 }
 
@@ -501,26 +510,29 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
 
     if (m_lineSets.length() > 0) {
         for (LineSet *lineSet : m_lineSets) {
-            qDebug() << "Drawing lineSet";
             QPen linePen;
             linePen.setStyle(Qt::SolidLine);
             linePen.setColor(lineSet->color());
             linePen.setWidth(lineSet->width());
             painter.setPen(linePen);
+            QBrush lineBrush;
+            lineBrush.setStyle(Qt::NoBrush);
+            painter.setBrush(lineBrush);
 
-            for (int i = 0; i < (lineSet->segments()->size() - 1); i++) {
-                qDebug() << "Raw line from" << lineSet->segments()->at(i) << "to" << lineSet->segments()->at(i+1);
-                QPoint p1(
-                    long2widgetX(lineSet->segments()->at(i).x()),
-                    lat2widgety(lineSet->segments()->at(i).y())
-                    );
-                QPoint p2(
-                    long2widgetX(lineSet->segments()->at(i+1).x()),
-                    lat2widgety(lineSet->segments()->at(i+1).y())
-                    );
-                painter.drawLine(p1, p2);
-                qDebug() << "Drawing line from" << p1 << "to" << p2;
-            }
+            QLineF seg1 = m_lineSetPaths[lineSet].at(0);
+            qDebug() << "Lat/Long Raw:" << seg1;
+            seg1.setP1(QPointF(seg1.p1().x() - boundingBoxLatLon().x(), seg1.p1().y() - boundingBoxLatLon().y()));
+            seg1.setP2(QPointF(seg1.p2().x() - boundingBoxLatLon().x(), seg1.p2().y() - boundingBoxLatLon().y()));
+            qDebug() << "After translate:" << seg1;
+            seg1.setP1(QPointF(seg1.p1().x() * (1.0 / degPerPixelX()), seg1.p1().y() * (1.0 / degPerPixelY())));
+            seg1.setP2(QPointF(seg1.p2().x() * (1.0 / degPerPixelX()), seg1.p2().y() * (1.0 / degPerPixelY())));
+            qDebug() << "After scale:" << seg1;
+
+            painter.save();
+            painter.translate(-(boundingBoxLatLon().x()), -(boundingBoxLatLon().y()));
+            painter.scale(1.0 / degPerPixelX(), 1.0 / degPerPixelY());
+            painter.drawLines(m_lineSetPaths[lineSet]);
+            painter.restore();
         }
     }
 
@@ -763,6 +775,29 @@ double SlippyMapWidget::widgetY2lat(qint32 y)
     double top_deg = m_lat + (height_deg / 2);
     double ypos = top_deg - (deg_per_pixel_y * y);
     return ypos;
+}
+
+double SlippyMapWidget::degPerPixelX()
+{
+    return (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
+}
+
+double SlippyMapWidget::degPerPixelY()
+{
+    double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
+    double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
+    return deg_per_pixel / scale_factor;
+}
+
+QRectF SlippyMapWidget::boundingBoxLatLon()
+{
+    double width_deg = degPerPixelX() * width();
+    double left_deg = m_lon - (width_deg / 2);
+
+    double height_deg = degPerPixelY() * height();
+    double top_deg = m_lat + (height_deg / 2);
+
+    return QRectF(left_deg, top_deg, width_deg, height_deg);
 }
 
 void SlippyMapWidget::remap()

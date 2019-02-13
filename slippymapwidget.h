@@ -175,6 +175,9 @@ private:
     qint32 lat2widgety(double lat);
     double widgetX2long(qint32 x);
     double widgetY2lat(qint32 y);
+    double degPerPixelX();
+    double degPerPixelY();
+    QRectF boundingBoxLatLon();
 
     void remap();
 
@@ -236,6 +239,7 @@ private:
     QClipboard *m_clipboard;
 
     QList<LineSet*> m_lineSets;
+    QMap<LineSet*,QVector<QLineF>> m_lineSetPaths;
 };
 
 #endif // SLIPPYMAPWIDGET_H
