@@ -516,23 +516,39 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
             linePen.setWidth(lineSet->width());
             painter.setPen(linePen);
             QBrush lineBrush;
-            lineBrush.setStyle(Qt::NoBrush);
+            lineBrush.setStyle(Qt::SolidPattern);
+            lineBrush.setColor(QColor(Qt::black));
             painter.setBrush(lineBrush);
 
-            QLineF seg1 = m_lineSetPaths[lineSet].at(0);
-            qDebug() << "Lat/Long Raw:" << seg1;
-            seg1.setP1(QPointF(seg1.p1().x() - boundingBoxLatLon().x(), seg1.p1().y() - boundingBoxLatLon().y()));
-            seg1.setP2(QPointF(seg1.p2().x() - boundingBoxLatLon().x(), seg1.p2().y() - boundingBoxLatLon().y()));
-            qDebug() << "After translate:" << seg1;
-            seg1.setP1(QPointF(seg1.p1().x() * (1.0 / degPerPixelX()), seg1.p1().y() * (1.0 / degPerPixelY())));
-            seg1.setP2(QPointF(seg1.p2().x() * (1.0 / degPerPixelX()), seg1.p2().y() * (1.0 / degPerPixelY())));
-            qDebug() << "After scale:" << seg1;
+//            QLineF seg1 = m_lineSetPaths[lineSet].at(0);
+//            qDebug() << "Lat/Long Raw:" << seg1;
+//            seg1.setP1(QPointF(seg1.p1().x() - boundingBoxLatLon().x(), seg1.p1().y() - boundingBoxLatLon().y()));
+//            seg1.setP2(QPointF(seg1.p2().x() - boundingBoxLatLon().x(), seg1.p2().y() - boundingBoxLatLon().y()));
+//            qDebug() << "After translate:" << seg1;
+//            seg1.setP1(QPointF(seg1.p1().x() * (1.0 / degPerPixelX()), seg1.p1().y() * (-1.0 / degPerPixelY())));
+//            seg1.setP2(QPointF(seg1.p2().x() * (1.0 / degPerPixelX()), seg1.p2().y() * (-1.0 / degPerPixelY())));
+//            qDebug() << "After scale:" << seg1;
 
-            painter.save();
-            painter.translate(-(boundingBoxLatLon().x()), -(boundingBoxLatLon().y()));
-            painter.scale(1.0 / degPerPixelX(), 1.0 / degPerPixelY());
-            painter.drawLines(m_lineSetPaths[lineSet]);
-            painter.restore();
+//            painter.drawEllipse(seg1.p1(), 10, 10);
+
+//            painter.scale(1.0/degPerPixelX(), -1.0/degPerPixelY());
+//            painter.translate((-boundingBoxLatLon().x()/degPerPixelX()), (boundingBoxLatLon().y()/degPerPixelY()) + height());
+////            painter.translate(-(boundingBoxLatLon().x()), -(boundingBoxLatLon().y()));
+////            painter.scale(-1.0 / degPerPixelX(), 1.0 / degPerPixelY());
+////            painter.translate(0, -height());
+//            painter.drawLines(m_lineSetPaths[lineSet]);
+//            painter.resetTransform();
+
+            for (int i = 0; i < m_lineSetPaths[lineSet].size(); i++) {
+                QLineF line = m_lineSetPaths[lineSet].at(i);
+                QPointF p1 = line.p1();
+                QPointF p2 = line.p2();
+                p1.setX(long2widgetX(p1.x()));
+                p1.setY(lat2widgety(p1.y()));
+                p2.setX(long2widgetX(p2.x()));
+                p2.setY(lat2widgety(p2.y()));
+                painter.drawLine(p1, p2);
+            }
         }
     }
 

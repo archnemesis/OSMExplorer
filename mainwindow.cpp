@@ -183,7 +183,7 @@ void MainWindow::on_actionDebugOpenDirectionsFile_triggered()
                     QJsonObject geometry = routes["geometry"].toObject();
                     if (geometry.contains("coordinates") && geometry["coordinates"].isArray()) {
                         QJsonArray coordinates = geometry["coordinates"].toArray();
-                        QVector<QPointF> *points = new QVector<QPointF>(coordinates.count());
+                        QVector<QPointF> *points = new QVector<QPointF>();
                         for (int i = 0; i < coordinates.count(); i++) {
                             QJsonArray tuple = coordinates[i].toArray();
                             points->append(QPointF(tuple[0].toDouble(), tuple[1].toDouble()));
@@ -192,7 +192,7 @@ void MainWindow::on_actionDebugOpenDirectionsFile_triggered()
 
                         qDebug() << "Loaded" << points->size() << "points.";
 
-                        SlippyMapWidget::LineSet *lineSet = new SlippyMapWidget::LineSet(points);
+                        SlippyMapWidget::LineSet *lineSet = new SlippyMapWidget::LineSet(points, 3);
                         ui->slippyMap->addLineSet(lineSet);
                     }
                     else {
