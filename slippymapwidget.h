@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QPoint>
+#include <QPointF>
 #include <QMap>
 #include <QMutex>
 #include <QBrush>
@@ -22,6 +23,7 @@ class QLineEdit;
 class QCompleter;
 class QMenu;
 class QAction;
+class QClipboard;
 
 class SlippyMapWidget : public QWidget
 {
@@ -53,8 +55,24 @@ public:
         QColor m_color;
     };
 
+    class LineSet {
+    public:
+        LineSet(QVector<QPointF> *segments, int width = 1, QColor color = Qt::black) {
+            m_segments = segments;
+            m_width = width;
+            m_color = color;
+        }
+        QVector<QPointF> *segments() { return m_segments; }
+        int width() { return m_width; }
+        QColor color() { return m_color; }
+    private:
+        QVector<QPointF> *m_segments;
+        int m_width;
+        QColor m_color;
+    };
+
     explicit SlippyMapWidget(QWidget *parent = nullptr);
-    virtual ~SlippyMapWidget();
+    virtual ~SlippyMapWidget() override;
     static QString latLonToString(double lat, double lon);
     void setTileServer(QString server);
     QString tileServer();
@@ -64,6 +82,8 @@ public:
     void addMarker(double latitude, double longitude, QString label);
     void addMarker(Marker *marker);
     void deleteMarker(Marker *marker);
+
+    void addLineSet(LineSet *lineSet);
 
 public slots:
     void setCenter(double latitude, double longitude);
@@ -80,6 +100,9 @@ protected slots:
     void centerMapActionTriggered();
     void zoomInHereActionTriggered();
     void zoomOutHereActionTriggered();
+    void copyCoordinatesActionTriggered();
+    void copyLatitudeActionTriggered();
+    void copyLongitudeActionTriggered();
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -205,7 +228,14 @@ private:
     QAction *m_centerMapAction;
     QAction *m_zoomInHereMapAction;
     QAction *m_zoomOutHereMapAction;
+    QAction *m_copyCoordinatesAction;
+    QAction *m_copyLatitudeAction;
+    QAction *m_copyLongitudeAction;
     QPoint m_contextMenuLocation;
+
+    QClipboard *m_clipboard;
+
+    QList<LineSet*> m_lineSets;
 };
 
 #endif // SLIPPYMAPWIDGET_H

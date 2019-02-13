@@ -31,6 +31,8 @@
 #include <QPainterPath>
 #include <QFontMetrics>
 #include <QInputDialog>
+#include <QClipboard>
+#include <QApplication>
 
 SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
 {
@@ -40,6 +42,7 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_net = new QNetworkAccessManager(this);
     m_zoomLevel = 14;
     m_tileSet = new QList<Tile*>();
+    m_clipboard = QApplication::clipboard();
 
     m_lat = 45.541460;
     m_lon = -122.999700;
@@ -138,6 +141,12 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_zoomInHereMapAction->setText(tr("Zoom In"));
     m_zoomOutHereMapAction = new QAction();
     m_zoomOutHereMapAction->setText(tr("Zoom Out"));
+    m_copyCoordinatesAction = new QAction();
+    m_copyCoordinatesAction->setText(tr("Copy Coordinates"));
+    m_copyLatitudeAction = new QAction();
+    m_copyLatitudeAction->setText(tr("Copy Latitude"));
+    m_copyLongitudeAction = new QAction();
+    m_copyLongitudeAction->setText(tr("Copy Longitude"));
 
     connect(m_addMarkerAction, &QAction::triggered, this, &SlippyMapWidget::addMarkerActionTriggered);
     connect(m_deleteMarkerAction, &QAction::triggered, this, &SlippyMapWidget::deleteMarkerActionTriggered);
@@ -145,6 +154,9 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     connect(m_zoomInHereMapAction, &QAction::triggered, this, &SlippyMapWidget::zoomInHereActionTriggered);
     connect(m_zoomOutHereMapAction, &QAction::triggered, this, &SlippyMapWidget::zoomOutHereActionTriggered);
     connect(m_centerMapAction, &QAction::triggered, this, &SlippyMapWidget::centerMapActionTriggered);
+    connect(m_copyCoordinatesAction, &QAction::triggered, this, &SlippyMapWidget::copyCoordinatesActionTriggered);
+    connect(m_copyLatitudeAction, &QAction::triggered, this, &SlippyMapWidget::copyLatitudeActionTriggered);
+    connect(m_copyLongitudeAction, &QAction::triggered, this, &SlippyMapWidget::copyLongitudeActionTriggered);
 
     m_contextMenu = new QMenu(this);
     m_contextMenu->addAction(m_coordAction);
@@ -156,6 +168,10 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_contextMenu->addAction(m_centerMapAction);
     m_contextMenu->addAction(m_zoomInHereMapAction);
     m_contextMenu->addAction(m_zoomOutHereMapAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_copyCoordinatesAction);
+    m_contextMenu->addAction(m_copyLatitudeAction);
+    m_contextMenu->addAction(m_copyLongitudeAction);
 }
 
 SlippyMapWidget::~SlippyMapWidget()
@@ -183,9 +199,9 @@ QString SlippyMapWidget::latLonToString(double lat, double lon)
     }
 
     QString ret = QString("%1 %2 %3 %4")
-            .arg(lat, 8, 'f', 4, '0')
+            .arg(fabs(lat), 8, 'f', 4, '0')
             .arg(dir_lat)
-            .arg(lon, 8, 'f', 4, '0')
+            .arg(fabs(lon), 8, 'f', 4, '0')
             .arg(dir_lon);
 
     return ret;
@@ -231,6 +247,11 @@ void SlippyMapWidget::addMarker(SlippyMapWidget::Marker *marker)
 void SlippyMapWidget::deleteMarker(SlippyMapWidget::Marker *marker)
 {
     m_markers.removeOne(marker);
+}
+
+void SlippyMapWidget::addLineSet(SlippyMapWidget::LineSet *lineSet)
+{
+    m_lineSets.append(lineSet);
 }
 
 void SlippyMapWidget::setCenter(double latitude, double longitude)
@@ -403,6 +424,28 @@ void SlippyMapWidget::zoomOutHereActionTriggered()
     decreaseZoomLevel();
 }
 
+void SlippyMapWidget::copyCoordinatesActionTriggered()
+{
+    double lat = widgetY2lat(m_contextMenuLocation.y());
+    double lon = widgetX2long(m_contextMenuLocation.x());
+    QString str = latLonToString(lat, lon);
+    m_clipboard->setText(str);
+}
+
+void SlippyMapWidget::copyLatitudeActionTriggered()
+{
+    double lat = widgetY2lat(m_contextMenuLocation.y());
+    QString str = QString("%1").arg(lat, 8, 'f', 4, '0');
+    m_clipboard->setText(str);
+}
+
+void SlippyMapWidget::copyLongitudeActionTriggered()
+{
+    double lon = widgetX2long(m_contextMenuLocation.x());
+    QString str = QString("%1").arg(lon, 8, 'f', 4, '0');
+    m_clipboard->setText(str);
+}
+
 void SlippyMapWidget::paintEvent(QPaintEvent *event)
 {
     (void)event;
@@ -456,6 +499,27 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
     m_searchBar->setMinimumWidth(searchBarWidth);
     m_searchBar->setMaximumWidth(searchBarWidth);
 
+    if (m_lineSets.length() > 0) {
+        for (LineSet *lineSet : m_lineSets) {
+            QPen linePen;
+            linePen.setColor(lineSet->color());
+            linePen.setWidth(lineSet->width());
+            painter.setPen(linePen);
+
+            for (int i = 0; i < (lineSet->segments()->size() - 1); i++) {
+                QPoint p1(
+                    long2widgetX(lineSet->segments()->at(i).x()),
+                    lat2widgety(lineSet->segments()->at(i).y())
+                    );
+                QPoint p2(
+                    long2widgetX(lineSet->segments()->at(i+1).x()),
+                    lat2widgety(lineSet->segments()->at(i+1).y())
+                    );
+                painter.drawLine(p1, p2);
+            }
+        }
+    }
+
     if (m_markers.length() > 0) {
         double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
         double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
@@ -505,6 +569,7 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
 
 void SlippyMapWidget::mousePressEvent(QMouseEvent *event)
 {
+    setFocus(Qt::MouseFocusReason);
     m_dragging = true;
     m_dragStart = event->pos();
     m_dragRealStart = event->pos();
