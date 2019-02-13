@@ -9,6 +9,11 @@
 #include <QMessageBox>
 #include <QLabel>
 #include <QListWidgetItem>
+#include <QFileDialog>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -152,4 +157,33 @@ void MainWindow::on_actionNewMarker_triggered()
 void MainWindow::on_actionViewSidebar_toggled(bool arg1)
 {
     ui->toolBox->setVisible(arg1);
+}
+
+void MainWindow::on_actionDebugOpenDirectionsFile_triggered()
+{
+    QString fileName = QFileDialog::getOpenFileName(
+                this,
+                tr("Open Directions JSON"),
+                tr("Select a file in GeoJSON format."),
+                tr("JSON Files (*.json)"));
+
+    if (fileName.length() > 0) {
+        QFile fp(fileName);
+        if (fp.exists() && fp.isReadable() && fp.open(QIODevice::ReadWrite)) {
+            QByteArray data = fp.readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            QJsonObject obj = doc.object();
+
+            if (obj.contains("routes") && obj["routes"].isObject()) {
+                QJsonObject routes = obj["routes"].toObject();
+                if (routes.contains("geometry") && routes["geometry"].isObject()) {
+                    QJsonObject geometry = obj["geometry"].toObject();
+                    if (geometry.contains("coordinates") && geometry["coordinates"].isArray()) {
+                        QJsonArray coordinates = geometry["coordinates"].toArray();
+                    }
+                }
+            }
+
+        }
+    }
 }
