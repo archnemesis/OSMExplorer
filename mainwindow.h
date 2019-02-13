@@ -42,6 +42,7 @@ protected slots:
 private slots:
     void on_actionNewMarker_triggered();
     void on_actionViewSidebar_toggled(bool arg1);
+    void on_actionDebugOpenDirectionsFile_triggered();
 };
 
 #endif // MAINWINDOW_H

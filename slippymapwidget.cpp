@@ -501,12 +501,15 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
 
     if (m_lineSets.length() > 0) {
         for (LineSet *lineSet : m_lineSets) {
+            qDebug() << "Drawing lineSet";
             QPen linePen;
+            linePen.setStyle(Qt::SolidLine);
             linePen.setColor(lineSet->color());
             linePen.setWidth(lineSet->width());
             painter.setPen(linePen);
 
             for (int i = 0; i < (lineSet->segments()->size() - 1); i++) {
+                qDebug() << "Raw line from" << lineSet->segments()->at(i) << "to" << lineSet->segments()->at(i+1);
                 QPoint p1(
                     long2widgetX(lineSet->segments()->at(i).x()),
                     lat2widgety(lineSet->segments()->at(i).y())
@@ -516,6 +519,7 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
                     lat2widgety(lineSet->segments()->at(i+1).y())
                     );
                 painter.drawLine(p1, p2);
+                qDebug() << "Drawing line from" << p1 << "to" << p2;
             }
         }
     }

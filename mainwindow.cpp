@@ -5,6 +5,7 @@
 #include "markerlistitemwidget.h"
 
 #include <math.h>
+#include <QDebug>
 #include <QComboBox>
 #include <QMessageBox>
 #include <QLabel>
@@ -164,26 +165,49 @@ void MainWindow::on_actionDebugOpenDirectionsFile_triggered()
     QString fileName = QFileDialog::getOpenFileName(
                 this,
                 tr("Open Directions JSON"),
-                tr("Select a file in GeoJSON format."),
+                "",
                 tr("JSON Files (*.json)"));
 
     if (fileName.length() > 0) {
         QFile fp(fileName);
-        if (fp.exists() && fp.isReadable() && fp.open(QIODevice::ReadWrite)) {
+        qDebug() << "Trying file" << fileName;
+        if (fp.open(QIODevice::ReadOnly)) {
             QByteArray data = fp.readAll();
             QJsonDocument doc = QJsonDocument::fromJson(data);
             QJsonObject obj = doc.object();
 
-            if (obj.contains("routes") && obj["routes"].isObject()) {
-                QJsonObject routes = obj["routes"].toObject();
+            if (obj.contains("routes") && obj["routes"].isArray()) {
+                QJsonArray routesArray = obj["routes"].toArray();
+                QJsonObject routes = routesArray[0].toObject();
                 if (routes.contains("geometry") && routes["geometry"].isObject()) {
-                    QJsonObject geometry = obj["geometry"].toObject();
+                    QJsonObject geometry = routes["geometry"].toObject();
                     if (geometry.contains("coordinates") && geometry["coordinates"].isArray()) {
                         QJsonArray coordinates = geometry["coordinates"].toArray();
+                        QVector<QPointF> *points = new QVector<QPointF>(coordinates.count());
+                        for (int i = 0; i < coordinates.count(); i++) {
+                            QJsonArray tuple = coordinates[i].toArray();
+                            points->append(QPointF(tuple[0].toDouble(), tuple[1].toDouble()));
+                        }
+
+                        qDebug() << "Loaded" << points->size() << "points.";
+
+                        SlippyMapWidget::LineSet *lineSet = new SlippyMapWidget::LineSet(points);
+                        ui->slippyMap->addLineSet(lineSet);
+                    }
+                    else {
+                        qDebug() << "Could not find coordinates object";
                     }
                 }
+                else {
+                    qDebug() << "Could not find geometry object";
+                }
             }
-
+            else {
+                qDebug() << "Could not find routes object!";
+            }
+        }
+        else {
+            qDebug() << "Unable to open file!";
         }
     }
 }

@@ -50,8 +50,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>383</width>
-          <height>510</height>
+          <width>380</width>
+          <height>524</height>
          </rect>
         </property>
         <attribute name="label">
@@ -68,8 +68,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>383</width>
-          <height>510</height>
+          <width>380</width>
+          <height>524</height>
          </rect>
         </property>
         <attribute name="label">
@@ -135,7 +135,7 @@
      <x>0</x>
      <y>0</y>
      <width>939</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -170,10 +170,17 @@
     </property>
     <addaction name="actionViewSidebar"/>
    </widget>
+   <widget class="QMenu" name="menuDebug">
+    <property name="title">
+     <string>Debug</string>
+    </property>
+    <addaction name="actionDebugOpenDirectionsFile"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuMarker"/>
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
+   <addaction name="menuDebug"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionExit">
@@ -227,6 +234,11 @@
    </property>
    <property name="text">
     <string>Sidebar</string>
+   </property>
+  </action>
+  <action name="actionDebugOpenDirectionsFile">
+   <property name="text">
+    <string>Open Directions File...</string>
    </property>
   </action>
  </widget>
