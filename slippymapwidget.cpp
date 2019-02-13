@@ -531,12 +531,12 @@ void SlippyMapWidget::mouseReleaseEvent(QMouseEvent *event)
                 return;
             }
         }
-    }
 
-    if (m_activeMarker != nullptr) {
-        emit markerDeactivated(m_activeMarker);
-        m_activeMarker = nullptr;
-        update();
+        if (m_activeMarker != nullptr) {
+            emit markerDeactivated(m_activeMarker);
+            m_activeMarker = nullptr;
+            update();
+        }
     }
 }
 

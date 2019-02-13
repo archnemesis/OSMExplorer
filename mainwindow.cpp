@@ -30,6 +30,8 @@ MainWindow::MainWindow(QWidget *parent) :
     m_statusBarStatusLabel = new QLabel(this);
 
     statusBar()->addPermanentWidget(m_statusBarPositionLabel);
+    ui->toolBox->hide();
+    ui->slippyMap->setFocus(Qt::OtherFocusReason);
 }
 
 MainWindow::~MainWindow()
