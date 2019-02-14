@@ -310,14 +310,17 @@ void MainWindow::onNetworkRequestFinished(QNetworkReply *reply)
                     double distance = step["distance"].toDouble();
                     double duration = step["duration"].toDouble();
                     QString instruction = step["instruction"].toString();
+
                     DirectionListItemWidget *itemWidget = new DirectionListItemWidget();
                     itemWidget->setInstruction(instruction);
                     itemWidget->setDistance(distance);
                     itemWidget->setDuration(duration);
+
                     QListWidgetItem *item = new QListWidgetItem();
                     item->setSizeHint(itemWidget->sizeHint());
                     ui->lstDirections->addItem(item);
                     ui->lstDirections->setItemWidget(item, itemWidget);
+
                     m_currentRouteListItem = item;
                     m_currentRouteListItemWidget = itemWidget;
                 }
@@ -372,88 +375,6 @@ void MainWindow::on_actionViewSidebar_toggled(bool arg1)
     settings.setValue("view/sidebarVisible", arg1);
 }
 
-void MainWindow::on_actionDebugOpenDirectionsFile_triggered()
-{
-    QString fileName = QFileDialog::getOpenFileName(
-                this,
-                tr("Open Directions JSON"),
-                "",
-                tr("JSON Files (*.json)"));
-
-    if (fileName.length() > 0) {
-        QFile fp(fileName);
-        qDebug() << "Trying file" << fileName;
-        if (fp.open(QIODevice::ReadOnly)) {
-            QByteArray data = fp.readAll();
-            QJsonDocument doc = QJsonDocument::fromJson(data);
-            QJsonObject obj = doc.object();
-
-            if (obj.contains("routes") && obj["routes"].isArray()) {
-                QJsonArray routesArray = obj["routes"].toArray();
-                QJsonObject routes = routesArray[0].toObject();
-                if (routes.contains("geometry") && routes["geometry"].isObject()) {
-                    QJsonObject geometry = routes["geometry"].toObject();
-                    if (geometry.contains("coordinates") && geometry["coordinates"].isArray()) {
-                        QJsonArray coordinates = geometry["coordinates"].toArray();
-                        QVector<QPointF> *points = new QVector<QPointF>();
-                        for (int i = 0; i < coordinates.count(); i++) {
-                            QJsonArray tuple = coordinates[i].toArray();
-                            points->append(QPointF(tuple[0].toDouble(), tuple[1].toDouble()));
-                        }
-
-                        SlippyMapWidget::LineSet *lineSet = new SlippyMapWidget::LineSet(points, 3, m_directionLineColor);
-                        ui->slippyMap->addLineSet(lineSet);
-                        m_currentRouteLineSet = lineSet;
-                    }
-                    else {
-                        qDebug() << "Could not find coordinates object";
-                    }
-                }
-                else {
-                    qDebug() << "Could not find geometry object";
-                }
-
-                if (routes.contains("segments") && routes["segments"].isArray()) {
-                    QJsonArray segments = routes["segments"].toArray();
-                    QJsonObject segment = segments[0].toObject();
-                    if (segment.contains("steps") && segment["steps"].isArray()) {
-                        QJsonArray steps = segment["steps"].toArray();
-
-                        for (int i = 0; i < steps.count(); i++) {
-                            QJsonObject step = steps[i].toObject();
-                            double distance = step["distance"].toDouble();
-                            double duration = step["duration"].toDouble();
-                            QString instruction = step["instruction"].toString();
-                            DirectionListItemWidget *itemWidget = new DirectionListItemWidget();
-                            itemWidget->setInstruction(instruction);
-                            itemWidget->setDistance(distance);
-                            itemWidget->setDuration(duration);
-                            QListWidgetItem *item = new QListWidgetItem();
-                            item->setSizeHint(itemWidget->sizeHint());
-                            ui->lstDirections->addItem(item);
-                            ui->lstDirections->setItemWidget(item, itemWidget);
-                            m_currentRouteListItem = item;
-                            m_currentRouteListItemWidget = itemWidget;
-                        }
-                    }
-                    else {
-                        qDebug() << "Could not find steps array";
-                    }
-                }
-                else {
-                    qDebug() << "Could not find segments object";
-                }
-            }
-            else {
-                qDebug() << "Could not find routes object!";
-            }
-        }
-        else {
-            qDebug() << "Unable to open file!";
-        }
-    }
-}
-
 void MainWindow::on_actionViewClearRoute_triggered()
 {
     if (m_currentRouteListItem != nullptr) {
@@ -481,9 +402,25 @@ void MainWindow::on_btnDirectionsGo_clicked()
 {
     QSettings settings;
 
+    on_actionViewClearRoute_triggered();
+
     if (settings.contains("wayfinding/service")) {
         QString service = settings.value("wayfinding/service").toString();
         if (service == "openrouteservice.org") {
+            QString startLocation = ui->lneDirectionsStart->text();
+            QStringList startLocationParts = startLocation.split(",");
+            double startLongitude = startLocationParts[0].toDouble();
+            double startLatitude = startLocationParts[1].toDouble();
+            QPointF startPoint(startLongitude, startLatitude);
+
+            QString finishLocation = ui->lneDirectionsFinish->text();
+            QStringList finishLocationParts = finishLocation.split(",");
+            double finishLongitude = finishLocationParts[0].toDouble();
+            double finishLatitude = finishLocationParts[1].toDouble();
+            QPointF finishPoint(finishLongitude, finishLatitude);
+
+
+
             QString urlBase = settings.value("wayfinding/openrouteservice/url").toString();
             QString apiKey = settings.value("wayfinding/openrouteservice/apikey").toString();
             QString req = QString("%1?api_key=%2&coordinates=%3|%4&profile=driving-car&geometry_format=geojson")
