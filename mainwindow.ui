@@ -56,8 +56,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>381</width>
-          <height>528</height>
+          <width>688</width>
+          <height>510</height>
          </rect>
         </property>
         <attribute name="label">
@@ -74,8 +74,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>381</width>
-          <height>528</height>
+          <width>688</width>
+          <height>510</height>
          </rect>
         </property>
         <attribute name="label">
@@ -118,6 +118,41 @@
           </layout>
          </item>
          <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <item>
+            <widget class="QComboBox" name="comboBox">
+             <item>
+              <property name="text">
+               <string>Driving (Car)</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Driving (Heavy Vehicle)</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Walking</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Cycling</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton">
+             <property name="text">
+              <string>...</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
           <widget class="QListWidget" name="lstDirections"/>
          </item>
         </layout>
@@ -141,7 +176,7 @@
      <x>0</x>
      <y>0</y>
      <width>939</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

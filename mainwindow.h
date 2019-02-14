@@ -83,7 +83,6 @@ protected slots:
 private slots:
     void on_actionNewMarker_triggered();
     void on_actionViewSidebar_toggled(bool arg1);
-    void on_actionDebugOpenDirectionsFile_triggered();
     void on_actionViewClearRoute_triggered();
     void on_actionFileSettings_triggered();
     void on_btnDirectionsGo_clicked();

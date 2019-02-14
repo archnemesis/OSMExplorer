@@ -211,20 +211,32 @@ QList<SlippyMapWidget::Marker *> SlippyMapWidget::markerList()
     return m_markers;
 }
 
-void SlippyMapWidget::addMarker(double latitude, double longitude)
+SlippyMapWidget::Marker *SlippyMapWidget::addMarker(double latitude, double longitude)
 {
     Marker *marker = new Marker(latitude, longitude);
     m_markers.append(marker);
     update();
     emit markerAdded(marker);
+    return marker;
 }
 
-void SlippyMapWidget::addMarker(double latitude, double longitude, QString label)
+SlippyMapWidget::Marker *SlippyMapWidget::addMarker(double latitude, double longitude, QString label)
 {
     Marker *marker = new Marker(latitude, longitude, label);
     m_markers.append(marker);
     update();
     emit markerAdded(marker);
+    return marker;
+}
+
+SlippyMapWidget::Marker *SlippyMapWidget::addMarker(QPointF location)
+{
+    return addMarker(location.x(), location.y());
+}
+
+SlippyMapWidget::Marker *SlippyMapWidget::addMarker(QPointF location, QString label)
+{
+    return addMarker(location.x(), location.y(), label);
 }
 
 void SlippyMapWidget::addMarker(SlippyMapWidget::Marker *marker)
