@@ -24,6 +24,8 @@
 #include <QSettings>
 #include <QTimer>
 #include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QUrl>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -33,6 +35,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->splitter, &QSplitter::splitterMoved, this, &MainWindow::onSplitterMoved);
 
     m_net = new QNetworkAccessManager();
+    connect(m_net, &QNetworkAccessManager::finished, this, &MainWindow::onNetworkRequestFinished);
 
     QSettings settings;
 
@@ -250,6 +253,19 @@ void MainWindow::onSplitterMoved(int pos, int index)
     m_saveSplitterPosTimer->start();
 }
 
+void MainWindow::onNetworkRequestFinished(QNetworkReply *reply)
+{
+    if (reply->error() != QNetworkReply::NoError) {
+        QMessageBox::critical(
+                    this,
+                    tr("Network Error"),
+                    tr("Failed to get directions from server."));
+        return;
+    }
+
+    QByteArray data = reply->readAll();
+}
+
 void MainWindow::onSplitterPosTimerTimeout()
 {
     QSettings settings;
@@ -406,6 +422,8 @@ void MainWindow::on_btnDirectionsGo_clicked()
                     .arg(apiKey)
                     .arg(ui->lneDirectionsStart->text())
                     .arg(ui->lneDirectionsFinish->text());
+            QNetworkRequest request(req);
+
         }
     }
 }
