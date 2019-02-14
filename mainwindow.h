@@ -17,6 +17,7 @@ class DirectionListItemWidget;
 class SettingsDialog;
 class QNetworkAccessManager;
 class QNetworkReply;
+class QMessageBox;
 
 class MainWindow : public QMainWindow
 {
@@ -46,6 +47,7 @@ private:
     QTimer *m_saveWindowSizeTimer;
     SettingsDialog *m_settingsDialog = nullptr;
     QNetworkAccessManager *m_net;
+    QMessageBox *m_loadingDialog = nullptr;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);

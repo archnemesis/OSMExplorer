@@ -25,6 +25,7 @@
 #include <QTimer>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QSslConfiguration>
 #include <QUrl>
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -255,15 +256,83 @@ void MainWindow::onSplitterMoved(int pos, int index)
 
 void MainWindow::onNetworkRequestFinished(QNetworkReply *reply)
 {
+    m_loadingDialog->hide();
+
     if (reply->error() != QNetworkReply::NoError) {
         QMessageBox::critical(
                     this,
                     tr("Network Error"),
                     tr("Failed to get directions from server."));
+        reply->deleteLater();
         return;
     }
 
     QByteArray data = reply->readAll();
+
+    qDebug() << QString::fromUtf8(data);
+
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    QJsonObject obj = doc.object();
+
+    if (obj.contains("routes") && obj["routes"].isArray()) {
+        QJsonArray routesArray = obj["routes"].toArray();
+        QJsonObject routes = routesArray[0].toObject();
+        if (routes.contains("geometry") && routes["geometry"].isObject()) {
+            QJsonObject geometry = routes["geometry"].toObject();
+            if (geometry.contains("coordinates") && geometry["coordinates"].isArray()) {
+                QJsonArray coordinates = geometry["coordinates"].toArray();
+                QVector<QPointF> *points = new QVector<QPointF>();
+                for (int i = 0; i < coordinates.count(); i++) {
+                    QJsonArray tuple = coordinates[i].toArray();
+                    points->append(QPointF(tuple[0].toDouble(), tuple[1].toDouble()));
+                }
+
+                SlippyMapWidget::LineSet *lineSet = new SlippyMapWidget::LineSet(points, 3, m_directionLineColor);
+                ui->slippyMap->addLineSet(lineSet);
+                m_currentRouteLineSet = lineSet;
+            }
+            else {
+                qDebug() << "Could not find coordinates object";
+            }
+        }
+        else {
+            qDebug() << "Could not find geometry object";
+        }
+
+        if (routes.contains("segments") && routes["segments"].isArray()) {
+            QJsonArray segments = routes["segments"].toArray();
+            QJsonObject segment = segments[0].toObject();
+            if (segment.contains("steps") && segment["steps"].isArray()) {
+                QJsonArray steps = segment["steps"].toArray();
+
+                for (int i = 0; i < steps.count(); i++) {
+                    QJsonObject step = steps[i].toObject();
+                    double distance = step["distance"].toDouble();
+                    double duration = step["duration"].toDouble();
+                    QString instruction = step["instruction"].toString();
+                    DirectionListItemWidget *itemWidget = new DirectionListItemWidget();
+                    itemWidget->setInstruction(instruction);
+                    itemWidget->setDistance(distance);
+                    itemWidget->setDuration(duration);
+                    QListWidgetItem *item = new QListWidgetItem();
+                    item->setSizeHint(itemWidget->sizeHint());
+                    ui->lstDirections->addItem(item);
+                    ui->lstDirections->setItemWidget(item, itemWidget);
+                    m_currentRouteListItem = item;
+                    m_currentRouteListItemWidget = itemWidget;
+                }
+            }
+            else {
+                qDebug() << "Could not find steps array";
+            }
+        }
+        else {
+            qDebug() << "Could not find segments object";
+        }
+    }
+    else {
+        qDebug() << "Could not find routes object!";
+    }
 }
 
 void MainWindow::onSplitterPosTimerTimeout()
@@ -414,16 +483,32 @@ void MainWindow::on_btnDirectionsGo_clicked()
 
     if (settings.contains("wayfinding/service")) {
         QString service = settings.value("wayfinding/service").toString();
-        if (service == "openrouteservice") {
+        if (service == "openrouteservice.org") {
             QString urlBase = settings.value("wayfinding/openrouteservice/url").toString();
             QString apiKey = settings.value("wayfinding/openrouteservice/apikey").toString();
-            QString req = QString("%1?api_key=%2&coordinates=%3|%4&profile=driving-car")
+            QString req = QString("%1?api_key=%2&coordinates=%3|%4&profile=driving-car&geometry_format=geojson")
                     .arg(urlBase)
                     .arg(apiKey)
                     .arg(ui->lneDirectionsStart->text())
                     .arg(ui->lneDirectionsFinish->text());
-            QNetworkRequest request(req);
+            qDebug() << "Requesting from" << req;
 
+            QSslConfiguration config = QSslConfiguration::defaultConfiguration();
+            config.setProtocol(QSsl::TlsV1_2);
+            QNetworkRequest request(req);
+            request.setSslConfiguration(config);
+            m_net->get(request);
+
+            if (m_loadingDialog == nullptr) {
+                m_loadingDialog = new QMessageBox();
+            }
+            m_loadingDialog->setWindowTitle(tr("Loading"));
+            m_loadingDialog->setText(tr("Loading directions..."));
+            m_loadingDialog->setInformativeText(tr("Click Cancel to abort."));
+            m_loadingDialog->setStandardButtons(QMessageBox::Cancel);
+            m_loadingDialog->setDefaultButton(QMessageBox::Cancel);
+            m_loadingDialog->setModal(true);
+            m_loadingDialog->show();
         }
     }
 }

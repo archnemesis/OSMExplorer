@@ -186,7 +186,17 @@
     </property>
     <addaction name="actionDebugOpenDirectionsFile"/>
    </widget>
+   <widget class="QMenu" name="menuDraw">
+    <property name="title">
+     <string>Draw</string>
+    </property>
+    <addaction name="actionLine"/>
+    <addaction name="actionCircle"/>
+    <addaction name="actionRectangle"/>
+    <addaction name="actionPolygon"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuDraw"/>
    <addaction name="menuMarker"/>
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
@@ -259,6 +269,26 @@
   <action name="actionFileSettings">
    <property name="text">
     <string>Settings...</string>
+   </property>
+  </action>
+  <action name="actionLine">
+   <property name="text">
+    <string>Line</string>
+   </property>
+  </action>
+  <action name="actionCircle">
+   <property name="text">
+    <string>Circle</string>
+   </property>
+  </action>
+  <action name="actionRectangle">
+   <property name="text">
+    <string>Rectangle</string>
+   </property>
+  </action>
+  <action name="actionPolygon">
+   <property name="text">
+    <string>Polygon</string>
    </property>
   </action>
  </widget>
