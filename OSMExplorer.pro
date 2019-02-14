@@ -30,20 +30,24 @@ SOURCES += \
     slippymapwidget.cpp \
     markerdialog.cpp \
     markerlistitemwidget.cpp \
-    directionlistitemwidget.cpp
+    directionlistitemwidget.cpp \
+    settingsdialog.cpp
 
 HEADERS += \
         mainwindow.h \
     slippymapwidget.h \
     markerdialog.h \
     markerlistitemwidget.h \
-    directionlistitemwidget.h
+    directionlistitemwidget.h \
+    settingsdialog.h \
+    defaults.h
 
 FORMS += \
         mainwindow.ui \
     markerdialog.ui \
     markerlistitemwidget.ui \
-    directionlistitemwidget.ui
+    directionlistitemwidget.ui \
+    settingsdialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

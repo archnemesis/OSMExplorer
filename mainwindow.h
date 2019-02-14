@@ -14,6 +14,9 @@ class QComboBox;
 class QLabel;
 class QListWidgetItem;
 class DirectionListItemWidget;
+class SettingsDialog;
+class QNetworkAccessManager;
+class QNetworkReply;
 
 class MainWindow : public QMainWindow
 {
@@ -41,6 +44,8 @@ private:
     QAction *m_directionsFromHereAction;
     QTimer *m_saveSplitterPosTimer;
     QTimer *m_saveWindowSizeTimer;
+    SettingsDialog *m_settingsDialog = nullptr;
+    QNetworkAccessManager *m_net;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -57,13 +62,29 @@ protected slots:
     void onDirectionsToHereTriggered();
     void onDirectionsFromHereTriggered();
     void onSplitterMoved(int pos, int index);
+    void onNetworkRequestFinished(QNetworkReply *reply);
+
+    /**
+     * @brief Save splitter position after finish moving.
+     */
     void onSplitterPosTimerTimeout();
+
+    /**
+     * @brief Save window size after finish moving.
+     */
     void onWindowSizeTimerTimeout();
+
+    /**
+     * @brief Refresh settings that would have immediate impact.
+     */
+    void refreshSettings();
 private slots:
     void on_actionNewMarker_triggered();
     void on_actionViewSidebar_toggled(bool arg1);
     void on_actionDebugOpenDirectionsFile_triggered();
     void on_actionViewClearRoute_triggered();
+    void on_actionFileSettings_triggered();
+    void on_btnDirectionsGo_clicked();
 };
 
 #endif // MAINWINDOW_H

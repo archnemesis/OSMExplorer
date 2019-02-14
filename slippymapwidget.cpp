@@ -1,4 +1,5 @@
 #include "slippymapwidget.h"
+#include "defaults.h"
 
 #include <math.h>
 
@@ -38,14 +39,14 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
 {
     setMouseTracking(true);
 
-    m_tileServer = "10.1.1.150";
+    m_tileServer = DEFAULT_TILE_SERVER;
     m_net = new QNetworkAccessManager(this);
-    m_zoomLevel = 14;
+    m_zoomLevel = DEFAULT_ZOOM;
     m_tileSet = new QList<Tile*>();
     m_clipboard = QApplication::clipboard();
 
-    m_lat = 45.541460;
-    m_lon = -122.999700;
+    m_lat = DEFAULT_LATITUDE;
+    m_lon = DEFAULT_LONGITUDE;
     emit centerChanged(m_lat, m_lon);
 
     m_zoomInButton = new QPushButton(this);
@@ -267,6 +268,16 @@ void SlippyMapWidget::removeContextMenuAction(QAction *action)
 {
     m_contextMenuActions.removeOne(action);
     setupContextMenu();
+}
+
+void SlippyMapWidget::setCenterOnCursorWhileZooming(bool enable)
+{
+    m_centerOnCursorWhileZooming = enable;
+}
+
+bool SlippyMapWidget::centerOnCursorWhileZooming()
+{
+    return m_centerOnCursorWhileZooming;
 }
 
 void SlippyMapWidget::setCenter(double latitude, double longitude)
@@ -684,7 +695,11 @@ void SlippyMapWidget::wheelEvent(QWheelEvent *event)
     if (deg.y() > 0) {
         if (m_zoomLevel < m_maxZoom) {
             m_zoomLevel++;
-            setCenter(widgetY2lat(event->y()), widgetX2long(event->x()));
+
+            if (m_centerOnCursorWhileZooming) {
+                setCenter(widgetY2lat(event->y()), widgetX2long(event->x()));
+            }
+
             remap();
             emit zoomLevelChanged(m_zoomLevel);
         }

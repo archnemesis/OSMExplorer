@@ -4,6 +4,8 @@
 #include "markerdialog.h"
 #include "markerlistitemwidget.h"
 #include "directionlistitemwidget.h"
+#include "settingsdialog.h"
+#include "defaults.h"
 
 #include <math.h>
 #include <QGuiApplication>
@@ -21,6 +23,7 @@
 #include <QAction>
 #include <QSettings>
 #include <QTimer>
+#include <QNetworkAccessManager>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -28,6 +31,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     connect(ui->splitter, &QSplitter::splitterMoved, this, &MainWindow::onSplitterMoved);
+
+    m_net = new QNetworkAccessManager();
 
     QSettings settings;
 
@@ -51,6 +56,14 @@ MainWindow::MainWindow(QWidget *parent) :
         int height = settings.value("view/windowHeight").toInt();
         resize(width, height);
     }
+
+    double defLat = settings.value("map/defaults/latitude", DEFAULT_LATITUDE).toDouble();
+    double defLon = settings.value("map/defaults/longitude", DEFAULT_LONGITUDE).toDouble();
+    int defZoom = settings.value("map/defaults/zoomLevel", DEFAULT_ZOOM).toInt();
+    ui->slippyMap->setCenter(defLat, defLon);
+    ui->slippyMap->setZoomLevel(defZoom);
+
+    refreshSettings();
 
     connect(ui->slippyMap, &SlippyMapWidget::centerChanged, this, &MainWindow::onSlippyMapCenterChanged);
     connect(ui->slippyMap, &SlippyMapWidget::zoomLevelChanged, this, &MainWindow::onSlippyMapZoomLevelChanged);
@@ -252,6 +265,13 @@ void MainWindow::onWindowSizeTimerTimeout()
     settings.setValue("view/windowHeight", height());
 }
 
+void MainWindow::refreshSettings()
+{
+    QSettings settings;
+    bool enable = settings.value("map/zoom/centerOnCursor", DEFAULT_CENTER_ON_CURSOR_ZOOM).toBool();
+    ui->slippyMap->setCenterOnCursorWhileZooming(enable);
+}
+
 void MainWindow::on_actionNewMarker_triggered()
 {
     SlippyMapWidget::Marker *marker = MarkerDialog::getNewMarker(this, tr("New Marker"));
@@ -358,5 +378,34 @@ void MainWindow::on_actionViewClearRoute_triggered()
         m_currentRouteLineSet = nullptr;
         m_currentRouteListItem = nullptr;
         m_currentRouteListItemWidget = nullptr;
+    }
+}
+
+void MainWindow::on_actionFileSettings_triggered()
+{
+    if (m_settingsDialog == nullptr) {
+        m_settingsDialog = new SettingsDialog();
+        connect(m_settingsDialog, &SettingsDialog::accepted, this, &MainWindow::refreshSettings);
+    }
+
+    m_settingsDialog->setModal(true);
+    m_settingsDialog->show();
+}
+
+void MainWindow::on_btnDirectionsGo_clicked()
+{
+    QSettings settings;
+
+    if (settings.contains("wayfinding/service")) {
+        QString service = settings.value("wayfinding/service").toString();
+        if (service == "openrouteservice") {
+            QString urlBase = settings.value("wayfinding/openrouteservice/url").toString();
+            QString apiKey = settings.value("wayfinding/openrouteservice/apikey").toString();
+            QString req = QString("%1?api_key=%2&coordinates=%3|%4&profile=driving-car")
+                    .arg(urlBase)
+                    .arg(apiKey)
+                    .arg(ui->lneDirectionsStart->text())
+                    .arg(ui->lneDirectionsFinish->text());
+        }
     }
 }

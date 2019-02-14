@@ -1,6 +1,7 @@
 #ifndef SLIPPYMAPWIDGET_H
 #define SLIPPYMAPWIDGET_H
 
+#include "defaults.h"
 #include <QWidget>
 #include <QPoint>
 #include <QPointF>
@@ -85,6 +86,8 @@ public:
     void removeLineSet(LineSet *lineSet);
     void addContextMenuAction(QAction *action);
     void removeContextMenuAction(QAction *action);
+    void setCenterOnCursorWhileZooming(bool enable);
+    bool centerOnCursorWhileZooming();
 
 public slots:
     void setCenter(double latitude, double longitude);
@@ -247,6 +250,9 @@ private:
     QMap<LineSet*,QVector<QLineF>> m_lineSetPaths;
 
     QList<QAction*> m_contextMenuActions;
+
+    /* configurable items */
+    bool m_centerOnCursorWhileZooming = DEFAULT_CENTER_ON_CURSOR_ZOOM;
 };
 
 #endif // SLIPPYMAPWIDGET_H

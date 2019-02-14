@@ -103,7 +103,7 @@
             </layout>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton">
+            <widget class="QPushButton" name="btnDirectionsGo">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Maximum" vsizetype="Minimum">
                <horstretch>0</horstretch>
@@ -148,6 +148,8 @@
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionFileSettings"/>
+    <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuMarker">
@@ -252,6 +254,11 @@
   <action name="actionViewClearRoute">
    <property name="text">
     <string>Clear Route</string>
+   </property>
+  </action>
+  <action name="actionFileSettings">
+   <property name="text">
+    <string>Settings...</string>
    </property>
   </action>
  </widget>
