@@ -25,6 +25,8 @@ private slots:
 
     void on_cboWayfindingService_currentIndexChanged(int index);
 
+    void on_btnChooseDefaultLocation_clicked();
+
 private:
     Ui::SettingsDialog *ui;
 };

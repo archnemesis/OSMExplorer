@@ -50,20 +50,24 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     emit centerChanged(m_lat, m_lon);
 
     m_zoomInButton = new QPushButton(this);
-    m_zoomInButton->setText("➕");
+    m_zoomInButton->setText("");
     m_zoomInButton->move(10, 10);
     m_zoomInButton->setMaximumWidth(35);
     m_zoomInButton->setMinimumWidth(35);
     m_zoomInButton->setMaximumHeight(35);
     m_zoomInButton->setMinimumHeight(35);
+    m_zoomInButton->setIcon(QIcon(":/icons/zoomin.png"));
+    m_zoomInButton->setIconSize(QSize(28,28));
 
     m_zoomOutButton = new QPushButton(this);
-    m_zoomOutButton->setText("➖");
+    m_zoomOutButton->setText("");
     m_zoomOutButton->move(10, 45);
     m_zoomOutButton->setMaximumWidth(35);
     m_zoomOutButton->setMinimumWidth(35);
     m_zoomOutButton->setMaximumHeight(35);
     m_zoomOutButton->setMinimumHeight(35);
+    m_zoomOutButton->setIcon(QIcon(":/icons/zoomout.png"));
+    m_zoomOutButton->setIconSize(QSize(28,28));
 
     m_currentLocationButton = new QPushButton(this);
     m_currentLocationButton->setText("☼");

@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file alias="satellite.png">resources/icons/satellite.png</file>
+        <file alias="pushpin.png">resources/icons/pushpin.png</file>
+        <file alias="map.png">resources/icons/map.png</file>
+        <file alias="swap.png">resources/icons/swap.png</file>
+        <file alias="zoomin.png">resources/icons/zoomin.png</file>
+        <file alias="zoomout.png">resources/icons/zoomout.png</file>
+        <file alias="settings">resources/icons/settings.png</file>
+    </qresource>
+</RCC>

@@ -82,3 +82,8 @@ void SettingsDialog::on_cboWayfindingService_currentIndexChanged(int index)
         ui->grpOpenRouteServiceSettings->setVisible(true);
     }
 }
+
+void SettingsDialog::on_btnChooseDefaultLocation_clicked()
+{
+
+}

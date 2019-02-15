@@ -78,8 +78,10 @@ public:
     void setTileServer(QString server);
     QString tileServer();
     QList<Marker*> markerList();
-    void addMarker(double latitude, double longitude);
-    void addMarker(double latitude, double longitude, QString label);
+    Marker *addMarker(double latitude, double longitude);
+    Marker *addMarker(double latitude, double longitude, QString label);
+    Marker *addMarker(QPointF location);
+    Marker *addMarker(QPointF location, QString label);
     void addMarker(Marker *marker);
     void deleteMarker(Marker *marker);
     void addLineSet(LineSet *lineSet);

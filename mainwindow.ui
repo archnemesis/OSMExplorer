@@ -56,8 +56,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>688</width>
-          <height>510</height>
+          <width>686</width>
+          <height>518</height>
          </rect>
         </property>
         <attribute name="label">
@@ -74,8 +74,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>688</width>
-          <height>510</height>
+          <width>686</width>
+          <height>518</height>
          </rect>
         </property>
         <attribute name="label">
@@ -84,6 +84,29 @@
         <layout class="QVBoxLayout" name="verticalLayout_4">
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout">
+           <item>
+            <widget class="QPushButton" name="btnDirectionsSwap">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset resource="resources.qrc">
+               <normaloff>:/icons/swap.png</normaloff>:/icons/swap.png</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>32</width>
+               <height>32</height>
+              </size>
+             </property>
+            </widget>
+           </item>
            <item>
             <layout class="QVBoxLayout" name="verticalLayout_3">
              <item>
@@ -111,7 +134,17 @@
               </sizepolicy>
              </property>
              <property name="text">
-              <string>Go</string>
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset resource="resources.qrc">
+               <normaloff>:/icons/map.png</normaloff>:/icons/map.png</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>32</width>
+               <height>32</height>
+              </size>
              </property>
             </widget>
            </item>
@@ -145,8 +178,24 @@
            </item>
            <item>
             <widget class="QPushButton" name="pushButton">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="toolTip">
+              <string>Route Settings...</string>
+             </property>
+             <property name="statusTip">
+              <string>Change route settings</string>
+             </property>
              <property name="text">
-              <string>...</string>
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset resource="resources.qrc">
+               <normaloff>:/icons/settings</normaloff>:/icons/settings</iconset>
              </property>
             </widget>
            </item>
@@ -176,7 +225,7 @@
      <x>0</x>
      <y>0</y>
      <width>939</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -215,12 +264,6 @@
     <addaction name="separator"/>
     <addaction name="actionViewClearRoute"/>
    </widget>
-   <widget class="QMenu" name="menuDebug">
-    <property name="title">
-     <string>Debug</string>
-    </property>
-    <addaction name="actionDebugOpenDirectionsFile"/>
-   </widget>
    <widget class="QMenu" name="menuDraw">
     <property name="title">
      <string>Draw</string>
@@ -235,15 +278,35 @@
    <addaction name="menuMarker"/>
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
-   <addaction name="menuDebug"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>48</width>
+     <height>48</height>
+    </size>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
   <action name="actionExit">
    <property name="text">
     <string>Exit</string>
    </property>
   </action>
   <action name="actionNewMarker">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/pushpin.png</normaloff>:/icons/pushpin.png</iconset>
+   </property>
    <property name="text">
     <string>New...</string>
    </property>
@@ -302,6 +365,10 @@
    </property>
   </action>
   <action name="actionFileSettings">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/settings</normaloff>:/icons/settings</iconset>
+   </property>
    <property name="text">
     <string>Settings...</string>
    </property>
@@ -336,6 +403,8 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
  <connections/>
 </ui>
