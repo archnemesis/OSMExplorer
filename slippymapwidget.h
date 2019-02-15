@@ -90,6 +90,10 @@ public:
     void removeContextMenuAction(QAction *action);
     void setCenterOnCursorWhileZooming(bool enable);
     bool centerOnCursorWhileZooming();
+    void setSearchBarVisible(bool visible);
+    void setZoomButtonsVisible(bool visible);
+    void setLocationButtonVisible(bool visible);
+    void setZoomSliderVisible(bool visible);
 
 public slots:
     void setCenter(double latitude, double longitude);
@@ -255,6 +259,10 @@ private:
 
     /* configurable items */
     bool m_centerOnCursorWhileZooming = DEFAULT_CENTER_ON_CURSOR_ZOOM;
+    bool m_searchBarVisible = true;
+    bool m_zoomButtonsVisible = true;
+    bool m_locationButtonVisible = true;
+    bool m_zoomSliderVisible = true;
 };
 
 #endif // SLIPPYMAPWIDGET_H

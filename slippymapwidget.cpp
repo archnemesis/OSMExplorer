@@ -296,6 +296,34 @@ bool SlippyMapWidget::centerOnCursorWhileZooming()
     return m_centerOnCursorWhileZooming;
 }
 
+void SlippyMapWidget::setSearchBarVisible(bool visible)
+{
+    m_searchBarVisible = visible;
+    m_searchBar->setVisible(false);
+    update();
+}
+
+void SlippyMapWidget::setZoomButtonsVisible(bool visible)
+{
+    m_zoomButtonsVisible = visible;
+    m_zoomInButton->setVisible(false);
+    m_zoomOutButton->setVisible(false);
+    update();
+}
+
+void SlippyMapWidget::setLocationButtonVisible(bool visible)
+{
+    m_locationButtonVisible = visible;
+    m_currentLocationButton->setVisible(visible);
+    update();
+}
+
+void SlippyMapWidget::setZoomSliderVisible(bool visible)
+{
+    m_zoomSliderVisible = visible;
+    update();
+}
+
 void SlippyMapWidget::setCenter(double latitude, double longitude)
 {
     m_lat = latitude;
