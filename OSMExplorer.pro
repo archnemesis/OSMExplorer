@@ -11,6 +11,9 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = OSMExplorer
 TEMPLATE = app
 
+INCLUDEPATH += "C:\Program Files\OpenSSL-1.0.2q-Win64\include"
+LIBS += -L"C:\Program Files\OpenSSL-1.0.2q-Win64\lib" -lssleay32 -llibeay32
+
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
@@ -31,7 +34,11 @@ SOURCES += \
     markerdialog.cpp \
     markerlistitemwidget.cpp \
     directionlistitemwidget.cpp \
-    settingsdialog.cpp
+    settingsdialog.cpp \
+    aprsdotficonfigurationdialog.cpp \
+    locationdataprovider.cpp \
+    aprsfilocationdataprovider.cpp \
+    layerpropertiesdialog.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -40,14 +47,20 @@ HEADERS += \
     markerlistitemwidget.h \
     directionlistitemwidget.h \
     settingsdialog.h \
-    defaults.h
+    defaults.h \
+    aprsdotficonfigurationdialog.h \
+    locationdataprovider.h \
+    aprsfilocationdataprovider.h \
+    layerpropertiesdialog.h
 
 FORMS += \
         mainwindow.ui \
     markerdialog.ui \
     markerlistitemwidget.ui \
     directionlistitemwidget.ui \
-    settingsdialog.ui
+    settingsdialog.ui \
+    aprsdotficonfigurationdialog.ui \
+    layerpropertiesdialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

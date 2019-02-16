@@ -1,14 +1,21 @@
 #include "settingsdialog.h"
 #include "ui_settingsdialog.h"
 #include "defaults.h"
+#include "aprsdotficonfigurationdialog.h"
+#include "layerpropertiesdialog.h"
 
+#include <QDebug>
 #include <QSettings>
+#include <QStandardPaths>
 
 SettingsDialog::SettingsDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::SettingsDialog)
 {
     ui->setupUi(this);
+    ui->btnLayerConfigure->setEnabled(false);
+    connect(ui->hslCacheSize, &QSlider::valueChanged, ui->spnCacheSize, &QSpinBox::setValue);
+    connect(ui->spnCacheSize, QOverload<int>::of(&QSpinBox::valueChanged), ui->hslCacheSize, &QSlider::setValue);
     loadSettings();
 }
 
@@ -40,6 +47,37 @@ void SettingsDialog::loadSettings()
         ui->cboWayfindingService->setCurrentIndex(0);
         ui->grpOpenRouteServiceSettings->setVisible(false);
     }
+
+    bool cacheEnabled = settings.value("map/cache/enable", true).toBool();
+    ui->chkCacheEnabled->setChecked(cacheEnabled);
+    ui->lneCacheDir->setEnabled(cacheEnabled);
+    ui->lneCacheDirBrowse->setEnabled(cacheEnabled);
+    ui->hslCacheSize->setEnabled(cacheEnabled);
+    ui->spnCacheSize->setEnabled(cacheEnabled);
+    ui->btnClearCache->setEnabled(cacheEnabled);
+
+    ui->lneCacheDir->setText(settings.value("map/cache/tiledir", QStandardPaths::writableLocation(QStandardPaths::CacheLocation)).toString());
+    ui->hslCacheSize->setValue(settings.value("map/cache/maxsize", 100).toInt());
+    ui->spnCacheSize->setValue(settings.value("map/cache/maxsize", 100).toInt());
+
+    m_layers.clear();
+    ui->lstLayerList->clear();
+    qDebug() << "Checking for layers config...";
+    qDebug() << "Getting layers...";
+    int count = settings.beginReadArray("layers");
+    for (int i = 0; i < count; i++) {
+        qDebug() << "Getting layer" << i;
+        settings.setArrayIndex(i);
+        LayerPropertiesDialog::LayerProperties props;
+        props.name = settings.value("name").toString();
+        props.description = settings.value("description").toString();
+        props.tileServer = settings.value("tileServer").toString();
+        props.zOrder = settings.value("zOrder").toInt();
+        m_layers.append(props);
+        ui->lstLayerList->addItem(props.name);
+    }
+    settings.endArray();
+
 }
 
 void SettingsDialog::on_buttonBox_accepted()
@@ -62,6 +100,20 @@ void SettingsDialog::on_buttonBox_accepted()
         settings.setValue("wayfinding/openrouteservice/apikey", ui->lneOpenRouteServiceAPIKey->text());
         break;
     }
+
+    settings.setValue("map/cache/enable", ui->chkCacheEnabled->isChecked());
+    settings.setValue("map/cache/tiledir", ui->lneCacheDir->text());
+    settings.setValue("map/cache/maxsize", ui->hslCacheSize->value());
+
+    settings.beginWriteArray("layers");
+    for (int i = 0; i < m_layers.count(); i++) {
+        settings.setArrayIndex(i);
+        settings.setValue("name", m_layers.at(i).name);
+        settings.setValue("description", m_layers.at(i).description);
+        settings.setValue("tileServer", m_layers.at(i).tileServer);
+        settings.setValue("zOrder", m_layers.at(i).zOrder);
+    }
+    settings.endArray();
 
     accept();
 }
@@ -86,4 +138,60 @@ void SettingsDialog::on_cboWayfindingService_currentIndexChanged(int index)
 void SettingsDialog::on_btnChooseDefaultLocation_clicked()
 {
 
+}
+
+void SettingsDialog::on_chkCacheEnabled_toggled(bool checked)
+{
+    ui->lneCacheDir->setEnabled(checked);
+    ui->lneCacheDirBrowse->setEnabled(checked);
+    ui->hslCacheSize->setEnabled(checked);
+    ui->spnCacheSize->setEnabled(checked);
+    ui->btnClearCache->setEnabled(checked);
+}
+
+void SettingsDialog::on_btnIntegrationConfigure_clicked()
+{
+    if (ui->lstIntegrationList->currentItem()->text() == "aprs.fi") {
+        AprsDotFiConfigurationDialog dlg(this);
+        int result = dlg.exec();
+    }
+}
+
+void SettingsDialog::on_btnLayerAdd_clicked()
+{
+    LayerPropertiesDialog::LayerProperties properties =
+            LayerPropertiesDialog::getLayerProperties(this);
+
+    if (properties.isValid) {
+        ui->lstLayerList->addItem(properties.name);
+        m_layers.append(properties);
+    }
+}
+
+void SettingsDialog::on_btnLayerDelete_clicked()
+{
+
+}
+
+void SettingsDialog::on_btnLayerConfigure_clicked()
+{
+    LayerPropertiesDialog::LayerProperties properties =
+            LayerPropertiesDialog::editLayerProperties(
+                this,
+                tr("Layer Properties"),
+                m_layers.at(ui->lstLayerList->currentRow()));
+    if (properties.isValid) {
+        m_layers.replace(ui->lstLayerList->currentRow(), properties);
+        ui->lstLayerList->currentItem()->setText(properties.name);
+    }
+}
+
+void SettingsDialog::on_lstLayerList_currentRowChanged(int currentRow)
+{
+    ui->btnLayerConfigure->setEnabled(true);
+}
+
+void SettingsDialog::on_lstLayerList_itemDoubleClicked(QListWidgetItem *item)
+{
+    on_btnLayerConfigure_clicked();
 }

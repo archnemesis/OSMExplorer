@@ -6,6 +6,7 @@
 #include "directionlistitemwidget.h"
 #include "settingsdialog.h"
 #include "defaults.h"
+#include "aprsfilocationdataprovider.h"
 
 #include <math.h>
 #include <QGuiApplication>
@@ -17,6 +18,7 @@
 #include <QListWidgetItem>
 #include <QFileDialog>
 #include <QFile>
+#include <QDir>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -28,6 +30,7 @@
 #include <QSslConfiguration>
 #include <QUrl>
 #include <QStyleFactory>
+#include <QStandardPaths>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -92,6 +95,22 @@ MainWindow::MainWindow(QWidget *parent) :
         int height = settings.value("view/windowHeight").toInt();
         resize(width, height);
     }
+
+    int layerCount = settings.beginReadArray("layers");
+    for (int i = 0; i < layerCount; i++) {
+        settings.setArrayIndex(i);
+        QString name = settings.value("name").toString();
+        QString description = settings.value("description").toString();
+        QString tileUrl = settings.value("tileServer").toString();
+        int zOrder = settings.value("zOrder").toInt();
+        SlippyMapWidget::Layer *layer = new SlippyMapWidget::Layer(tileUrl);
+        layer->setName(name);
+        layer->setDescription(description);
+        layer->setZOrder(zOrder);
+        ui->slippyMap->addLayer(layer);
+        m_layers.append(layer);
+    }
+    settings.endArray();
 
     double defLat = settings.value("map/defaults/latitude", DEFAULT_LATITUDE).toDouble();
     double defLon = settings.value("map/defaults/longitude", DEFAULT_LONGITUDE).toDouble();
@@ -371,6 +390,26 @@ void MainWindow::onNetworkRequestFinished(QNetworkReply *reply)
     }
 }
 
+void MainWindow::onDataProviderAprsFiPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
+{
+    SlippyMapWidget::Marker *marker;
+
+    if (m_dataProviderAprsFiMarkers.contains(identifier)) {
+        marker = m_dataProviderAprsFiMarkers[identifier];
+        marker->setLabel(identifier);
+        marker->setLongitude(position.x());
+        marker->setLatitude(position.y());
+    }
+    else {
+        marker = new SlippyMapWidget::Marker(position.y(), position.x());
+        marker->setLabel(identifier);
+        m_dataProviderAprsFiMarkers[identifier] = marker;
+        ui->slippyMap->addMarker(marker);
+    }
+
+    ui->slippyMap->update();
+}
+
 void MainWindow::onSplitterPosTimerTimeout()
 {
     QSettings settings;
@@ -391,6 +430,36 @@ void MainWindow::refreshSettings()
     QSettings settings;
     bool enable = settings.value("map/zoom/centerOnCursor", DEFAULT_CENTER_ON_CURSOR_ZOOM).toBool();
     ui->slippyMap->setCenterOnCursorWhileZooming(enable);
+
+    ui->slippyMap->setTileCacheDir(settings.value("map/cache/tiledir", QStandardPaths::writableLocation(QStandardPaths::CacheLocation)).toString());
+    ui->slippyMap->setTileCachingEnabled(settings.value("map/cache/enable", true).toBool());
+
+    if (settings.contains("integrations/aprs.fi/apikey")) {
+        QString apiUrl = settings.value("integrations/aprs.fi/apiUrl").toString();
+        QString apiKey = settings.value("integrations/aprs.fi/apiKey").toString();
+        int updateInterval = settings.value("integrations/aprs.fi/updateInterval").toInt();
+
+        QStringList callsigns;
+        int size = settings.beginReadArray("integrations/aprs.fi/callsigns");
+        for (int i = 0; i < size; i++) {
+            settings.setArrayIndex(i);
+            callsigns.append(settings.value("callsign").toString());
+        }
+
+        if (m_dataProviderAprsFi == nullptr) {
+            m_dataProviderAprsFi = new AprsFiLocationDataProvider();
+            connect(m_dataProviderAprsFi,
+                    &AprsFiLocationDataProvider::positionUpdated,
+                    this,
+                    &MainWindow::onDataProviderAprsFiPositionUpdated);
+        }
+
+        m_dataProviderAprsFi->setApiUrl(apiUrl);
+        m_dataProviderAprsFi->setApiKey(apiKey);
+        m_dataProviderAprsFi->setUpdateInterval(updateInterval);
+        m_dataProviderAprsFi->setCallsigns(callsigns);
+        m_dataProviderAprsFi->start();
+    }
 }
 
 void MainWindow::on_actionNewMarker_triggered()

@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 #include <QMap>
+#include <QHash>
+#include <QVariant>
 #include <QTimer>
 #include "slippymapwidget.h"
 
@@ -18,6 +20,7 @@ class SettingsDialog;
 class QNetworkAccessManager;
 class QNetworkReply;
 class QMessageBox;
+class AprsFiLocationDataProvider;
 
 class MainWindow : public QMainWindow
 {
@@ -48,6 +51,9 @@ private:
     SettingsDialog *m_settingsDialog = nullptr;
     QNetworkAccessManager *m_net;
     QMessageBox *m_loadingDialog = nullptr;
+    AprsFiLocationDataProvider *m_dataProviderAprsFi = nullptr;
+    QHash<QString,SlippyMapWidget::Marker*> m_dataProviderAprsFiMarkers;
+    QList<SlippyMapWidget::Layer*> m_layers;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -65,6 +71,7 @@ protected slots:
     void onDirectionsFromHereTriggered();
     void onSplitterMoved(int pos, int index);
     void onNetworkRequestFinished(QNetworkReply *reply);
+    void onDataProviderAprsFiPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
 
     /**
      * @brief Save splitter position after finish moving.

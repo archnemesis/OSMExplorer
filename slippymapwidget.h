@@ -11,6 +11,7 @@
 #include <QPen>
 #include <QFont>
 #include <QRegularExpression>
+#include <QCryptographicHash>
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -30,6 +31,32 @@ class SlippyMapWidget : public QWidget
 {
     Q_OBJECT
 public:
+    class Layer {
+    public:
+        Layer(QString tileUrl) {
+            m_tileUrl = tileUrl;
+        }
+        void setTileUrl(QString tileUrl) { m_tileUrl = tileUrl; }
+        void setName(QString name) { m_name = name; }
+        void setDescription(QString description) { m_description = description; }
+        void setZOrder(int zOrder) { m_zOrder = zOrder; }
+        QString name() { return m_name; }
+        QString description() { return m_description; }
+        QString tileUrl() { return m_tileUrl; }
+        QString tileUrlHash() {
+            QByteArray hash = QCryptographicHash::hash(
+                        m_tileUrl.toLocal8Bit(),
+                        QCryptographicHash::Md5).toHex();
+            return QString::fromLocal8Bit(hash);
+        }
+        int zOrder() { return m_zOrder; }
+    private:
+        QString m_name;
+        QString m_description;
+        QString m_tileUrl;
+        int m_zOrder;
+    };
+
     class Marker {
     public:
         Marker(double latitude, double longitude, QString label) {
@@ -86,6 +113,8 @@ public:
     void deleteMarker(Marker *marker);
     void addLineSet(LineSet *lineSet);
     void removeLineSet(LineSet *lineSet);
+    void addLayer(Layer *layer);
+    QList<Layer*> layers();
     void addContextMenuAction(QAction *action);
     void removeContextMenuAction(QAction *action);
     void setCenterOnCursorWhileZooming(bool enable);
@@ -94,6 +123,8 @@ public:
     void setZoomButtonsVisible(bool visible);
     void setLocationButtonVisible(bool visible);
     void setZoomSliderVisible(bool visible);
+    void setTileCachingEnabled(bool enabled);
+    void setTileCacheDir(QString dir);
 
 public slots:
     void setCenter(double latitude, double longitude);
@@ -208,7 +239,6 @@ private:
     QPoint m_selectedPosition;
     QMutex m_tileMutex;
     QNetworkAccessManager *m_net;
-    QList<Tile*> *m_tileSet;
     QPushButton *m_zoomInButton;
     QPushButton *m_zoomOutButton;
     QPushButton *m_currentLocationButton;
@@ -252,6 +282,8 @@ private:
 
     QClipboard *m_clipboard;
 
+    QMap<Layer*,QList<Tile*>> m_layerTileMaps;
+    QList<Layer*> m_layers;
     QList<LineSet*> m_lineSets;
     QMap<LineSet*,QVector<QLineF>> m_lineSetPaths;
 
@@ -263,6 +295,8 @@ private:
     bool m_zoomButtonsVisible = true;
     bool m_locationButtonVisible = true;
     bool m_zoomSliderVisible = true;
+    bool m_cacheTiles = false;
+    QString m_cacheTileDir;
 };
 
 #endif // SLIPPYMAPWIDGET_H

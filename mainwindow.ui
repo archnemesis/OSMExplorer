@@ -202,6 +202,20 @@
           </layout>
          </item>
          <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Trip Time: 0 minutes</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>Distance: 0 meters</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QListWidget" name="lstDirections"/>
          </item>
         </layout>

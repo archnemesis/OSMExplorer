@@ -19,6 +19,8 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QUrl>
+#include <QFile>
+#include <QDir>
 
 #include <QRegularExpressionMatch>
 #include <QMenu>
@@ -34,6 +36,7 @@
 #include <QInputDialog>
 #include <QClipboard>
 #include <QApplication>
+#include <QCryptographicHash>
 
 SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
 {
@@ -42,7 +45,6 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_tileServer = DEFAULT_TILE_SERVER;
     m_net = new QNetworkAccessManager(this);
     m_zoomLevel = DEFAULT_ZOOM;
-    m_tileSet = new QList<Tile*>();
     m_clipboard = QApplication::clipboard();
 
     m_lat = DEFAULT_LATITUDE;
@@ -274,6 +276,18 @@ void SlippyMapWidget::removeLineSet(SlippyMapWidget::LineSet *lineSet)
     m_lineSetPaths.remove(lineSet);
 }
 
+void SlippyMapWidget::addLayer(SlippyMapWidget::Layer *layer)
+{
+    m_layers.append(layer);
+    m_layerTileMaps[layer] = QList<Tile*>();
+    remap();
+}
+
+QList<SlippyMapWidget::Layer *> SlippyMapWidget::layers()
+{
+    return m_layers;
+}
+
 void SlippyMapWidget::addContextMenuAction(QAction *action)
 {
     m_contextMenuActions.append(action);
@@ -322,6 +336,18 @@ void SlippyMapWidget::setZoomSliderVisible(bool visible)
 {
     m_zoomSliderVisible = visible;
     update();
+}
+
+void SlippyMapWidget::setTileCachingEnabled(bool enabled)
+{
+    m_cacheTiles = true;
+}
+
+void SlippyMapWidget::setTileCacheDir(QString dir)
+{
+    m_cacheTileDir = dir;
+    QDir cacheDir(dir);
+    cacheDir.mkpath(".");
 }
 
 void SlippyMapWidget::setCenter(double latitude, double longitude)
@@ -523,10 +549,12 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
     QPainter painter(this);
     painter.setRenderHints(QPainter::TextAntialiasing | QPainter::Antialiasing);
 
-    for (int i = 0; i < m_tileSet->size(); i++) {
-        Tile *t = m_tileSet->at(i);
-        if (t->isLoaded()) {
-            painter.drawPixmap(t->point(), t->pixmap());
+    for (Layer *layer : m_layers) {
+        for (int i = 0; i < m_layerTileMaps[layer].size(); i++) {
+            Tile *t = m_layerTileMaps[layer].at(i);
+            if (t->isLoaded()) {
+                painter.drawPixmap(t->point(), t->pixmap());
+            }
         }
     }
 
@@ -775,7 +803,6 @@ void SlippyMapWidget::contextMenuEvent(QContextMenuEvent *event)
     for (Marker *marker : m_markers) {
         qint32 marker_x = long2widgetX(marker->longitude());
         qint32 marker_y = lat2widgety(marker->latitude());
-        qDebug() << "Marker is at:" << marker_x << marker_y;
         if (event->x() > (marker_x - 5) && event->x() < (marker_x + 5)) {
             if (event->y() > (marker_y - 5) && event->y() < (marker_y + 5)) {
                 m_addMarkerAction->setVisible(false);
@@ -912,79 +939,111 @@ void SlippyMapWidget::remap()
     qint32 startX = centerX - 128 - ((tiles_wide / 2) * 256) + diff_pix_x;
     qint32 startY = centerY - 128 - ((tiles_high / 2) * 256) - diff_pix_y;
 
-    QList<Tile*> deleteList(*m_tileSet);
+    for (Layer *layer : m_layers) {
+        QList<Tile*> deleteList(m_layerTileMaps[layer]);
 
-    for (int y = 0; y < tiles_high; y++) {
-        for (int x = 0; x < tiles_wide; x++) {
-            qint32 this_x = tile_x_start + x;
-            qint32 this_y = tile_y_start + y;
-            QPoint point(startX + (x * 256), startY + (y * 256));
+        for (int y = 0; y < tiles_high; y++) {
+            for (int x = 0; x < tiles_wide; x++) {
+                qint32 this_x = tile_x_start + x;
+                qint32 this_y = tile_y_start + y;
+                QPoint point(startX + (x * 256), startY + (y * 256));
 
-            Tile *tile = nullptr;
-            for (int i = 0; i < m_tileSet->length(); i++) {
-                if (m_tileSet->at(i)->x() == this_x && m_tileSet->at(i)->y() == this_y) {
-                    tile = m_tileSet->at(i);
+                Tile *tile = nullptr;
+                for (int i = 0; i < m_layerTileMaps[layer].length(); i++) {
+                    if (m_layerTileMaps[layer].at(i)->x() == this_x && m_layerTileMaps[layer].at(i)->y() == this_y) {
+                        tile = m_layerTileMaps[layer].at(i);
+                    }
+                }
+
+                if (tile == nullptr) {
+                    tile = new Tile(this_x, this_y, point);
+                    m_layerTileMaps[layer].append(tile);
+
+                    QString tileUrl = layer->tileUrl()
+                            .arg(m_zoomLevel)
+                            .arg(this_x)
+                            .arg(this_y);
+                    QString fileExt = QUrl(tileUrl).fileName().split(".").last();
+                    QString fileName = QString("%1/%2/%3.%4")
+                            .arg(m_zoomLevel)
+                            .arg(this_x)
+                            .arg(this_y)
+                            .arg(fileExt);
+                    QString cachedFileName = QString("%1/%2/%3")
+                            .arg(m_cacheTileDir)
+                            .arg(layer->tileUrlHash())
+                            .arg(fileName);
+
+                    if (m_cacheTiles == true && QFile::exists(cachedFileName)) {
+                        QPixmap pixmap(cachedFileName);
+                        tile->setPixmap(pixmap);
+                        update();
+                        qDebug() << "Cache hit!" << layer->name();
+                    }
+                    else {
+                        QNetworkRequest req(tileUrl);
+                        emit tileRequestInitiated();
+                        QNetworkReply *reply = m_net->get(req);
+                        tile->setPendingReply(reply);
+                        connect(reply, &QNetworkReply::finished, [=]() {
+                            emit tileRequestFinished();
+
+                            if (tile->isDiscarded()) {
+                                delete tile;
+                            }
+                            else {
+                                if (reply->error() != QNetworkReply::NoError) {
+                                  // handle error
+                                  return;
+                                }
+
+                                QByteArray data = reply->readAll();
+
+                                if (m_cacheTiles) {
+                                    QFile cacheFile(cachedFileName);
+                                    QFileInfo cacheFileInfo(cacheFile);
+                                    cacheFileInfo.dir().mkpath(".");
+                                    if (cacheFile.open(QIODevice::ReadWrite)) {
+                                        cacheFile.write(data);
+                                        cacheFile.close();
+                                    }
+                                }
+
+                                QPixmap pixmap;
+                                pixmap.loadFromData(data);
+                                tile->setPixmap(pixmap);
+                                tile->setPendingReply(nullptr);
+                                update();
+                            }
+
+                            reply->deleteLater();
+                        });
+                    }
+
+                }
+                else {
+                    QPoint old = tile->point();
+                    tile->setPoint(point);
+                    deleteList.removeOne(tile);
+                    if (old != point) update();
                 }
             }
 
-            if (tile == nullptr) {
-                tile = new Tile(this_x, this_y, point);
-                m_tileSet->append(tile);
+        }
 
-                QString tile_path = QString("http://%1/osm_tiles/%2/%3/%4.png")
-                        .arg(m_tileServer)
-                        .arg(m_zoomLevel)
-                        .arg(this_x)
-                        .arg(this_y);
-                QNetworkRequest req(tile_path);
-                emit tileRequestInitiated();
-                QNetworkReply *reply = m_net->get(req);
-                tile->setPendingReply(reply);
-                connect(reply, &QNetworkReply::finished, [=]() {
-                    emit tileRequestFinished();
+        while (deleteList.length() > 0) {
+            Tile *todelete = deleteList.takeFirst();
 
-                    if (tile->isDiscarded()) {
-                        delete tile;
-                    }
-                    else {
-                        if (reply->error() != QNetworkReply::NoError) {
-                          // handle error
-                          return;
-                        }
-
-                        QByteArray data = reply->readAll();
-                        QPixmap pixmap;
-                        pixmap.loadFromData(data);
-                        tile->setPixmap(pixmap);
-                        tile->setPendingReply(nullptr);
-                        update();
-                    }
-
-                    reply->deleteLater();
-                });
+            if (todelete->pendingReply() != nullptr && todelete->pendingReply()->isRunning()) {
+                m_layerTileMaps[layer].removeOne(todelete);
+                todelete->discard();
+                todelete->pendingReply()->abort();
             }
             else {
-                QPoint old = tile->point();
-                tile->setPoint(point);
-                deleteList.removeOne(tile);
-                if (old != point) update();
+                m_layerTileMaps[layer].removeOne(todelete);
+                delete todelete;
             }
         }
-    }
-
-    while (deleteList.length() > 0) {
-        Tile *todelete = deleteList.takeFirst();
-
-        if (todelete->pendingReply() != nullptr && todelete->pendingReply()->isRunning()) {
-            m_tileSet->removeOne(todelete);
-            todelete->discard();
-            todelete->pendingReply()->abort();
-        }
-        else {
-            m_tileSet->removeOne(todelete);
-            delete todelete;
-        }
-
     }
 }
 
