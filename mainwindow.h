@@ -46,8 +46,8 @@ private:
     QPointF m_slippyContextMenuLocation;
     QAction *m_directionsToHereAction;
     QAction *m_directionsFromHereAction;
-    QTimer *m_saveSplitterPosTimer;
-    QTimer *m_saveWindowSizeTimer;
+    QTimer *m_saveSplitterPosTimer = nullptr;
+    QTimer *m_saveWindowSizeTimer = nullptr;
     SettingsDialog *m_settingsDialog = nullptr;
     QNetworkAccessManager *m_net;
     QMessageBox *m_loadingDialog = nullptr;

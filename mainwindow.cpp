@@ -90,12 +90,6 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->actionViewSidebar->setChecked(true);
     }
 
-    if (settings.contains("view/windowWidth") && settings.contains("view/windowHeight")) {
-        int width = settings.value("view/windowWidth").toInt();
-        int height = settings.value("view/windowHeight").toInt();
-        resize(width, height);
-    }
-
     int layerCount = settings.beginReadArray("layers");
     for (int i = 0; i < layerCount; i++) {
         settings.setArrayIndex(i);
@@ -111,6 +105,15 @@ MainWindow::MainWindow(QWidget *parent) :
         m_layers.append(layer);
     }
     settings.endArray();
+
+    if (layerCount == 0) {
+        QMessageBox::information(
+                    this,
+                    tr("OSMExplorer"),
+                    tr("There are no layers configured. To get started, add one or more layers in Settings."),
+                    QMessageBox::Ok);
+        on_actionFileSettings_triggered();
+    }
 
     double defLat = settings.value("map/defaults/latitude", DEFAULT_LATITUDE).toDouble();
     double defLon = settings.value("map/defaults/longitude", DEFAULT_LONGITUDE).toDouble();
@@ -161,6 +164,12 @@ MainWindow::MainWindow(QWidget *parent) :
     m_saveWindowSizeTimer->setSingleShot(true);
     m_saveWindowSizeTimer->setInterval(100);
     connect(m_saveWindowSizeTimer, &QTimer::timeout, this, &MainWindow::onWindowSizeTimerTimeout);
+
+    if (settings.contains("view/windowWidth") && settings.contains("view/windowHeight")) {
+        int width = settings.value("view/windowWidth").toInt();
+        int height = settings.value("view/windowHeight").toInt();
+        resize(width, height);
+    }
 }
 
 MainWindow::~MainWindow()
@@ -170,8 +179,10 @@ MainWindow::~MainWindow()
 
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
-    m_saveWindowSizeTimer->stop();
-    m_saveWindowSizeTimer->start();
+    if (m_saveWindowSizeTimer != nullptr) {
+        m_saveWindowSizeTimer->stop();
+        m_saveWindowSizeTimer->start();
+    }
 }
 
 void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
