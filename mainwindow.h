@@ -20,6 +20,7 @@ class SettingsDialog;
 class QNetworkAccessManager;
 class QNetworkReply;
 class QMessageBox;
+class LocationDataProvider;
 class AprsFiLocationDataProvider;
 
 class MainWindow : public QMainWindow
@@ -54,6 +55,7 @@ private:
     AprsFiLocationDataProvider *m_dataProviderAprsFi = nullptr;
     QHash<QString,SlippyMapWidget::Marker*> m_dataProviderAprsFiMarkers;
     QList<SlippyMapWidget::Layer*> m_layers;
+    QList<LocationDataProvider*> m_gpsProviders;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -72,6 +74,7 @@ protected slots:
     void onSplitterMoved(int pos, int index);
     void onNetworkRequestFinished(QNetworkReply *reply);
     void onDataProviderAprsFiPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
+    void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> m_metadata);
 
     /**
      * @brief Save splitter position after finish moving.
@@ -93,6 +96,7 @@ private slots:
     void on_actionViewClearRoute_triggered();
     void on_actionFileSettings_triggered();
     void on_btnDirectionsGo_clicked();
+    void on_actionMapGpsAddSource_triggered();
 };
 
 #endif // MAINWINDOW_H

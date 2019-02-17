@@ -35,11 +35,13 @@ public:
     public:
         Layer(QString tileUrl) {
             m_tileUrl = tileUrl;
+            m_visible = true;
         }
         void setTileUrl(QString tileUrl) { m_tileUrl = tileUrl; }
         void setName(QString name) { m_name = name; }
         void setDescription(QString description) { m_description = description; }
         void setZOrder(int zOrder) { m_zOrder = zOrder; }
+        void setVisible(bool visible) { m_visible = visible; }
         QString name() { return m_name; }
         QString description() { return m_description; }
         QString tileUrl() { return m_tileUrl; }
@@ -50,11 +52,13 @@ public:
             return QString::fromLocal8Bit(hash);
         }
         int zOrder() { return m_zOrder; }
+        bool isVisible() { return m_visible; }
     private:
         QString m_name;
         QString m_description;
         QString m_tileUrl;
         int m_zOrder;
+        bool m_visible;
     };
 
     class Marker {

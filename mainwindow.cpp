@@ -7,6 +7,8 @@
 #include "settingsdialog.h"
 #include "defaults.h"
 #include "aprsfilocationdataprovider.h"
+#include "nmeaseriallocationdataprovider.h"
+#include "gpssourcedialog.h"
 
 #include <math.h>
 #include <QGuiApplication>
@@ -97,12 +99,23 @@ MainWindow::MainWindow(QWidget *parent) :
         QString description = settings.value("description").toString();
         QString tileUrl = settings.value("tileServer").toString();
         int zOrder = settings.value("zOrder").toInt();
+        bool visible = settings.value("visible", true).toBool();
         SlippyMapWidget::Layer *layer = new SlippyMapWidget::Layer(tileUrl);
         layer->setName(name);
         layer->setDescription(description);
         layer->setZOrder(zOrder);
         ui->slippyMap->addLayer(layer);
         m_layers.append(layer);
+
+        QAction *layerShowHide = new QAction();
+        layerShowHide->setCheckable(true);
+        layerShowHide->setChecked(visible);
+        layerShowHide->setText(name);
+        connect(layerShowHide, &QAction::triggered, [=]() {
+            layer->setVisible(layerShowHide->isChecked());
+            ui->slippyMap->update();
+        });
+        ui->menuFileLayers->addAction(layerShowHide);
     }
     settings.endArray();
 
@@ -421,6 +434,11 @@ void MainWindow::onDataProviderAprsFiPositionUpdated(QString identifier, QPointF
     ui->slippyMap->update();
 }
 
+void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> m_metadata)
+{
+
+}
+
 void MainWindow::onSplitterPosTimerTimeout()
 {
     QSettings settings;
@@ -559,6 +577,29 @@ void MainWindow::on_btnDirectionsGo_clicked()
             m_loadingDialog->setDefaultButton(QMessageBox::Cancel);
             m_loadingDialog->setModal(true);
             m_loadingDialog->show();
+        }
+    }
+}
+
+void MainWindow::on_actionMapGpsAddSource_triggered()
+{
+    GpsSourceDialog::GpsSourceInfo source =
+            GpsSourceDialog::getNewSource(
+                this,
+                tr("Add GPS Source"));
+
+    if (source.isValid) {
+        if (source.sourceType == GpsSourceDialog::NmeaSource) {
+            NmeaSerialLocationDataProvider *provider =
+                    new NmeaSerialLocationDataProvider(this);
+            provider->setPortName(source.portName);
+            provider->setBaudRate(source.baudRate);
+            provider->setDataBits(source.dataBits);
+            provider->setStopBits(source.stopBits);
+            provider->setParity(source.parity);
+            provider->setFlowControl(source.flowControl);
+            connect(provider, &LocationDataProvider::positionUpdated, this, &MainWindow::onGpsDataProviderPositionUpdated);
+            provider->start();
         }
     }
 }

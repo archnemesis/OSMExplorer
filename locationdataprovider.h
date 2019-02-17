@@ -16,6 +16,7 @@ public:
     int updateInterval();
 signals:
     void positionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
+    void dataProviderError();
 
 public slots:
     virtual void start() = 0;

@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network
+QT       += core gui network serialport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -38,7 +38,9 @@ SOURCES += \
     aprsdotficonfigurationdialog.cpp \
     locationdataprovider.cpp \
     aprsfilocationdataprovider.cpp \
-    layerpropertiesdialog.cpp
+    layerpropertiesdialog.cpp \
+    gpssourcedialog.cpp \
+    nmeaseriallocationdataprovider.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -51,7 +53,9 @@ HEADERS += \
     aprsdotficonfigurationdialog.h \
     locationdataprovider.h \
     aprsfilocationdataprovider.h \
-    layerpropertiesdialog.h
+    layerpropertiesdialog.h \
+    gpssourcedialog.h \
+    nmeaseriallocationdataprovider.h
 
 FORMS += \
         mainwindow.ui \
@@ -60,7 +64,8 @@ FORMS += \
     directionlistitemwidget.ui \
     settingsdialog.ui \
     aprsdotficonfigurationdialog.ui \
-    layerpropertiesdialog.ui
+    layerpropertiesdialog.ui \
+    gpssourcedialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

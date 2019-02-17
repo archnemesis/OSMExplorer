@@ -170,7 +170,11 @@ void SettingsDialog::on_btnLayerAdd_clicked()
 
 void SettingsDialog::on_btnLayerDelete_clicked()
 {
-
+    int row = ui->lstLayerList->currentRow();
+    if (row >= 0) {
+        ui->lstLayerList->takeItem(row);
+        m_layers.removeAt(row);
+    }
 }
 
 void SettingsDialog::on_btnLayerConfigure_clicked()
@@ -188,10 +192,12 @@ void SettingsDialog::on_btnLayerConfigure_clicked()
 
 void SettingsDialog::on_lstLayerList_currentRowChanged(int currentRow)
 {
+    (void)currentRow;
     ui->btnLayerConfigure->setEnabled(true);
 }
 
 void SettingsDialog::on_lstLayerList_itemDoubleClicked(QListWidgetItem *item)
 {
+    (void)item;
     on_btnLayerConfigure_clicked();
 }

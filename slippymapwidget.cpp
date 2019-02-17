@@ -942,93 +942,94 @@ void SlippyMapWidget::remap()
     for (Layer *layer : m_layers) {
         QList<Tile*> deleteList(m_layerTileMaps[layer]);
 
-        for (int y = 0; y < tiles_high; y++) {
-            for (int x = 0; x < tiles_wide; x++) {
-                qint32 this_x = tile_x_start + x;
-                qint32 this_y = tile_y_start + y;
-                QPoint point(startX + (x * 256), startY + (y * 256));
+        if (layer->isVisible()) {
+            for (int y = 0; y < tiles_high; y++) {
+                for (int x = 0; x < tiles_wide; x++) {
+                    qint32 this_x = tile_x_start + x;
+                    qint32 this_y = tile_y_start + y;
+                    QPoint point(startX + (x * 256), startY + (y * 256));
 
-                Tile *tile = nullptr;
-                for (int i = 0; i < m_layerTileMaps[layer].length(); i++) {
-                    if (m_layerTileMaps[layer].at(i)->x() == this_x && m_layerTileMaps[layer].at(i)->y() == this_y) {
-                        tile = m_layerTileMaps[layer].at(i);
+                    Tile *tile = nullptr;
+                    for (int i = 0; i < m_layerTileMaps[layer].length(); i++) {
+                        if (m_layerTileMaps[layer].at(i)->x() == this_x && m_layerTileMaps[layer].at(i)->y() == this_y) {
+                            tile = m_layerTileMaps[layer].at(i);
+                        }
                     }
-                }
 
-                if (tile == nullptr) {
-                    tile = new Tile(this_x, this_y, point);
-                    m_layerTileMaps[layer].append(tile);
+                    if (tile == nullptr) {
+                        tile = new Tile(this_x, this_y, point);
+                        m_layerTileMaps[layer].append(tile);
 
-                    QString tileUrl = layer->tileUrl()
-                            .arg(m_zoomLevel)
-                            .arg(this_x)
-                            .arg(this_y);
-                    QString fileExt = QUrl(tileUrl).fileName().split(".").last();
-                    QString fileName = QString("%1/%2/%3.%4")
-                            .arg(m_zoomLevel)
-                            .arg(this_x)
-                            .arg(this_y)
-                            .arg(fileExt);
-                    QString cachedFileName = QString("%1/%2/%3")
-                            .arg(m_cacheTileDir)
-                            .arg(layer->tileUrlHash())
-                            .arg(fileName);
+                        QString tileUrl = layer->tileUrl()
+                                .arg(m_zoomLevel)
+                                .arg(this_x)
+                                .arg(this_y);
+                        QString fileExt = QUrl(tileUrl).fileName().split(".").last();
+                        QString fileName = QString("%1/%2/%3.%4")
+                                .arg(m_zoomLevel)
+                                .arg(this_x)
+                                .arg(this_y)
+                                .arg(fileExt);
+                        QString cachedFileName = QString("%1/%2/%3")
+                                .arg(m_cacheTileDir)
+                                .arg(layer->tileUrlHash())
+                                .arg(fileName);
 
-                    if (m_cacheTiles == true && QFile::exists(cachedFileName)) {
-                        QPixmap pixmap(cachedFileName);
-                        tile->setPixmap(pixmap);
-                        update();
-                        qDebug() << "Cache hit!" << layer->name();
+                        if (m_cacheTiles == true && QFile::exists(cachedFileName)) {
+                            QPixmap pixmap(cachedFileName);
+                            tile->setPixmap(pixmap);
+                            update();
+                            qDebug() << "Cache hit!" << layer->name();
+                        }
+                        else {
+                            QNetworkRequest req(tileUrl);
+                            emit tileRequestInitiated();
+                            QNetworkReply *reply = m_net->get(req);
+                            tile->setPendingReply(reply);
+                            connect(reply, &QNetworkReply::finished, [=]() {
+                                emit tileRequestFinished();
+
+                                if (tile->isDiscarded()) {
+                                    delete tile;
+                                }
+                                else {
+                                    if (reply->error() != QNetworkReply::NoError) {
+                                      // handle error
+                                      return;
+                                    }
+
+                                    QByteArray data = reply->readAll();
+
+                                    if (m_cacheTiles) {
+                                        QFile cacheFile(cachedFileName);
+                                        QFileInfo cacheFileInfo(cacheFile);
+                                        cacheFileInfo.dir().mkpath(".");
+                                        if (cacheFile.open(QIODevice::ReadWrite)) {
+                                            cacheFile.write(data);
+                                            cacheFile.close();
+                                        }
+                                    }
+
+                                    QPixmap pixmap;
+                                    pixmap.loadFromData(data);
+                                    tile->setPixmap(pixmap);
+                                    tile->setPendingReply(nullptr);
+                                    update();
+                                }
+
+                                reply->deleteLater();
+                            });
+                        }
+
                     }
                     else {
-                        QNetworkRequest req(tileUrl);
-                        emit tileRequestInitiated();
-                        QNetworkReply *reply = m_net->get(req);
-                        tile->setPendingReply(reply);
-                        connect(reply, &QNetworkReply::finished, [=]() {
-                            emit tileRequestFinished();
-
-                            if (tile->isDiscarded()) {
-                                delete tile;
-                            }
-                            else {
-                                if (reply->error() != QNetworkReply::NoError) {
-                                  // handle error
-                                  return;
-                                }
-
-                                QByteArray data = reply->readAll();
-
-                                if (m_cacheTiles) {
-                                    QFile cacheFile(cachedFileName);
-                                    QFileInfo cacheFileInfo(cacheFile);
-                                    cacheFileInfo.dir().mkpath(".");
-                                    if (cacheFile.open(QIODevice::ReadWrite)) {
-                                        cacheFile.write(data);
-                                        cacheFile.close();
-                                    }
-                                }
-
-                                QPixmap pixmap;
-                                pixmap.loadFromData(data);
-                                tile->setPixmap(pixmap);
-                                tile->setPendingReply(nullptr);
-                                update();
-                            }
-
-                            reply->deleteLater();
-                        });
+                        QPoint old = tile->point();
+                        tile->setPoint(point);
+                        deleteList.removeOne(tile);
+                        if (old != point) update();
                     }
-
-                }
-                else {
-                    QPoint old = tile->point();
-                    tile->setPoint(point);
-                    deleteList.removeOne(tile);
-                    if (old != point) update();
                 }
             }
-
         }
 
         while (deleteList.length() > 0) {
