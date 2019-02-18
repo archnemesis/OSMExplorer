@@ -434,9 +434,22 @@ void MainWindow::onDataProviderAprsFiPositionUpdated(QString identifier, QPointF
     ui->slippyMap->update();
 }
 
-void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> m_metadata)
+void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
 {
+    SlippyMapWidget::Marker *marker;
 
+    if (m_gpsMarkers.contains(identifier)) {
+        marker = m_gpsMarkers[identifier];
+        marker->setLabel(metadata["gps_label"].toString());
+        marker->setLongitude(position.x());
+        marker->setLatitude(position.y());
+    }
+    else {
+        marker = new SlippyMapWidget::Marker(position.y(), position.x());
+        marker->setLabel(metadata["gps_label"].toString());
+        m_gpsMarkers[identifier] = marker;
+        ui->slippyMap->addMarker(marker);
+    }
 }
 
 void MainWindow::onSplitterPosTimerTimeout()
@@ -591,7 +604,8 @@ void MainWindow::on_actionMapGpsAddSource_triggered()
     if (source.isValid) {
         if (source.sourceType == GpsSourceDialog::NmeaSource) {
             NmeaSerialLocationDataProvider *provider =
-                    new NmeaSerialLocationDataProvider(this);
+                    new NmeaSerialLocationDataProvider();
+            provider->setLabelText(source.label);
             provider->setPortName(source.portName);
             provider->setBaudRate(source.baudRate);
             provider->setDataBits(source.dataBits);
@@ -600,6 +614,7 @@ void MainWindow::on_actionMapGpsAddSource_triggered()
             provider->setFlowControl(source.flowControl);
             connect(provider, &LocationDataProvider::positionUpdated, this, &MainWindow::onGpsDataProviderPositionUpdated);
             provider->start();
+            m_gpsProviders.append(provider);
         }
     }
 }

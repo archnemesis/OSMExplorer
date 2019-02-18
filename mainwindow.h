@@ -56,6 +56,7 @@ private:
     QHash<QString,SlippyMapWidget::Marker*> m_dataProviderAprsFiMarkers;
     QList<SlippyMapWidget::Layer*> m_layers;
     QList<LocationDataProvider*> m_gpsProviders;
+    QHash<QString,SlippyMapWidget::Marker*> m_gpsMarkers;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -74,7 +75,7 @@ protected slots:
     void onSplitterMoved(int pos, int index);
     void onNetworkRequestFinished(QNetworkReply *reply);
     void onDataProviderAprsFiPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
-    void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> m_metadata);
+    void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
 
     /**
      * @brief Save splitter position after finish moving.

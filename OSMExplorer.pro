@@ -40,7 +40,8 @@ SOURCES += \
     aprsfilocationdataprovider.cpp \
     layerpropertiesdialog.cpp \
     gpssourcedialog.cpp \
-    nmeaseriallocationdataprovider.cpp
+    nmeaseriallocationdataprovider.cpp \
+    slippymapwidgetmarker.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -55,7 +56,8 @@ HEADERS += \
     aprsfilocationdataprovider.h \
     layerpropertiesdialog.h \
     gpssourcedialog.h \
-    nmeaseriallocationdataprovider.h
+    nmeaseriallocationdataprovider.h \
+    slippymapwidgetmarker.h
 
 FORMS += \
         mainwindow.ui \
