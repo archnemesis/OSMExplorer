@@ -200,12 +200,13 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 
 void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
 {
-
+    (void)latitude;
+    (void)longitude;
 }
 
 void MainWindow::onSlippyMapZoomLevelChanged(int zoom)
 {
-
+    (void)zoom;
 }
 
 void MainWindow::onSlippyMapTileRequestStarted()
@@ -267,7 +268,7 @@ void MainWindow::onSlippyMapCursorLeft()
     m_statusBarPositionLabel->setText("");
 }
 
-void MainWindow::onSlippyMapMarkerAdded(SlippyMapWidget::Marker *marker)
+void MainWindow::onSlippyMapMarkerAdded(SlippyMapWidgetMarker *marker)
 {
     MarkerListItemWidget *itemWidget = new MarkerListItemWidget();
     itemWidget->setName(marker->label());
@@ -281,7 +282,7 @@ void MainWindow::onSlippyMapMarkerAdded(SlippyMapWidget::Marker *marker)
     connect(itemWidget, &MarkerListItemWidget::markerMapButtonPressed, ui->slippyMap, &SlippyMapWidget::setCenter);
 }
 
-void MainWindow::onSlippyMapMarkerDeleted(SlippyMapWidget::Marker *marker)
+void MainWindow::onSlippyMapMarkerDeleted(SlippyMapWidgetMarker *marker)
 {
     if (m_markerListItemMap.contains(marker)) {
         delete m_markerListItemMap[marker];
@@ -289,7 +290,7 @@ void MainWindow::onSlippyMapMarkerDeleted(SlippyMapWidget::Marker *marker)
     }
 }
 
-void MainWindow::onSlippyMapMarkerUpdated(SlippyMapWidget::Marker *marker)
+void MainWindow::onSlippyMapMarkerUpdated(SlippyMapWidgetMarker *marker)
 {
     if (m_markerListItemMap.contains(marker)) {
         QListWidgetItem *item = m_markerListItemMap[marker];
@@ -326,6 +327,8 @@ void MainWindow::onDirectionsFromHereTriggered()
 
 void MainWindow::onSplitterMoved(int pos, int index)
 {
+    (void)pos;
+    (void)index;
     m_saveSplitterPosTimer->stop();
     m_saveSplitterPosTimer->start();
 }
@@ -416,16 +419,15 @@ void MainWindow::onNetworkRequestFinished(QNetworkReply *reply)
 
 void MainWindow::onDataProviderAprsFiPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
 {
-    SlippyMapWidget::Marker *marker;
+    SlippyMapWidgetMarker *marker;
 
     if (m_dataProviderAprsFiMarkers.contains(identifier)) {
         marker = m_dataProviderAprsFiMarkers[identifier];
         marker->setLabel(identifier);
-        marker->setLongitude(position.x());
-        marker->setLatitude(position.y());
+        marker->setPosition(position);
     }
     else {
-        marker = new SlippyMapWidget::Marker(position.y(), position.x());
+        marker = new SlippyMapWidgetMarker(position);
         marker->setLabel(identifier);
         m_dataProviderAprsFiMarkers[identifier] = marker;
         ui->slippyMap->addMarker(marker);
@@ -436,16 +438,15 @@ void MainWindow::onDataProviderAprsFiPositionUpdated(QString identifier, QPointF
 
 void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
 {
-    SlippyMapWidget::Marker *marker;
+    SlippyMapWidgetMarker *marker;
 
     if (m_gpsMarkers.contains(identifier)) {
         marker = m_gpsMarkers[identifier];
         marker->setLabel(metadata["gps_label"].toString());
-        marker->setLongitude(position.x());
-        marker->setLatitude(position.y());
+        marker->setPosition(position);
     }
     else {
-        marker = new SlippyMapWidget::Marker(position.y(), position.x());
+        marker = new SlippyMapWidgetMarker(position);
         marker->setLabel(metadata["gps_label"].toString());
         m_gpsMarkers[identifier] = marker;
         ui->slippyMap->addMarker(marker);
@@ -456,7 +457,7 @@ void MainWindow::onSplitterPosTimerTimeout()
 {
     QSettings settings;
     QList<int> widths = ui->splitter->sizes();
-    double ratio = (double)widths[0] / (double)width();
+    double ratio = static_cast<double>(widths[0]) / static_cast<double>(width());
     settings.setValue("view/sidebarWidth", ratio);
 }
 
@@ -506,7 +507,7 @@ void MainWindow::refreshSettings()
 
 void MainWindow::on_actionNewMarker_triggered()
 {
-    SlippyMapWidget::Marker *marker = MarkerDialog::getNewMarker(this, tr("New Marker"));
+    SlippyMapWidgetMarker *marker = MarkerDialog::getNewMarker(this, tr("New Marker"));
     if (marker != nullptr) {
         ui->slippyMap->addMarker(marker);
     }

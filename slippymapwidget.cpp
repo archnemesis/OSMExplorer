@@ -1,4 +1,5 @@
 #include "slippymapwidget.h"
+#include "slippymapwidgetmarker.h"
 #include "defaults.h"
 
 #include <math.h>
@@ -29,6 +30,7 @@
 #include <QMessageBox>
 #include <QPixmap>
 #include <QPoint>
+#include <QPointF>
 #include <QPushButton>
 #include <QLineEdit>
 #include <QPainterPath>
@@ -121,18 +123,6 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     searchFont.setPixelSize(18);
     m_searchBar->setFont(searchFont);
 
-    QPalette systemPalette = QGuiApplication::palette();
-    m_markerBrush.setStyle(Qt::SolidPattern);
-    m_markerBrush.setColor(systemPalette.highlight().color());
-    m_markerPen.setStyle(Qt::NoPen);
-    m_markerLabelBrush.setStyle(Qt::SolidPattern);
-    m_markerLabelBrush.setColor(systemPalette.background().color());
-    m_markerLabelPen.setStyle(Qt::SolidLine);
-    m_markerLabelPen.setColor(systemPalette.dark().color());
-    m_markerLabelTextBrush.setStyle(Qt::NoBrush);
-    m_markerLabelTextPen.setStyle(Qt::SolidLine);
-    m_markerLabelTextPen.setColor(systemPalette.text().color());
-
     m_coordAction = new QAction();
     m_coordAction->setEnabled(false);
 
@@ -212,46 +202,49 @@ QString SlippyMapWidget::tileServer()
     return m_tileServer;
 }
 
-QList<SlippyMapWidget::Marker *> SlippyMapWidget::markerList()
+QList<SlippyMapWidgetMarker *> SlippyMapWidget::markerList()
 {
     return m_markers;
 }
 
-SlippyMapWidget::Marker *SlippyMapWidget::addMarker(double latitude, double longitude)
+SlippyMapWidgetMarker *SlippyMapWidget::addMarker(double latitude, double longitude)
 {
-    Marker *marker = new Marker(latitude, longitude);
+    SlippyMapWidgetMarker *marker =
+            new SlippyMapWidgetMarker(QPointF(longitude, latitude));
     m_markers.append(marker);
     update();
     emit markerAdded(marker);
     return marker;
 }
 
-SlippyMapWidget::Marker *SlippyMapWidget::addMarker(double latitude, double longitude, QString label)
+SlippyMapWidgetMarker *SlippyMapWidget::addMarker(double latitude, double longitude, QString label)
 {
-    Marker *marker = new Marker(latitude, longitude, label);
+    SlippyMapWidgetMarker *marker =
+            new SlippyMapWidgetMarker(QPointF(longitude, latitude), label);
     m_markers.append(marker);
     update();
     emit markerAdded(marker);
     return marker;
 }
 
-SlippyMapWidget::Marker *SlippyMapWidget::addMarker(QPointF location)
+SlippyMapWidgetMarker *SlippyMapWidget::addMarker(QPointF location)
 {
     return addMarker(location.x(), location.y());
 }
 
-SlippyMapWidget::Marker *SlippyMapWidget::addMarker(QPointF location, QString label)
+SlippyMapWidgetMarker *SlippyMapWidget::addMarker(QPointF location, QString label)
 {
     return addMarker(location.x(), location.y(), label);
 }
 
-void SlippyMapWidget::addMarker(SlippyMapWidget::Marker *marker)
+void SlippyMapWidget::addMarker(SlippyMapWidgetMarker *marker)
 {
     m_markers.append(marker);
+    connect(marker, &SlippyMapWidgetMarker::changed, this, &SlippyMapWidget::onMarkerChanged);
     emit markerAdded(marker);
 }
 
-void SlippyMapWidget::deleteMarker(SlippyMapWidget::Marker *marker)
+void SlippyMapWidget::deleteMarker(SlippyMapWidgetMarker *marker)
 {
     m_markers.removeOne(marker);
 }
@@ -542,6 +535,11 @@ void SlippyMapWidget::copyLongitudeActionTriggered()
     m_clipboard->setText(str);
 }
 
+void SlippyMapWidget::onMarkerChanged()
+{
+    update();
+}
+
 void SlippyMapWidget::paintEvent(QPaintEvent *event)
 {
     (void)event;
@@ -609,25 +607,6 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
             lineBrush.setColor(QColor(Qt::black));
             painter.setBrush(lineBrush);
 
-//            QLineF seg1 = m_lineSetPaths[lineSet].at(0);
-//            qDebug() << "Lat/Long Raw:" << seg1;
-//            seg1.setP1(QPointF(seg1.p1().x() - boundingBoxLatLon().x(), seg1.p1().y() - boundingBoxLatLon().y()));
-//            seg1.setP2(QPointF(seg1.p2().x() - boundingBoxLatLon().x(), seg1.p2().y() - boundingBoxLatLon().y()));
-//            qDebug() << "After translate:" << seg1;
-//            seg1.setP1(QPointF(seg1.p1().x() * (1.0 / degPerPixelX()), seg1.p1().y() * (-1.0 / degPerPixelY())));
-//            seg1.setP2(QPointF(seg1.p2().x() * (1.0 / degPerPixelX()), seg1.p2().y() * (-1.0 / degPerPixelY())));
-//            qDebug() << "After scale:" << seg1;
-
-//            painter.drawEllipse(seg1.p1(), 10, 10);
-
-//            painter.scale(1.0/degPerPixelX(), -1.0/degPerPixelY());
-//            painter.translate((-boundingBoxLatLon().x()/degPerPixelX()), (boundingBoxLatLon().y()/degPerPixelY()) + height());
-////            painter.translate(-(boundingBoxLatLon().x()), -(boundingBoxLatLon().y()));
-////            painter.scale(-1.0 / degPerPixelX(), 1.0 / degPerPixelY());
-////            painter.translate(0, -height());
-//            painter.drawLines(m_lineSetPaths[lineSet]);
-//            painter.resetTransform();
-
             for (int i = 0; i < m_lineSetPaths[lineSet].size(); i++) {
                 QLineF line = m_lineSetPaths[lineSet].at(i);
                 QPointF p1 = line.p1();
@@ -642,47 +621,13 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
     }
 
     if (m_markers.length() > 0) {
-        double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
-        double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
-        double deg_per_pixel_y = deg_per_pixel / scale_factor;
-        double width_deg = deg_per_pixel * width();
-        double height_deg = deg_per_pixel_y * height();
-        double left_deg = m_lon - (width_deg / 2);
-        double top_deg = m_lat - (height_deg / 2);
+        QRectF bbox = boundingBoxLatLon();
 
-        for (Marker *marker : m_markers) {
-            if (marker->longitude() > left_deg && marker->longitude() < (left_deg + width_deg)) {
-                if (marker->latitude() > top_deg && marker->latitude() < (top_deg + height_deg)) {
-                    qint32 x = static_cast<qint32>((marker->longitude() - left_deg) / deg_per_pixel);
-                    qint32 y = height() - static_cast<qint32>((marker->latitude() - top_deg) / deg_per_pixel_y);
-                    qint32 rad = (m_activeMarker == marker ? 10 : 5);
-
-                    painter.setBrush(m_markerBrush);
-                    painter.setPen(m_markerPen);
-                    painter.drawEllipse(QPoint(x, y), rad, rad);
-
-                    QFontMetrics metrics(painter.font());
-                    if (marker->label().length() > 0) {
-                        qint32 label_w = metrics.width(marker->label());
-                        qint32 label_h = metrics.height();
-                        qint32 label_x = x - (label_w / 2);
-                        qint32 label_y = y - (label_h + 15);
-                        painter.setBrush(m_markerLabelBrush);
-                        painter.setPen(m_markerLabelPen);
-                        painter.drawRoundRect(
-                                    label_x - 5,
-                                    label_y - 5,
-                                    label_w + 10,
-                                    label_h + 10,
-                                    5, 5);
-                        painter.setBrush(m_markerLabelTextBrush);
-                        painter.setPen(m_markerLabelTextPen);
-                        painter.drawText(
-                                    label_x,
-                                    label_y + (label_h / 2) + 5,
-                                    marker->label());
-                    }
-                }
+        for (SlippyMapWidgetMarker *marker : m_markers) {
+            if (bbox.contains(marker->position())) {
+                qint32 x = long2widgetX(marker->position().x());
+                qint32 y = lat2widgety(marker->position().y());
+                marker->drawMarker(&painter, QPoint(x, y));
             }
         }
     }
@@ -695,14 +640,32 @@ void SlippyMapWidget::mousePressEvent(QMouseEvent *event)
     m_dragStart = event->pos();
     m_dragRealStart = event->pos();
     m_dragButton = event->button();
+
+    if (event->button() == Qt::LeftButton) {
+        for (SlippyMapWidgetMarker *marker : m_markers) {
+            if (marker->isMovable()) {
+                qint32 marker_x = long2widgetX(marker->longitude());
+                qint32 marker_y = lat2widgety(marker->latitude());
+                QRect marker_box(
+                            (marker_x - 5),
+                            (marker_y - 5),
+                            10, 10);
+
+                if (marker_box.contains(event->pos())) {
+                    m_dragMarker = marker;
+                }
+            }
+        }
+    }
 }
 
 void SlippyMapWidget::mouseReleaseEvent(QMouseEvent *event)
 {
     m_dragging = false;
+    m_dragMarker = nullptr;
 
     if (event->button() == Qt::LeftButton && event->pos() == m_dragRealStart) {
-        for (Marker *marker : m_markers) {
+        for (SlippyMapWidgetMarker *marker : m_markers) {
             qint32 marker_x = long2widgetX(marker->longitude());
             qint32 marker_y = lat2widgety(marker->latitude());
             QRect marker_box(
@@ -733,10 +696,18 @@ void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
     double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
     double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
     double deg_per_pixel_y = deg_per_pixel / scale_factor;
+    QPoint pos = event->pos();
+    QPoint diff = pos - m_dragStart;
 
-    if (m_dragging) {
-        QPoint pos = event->pos();
-        QPoint diff = pos - m_dragStart;
+    if (m_dragging && m_dragMarker != nullptr) {
+        QPointF markerPoint = m_dragMarker->position();
+        m_dragStart = pos;
+        markerPoint.setY(markerPoint.y() - (deg_per_pixel_y * diff.y()));
+        markerPoint.setX(markerPoint.x() + (deg_per_pixel * diff.x()));
+        m_dragMarker->setPosition(markerPoint);
+        remap();
+    }
+    else if (m_dragging) {
         m_dragStart = pos;
         m_lat = m_lat + (deg_per_pixel_y * diff.y());
         m_lon = m_lon - (deg_per_pixel * diff.x());
@@ -800,7 +771,7 @@ void SlippyMapWidget::contextMenuEvent(QContextMenuEvent *event)
     m_setMarkerLabelAction->setVisible(false);
     m_activeMarker = nullptr;
 
-    for (Marker *marker : m_markers) {
+    for (SlippyMapWidgetMarker *marker : m_markers) {
         qint32 marker_x = long2widgetX(marker->longitude());
         qint32 marker_y = lat2widgety(marker->latitude());
         if (event->x() > (marker_x - 5) && event->x() < (marker_x + 5)) {
@@ -898,7 +869,7 @@ QRectF SlippyMapWidget::boundingBoxLatLon()
     double height_deg = degPerPixelY() * height();
     double top_deg = m_lat + (height_deg / 2);
 
-    return QRectF(left_deg, top_deg, width_deg, height_deg);
+    return QRectF(left_deg, top_deg, width_deg, -height_deg);
 }
 
 void SlippyMapWidget::remap()

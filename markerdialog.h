@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include "slippymapwidget.h"
+#include "slippymapwidgetmarker.h"
 
 namespace Ui {
 class MarkerDialog;
@@ -16,8 +17,8 @@ public:
     explicit MarkerDialog(QWidget *parent = nullptr);
     ~MarkerDialog();
 
-    static SlippyMapWidget::Marker *getNewMarker(QWidget *parent, QString title);
-    static bool getEditMarker(QWidget *parent, QString title, SlippyMapWidget::Marker *marker);
+    static SlippyMapWidgetMarker *getNewMarker(QWidget *parent, QString title);
+    static bool getEditMarker(QWidget *parent, QString title, SlippyMapWidgetMarker *marker);
 
 private:
     Ui::MarkerDialog *ui;

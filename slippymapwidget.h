@@ -26,6 +26,7 @@ class QCompleter;
 class QMenu;
 class QAction;
 class QClipboard;
+class SlippyMapWidgetMarker;
 
 class SlippyMapWidget : public QWidget
 {
@@ -61,32 +62,6 @@ public:
         bool m_visible;
     };
 
-    class Marker {
-    public:
-        Marker(double latitude, double longitude, QString label) {
-            m_label = label;
-            m_latitude = latitude;
-            m_longitude = longitude;
-        }
-        Marker(double latitude, double longitude) {
-            m_latitude = latitude;
-            m_longitude = longitude;
-        }
-        void setLatitude(double latitude) { m_latitude = latitude; }
-        void setLongitude(double longitude) { m_longitude = longitude; }
-        void setLabel(QString label) { m_label = label; }
-        void setColor(QColor color) { m_color = color; }
-        double latitude() { return m_latitude; }
-        double longitude() { return m_longitude; }
-        QString label() { return m_label; }
-        QColor color() { return m_color; }
-    private:
-        double m_latitude;
-        double m_longitude;
-        QString m_label;
-        QColor m_color;
-    };
-
     class LineSet {
     public:
         LineSet(QVector<QPointF> *segments, int width = 1, QColor color = Qt::black) {
@@ -108,13 +83,13 @@ public:
     static QString latLonToString(double lat, double lon);
     void setTileServer(QString server);
     QString tileServer();
-    QList<Marker*> markerList();
-    Marker *addMarker(double latitude, double longitude);
-    Marker *addMarker(double latitude, double longitude, QString label);
-    Marker *addMarker(QPointF location);
-    Marker *addMarker(QPointF location, QString label);
-    void addMarker(Marker *marker);
-    void deleteMarker(Marker *marker);
+    QList<SlippyMapWidgetMarker*> markerList();
+    SlippyMapWidgetMarker *addMarker(double latitude, double longitude);
+    SlippyMapWidgetMarker *addMarker(double latitude, double longitude, QString label);
+    SlippyMapWidgetMarker *addMarker(QPointF location);
+    SlippyMapWidgetMarker *addMarker(QPointF location, QString label);
+    void addMarker(SlippyMapWidgetMarker *marker);
+    void deleteMarker(SlippyMapWidgetMarker *marker);
     void addLineSet(LineSet *lineSet);
     void removeLineSet(LineSet *lineSet);
     void addLayer(Layer *layer);
@@ -148,6 +123,7 @@ protected slots:
     void copyCoordinatesActionTriggered();
     void copyLatitudeActionTriggered();
     void copyLongitudeActionTriggered();
+    void onMarkerChanged();
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -168,11 +144,11 @@ signals:
     void cursorPositionChanged(double latitude, double longitude);
     void cursorLeft();
     void cursorEntered();
-    void markerActivated(Marker *marker);
-    void markerDeactivated(Marker *marker);
-    void markerAdded(Marker *marker);
-    void markerDeleted(Marker *marker);
-    void markerUpdated(Marker *marker);
+    void markerActivated(SlippyMapWidgetMarker *marker);
+    void markerDeactivated(SlippyMapWidgetMarker *marker);
+    void markerAdded(SlippyMapWidgetMarker *marker);
+    void markerDeleted(SlippyMapWidgetMarker *marker);
+    void markerUpdated(SlippyMapWidgetMarker *marker);
     void contextMenuActivated(double latitude, double longitude);
 
 private:
@@ -232,6 +208,7 @@ private:
     QPoint m_dragRealStart;
     QPoint m_dragStart;
     Qt::MouseButton m_dragButton;
+    SlippyMapWidgetMarker *m_dragMarker = nullptr;
     int m_zoomLevel = 0;
     int m_tileX = 0;
     int m_tileY = 0;
@@ -262,8 +239,8 @@ private:
     QRegularExpression m_locationParser;
     QCompleter *m_locationCompleter;
 
-    QList<Marker*> m_markers;
-    Marker* m_activeMarker = nullptr;
+    QList<SlippyMapWidgetMarker*> m_markers;
+    SlippyMapWidgetMarker* m_activeMarker = nullptr;
     QBrush m_markerBrush;
     QPen m_markerPen;
     QBrush m_markerLabelBrush;

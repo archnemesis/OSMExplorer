@@ -13,7 +13,7 @@ MarkerDialog::~MarkerDialog()
     delete ui;
 }
 
-SlippyMapWidget::Marker *MarkerDialog::getNewMarker(QWidget *parent, QString title)
+SlippyMapWidgetMarker *MarkerDialog::getNewMarker(QWidget *parent, QString title)
 {
     MarkerDialog dlg(parent);
     if (title.length() > 0) dlg.setWindowTitle(title);
@@ -23,11 +23,11 @@ SlippyMapWidget::Marker *MarkerDialog::getNewMarker(QWidget *parent, QString tit
         bool ok;
         double lat = dlg.ui->lblLatitude->text().toDouble(&ok);
         double lon = dlg.ui->lblLongitude->text().toDouble(&ok);
+        QPointF pos(lon, lat);
         QString name = dlg.ui->lblName->text();
         QString description = dlg.ui->lblDescription->toPlainText();
-        SlippyMapWidget::Marker *marker = new SlippyMapWidget::Marker(
-                    lat,
-                    lon,
+        SlippyMapWidgetMarker *marker = new SlippyMapWidgetMarker(
+                    pos,
                     name);
         return marker;
     }
@@ -35,7 +35,7 @@ SlippyMapWidget::Marker *MarkerDialog::getNewMarker(QWidget *parent, QString tit
     return nullptr;
 }
 
-bool MarkerDialog::getEditMarker(QWidget *parent, QString title, SlippyMapWidget::Marker *marker)
+bool MarkerDialog::getEditMarker(QWidget *parent, QString title, SlippyMapWidgetMarker *marker)
 {
     MarkerDialog dlg(parent);
     if (title.length() > 0) dlg.setWindowTitle(title);
@@ -50,11 +50,11 @@ bool MarkerDialog::getEditMarker(QWidget *parent, QString title, SlippyMapWidget
         bool ok;
         double lat = dlg.ui->lblLatitude->text().toDouble(&ok);
         double lon = dlg.ui->lblLongitude->text().toDouble(&ok);
+        QPointF pos(lon, lat);
         QString name = dlg.ui->lblName->text();
         QString description = dlg.ui->lblDescription->toPlainText();
         marker->setLabel(name);
-        marker->setLatitude(lat);
-        marker->setLongitude(lon);
+        marker->setPosition(pos);
         return true;
     }
 

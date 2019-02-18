@@ -7,6 +7,7 @@
 #include <QVariant>
 #include <QTimer>
 #include "slippymapwidget.h"
+#include "slippymapwidgetmarker.h"
 
 namespace Ui {
 class MainWindow;
@@ -39,7 +40,7 @@ private:
     int m_requestCount = 0;
     QLabel *m_statusBarPositionLabel;
     QLabel *m_statusBarStatusLabel;
-    QMap<SlippyMapWidget::Marker*,QListWidgetItem*> m_markerListItemMap;
+    QMap<SlippyMapWidgetMarker*,QListWidgetItem*> m_markerListItemMap;
     QColor m_directionLineColor;
     QListWidgetItem *m_currentRouteListItem = nullptr;
     DirectionListItemWidget *m_currentRouteListItemWidget = nullptr;
@@ -53,10 +54,10 @@ private:
     QNetworkAccessManager *m_net;
     QMessageBox *m_loadingDialog = nullptr;
     AprsFiLocationDataProvider *m_dataProviderAprsFi = nullptr;
-    QHash<QString,SlippyMapWidget::Marker*> m_dataProviderAprsFiMarkers;
+    QHash<QString,SlippyMapWidgetMarker*> m_dataProviderAprsFiMarkers;
     QList<SlippyMapWidget::Layer*> m_layers;
     QList<LocationDataProvider*> m_gpsProviders;
-    QHash<QString,SlippyMapWidget::Marker*> m_gpsMarkers;
+    QHash<QString,SlippyMapWidgetMarker*> m_gpsMarkers;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -66,9 +67,9 @@ protected slots:
     void onSlippyMapCursorPositionChanged(double latitude, double longitude);
     void onSlippyMapCursorEntered();
     void onSlippyMapCursorLeft();
-    void onSlippyMapMarkerAdded(SlippyMapWidget::Marker *marker);
-    void onSlippyMapMarkerDeleted(SlippyMapWidget::Marker *marker);
-    void onSlippyMapMarkerUpdated(SlippyMapWidget::Marker *marker);
+    void onSlippyMapMarkerAdded(SlippyMapWidgetMarker *marker);
+    void onSlippyMapMarkerDeleted(SlippyMapWidgetMarker *marker);
+    void onSlippyMapMarkerUpdated(SlippyMapWidgetMarker *marker);
     void onSlippyMapContextMenuActivated(double latitude, double longitude);
     void onDirectionsToHereTriggered();
     void onDirectionsFromHereTriggered();
