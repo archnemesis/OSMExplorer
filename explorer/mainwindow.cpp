@@ -7,7 +7,6 @@
 #include "directionlistitemwidget.h"
 #include "settingsdialog.h"
 #include "defaults.h"
-#include "aprsfilocationdataprovider.h"
 #include "nmeaseriallocationdataprovider.h"
 #include "gpssourcedialog.h"
 #include "textlogviewerform.h"
@@ -484,22 +483,22 @@ void MainWindow::onNetworkRequestFinished(QNetworkReply *reply)
 
 void MainWindow::onDataProviderAprsFiPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
 {
-    SlippyMapWidgetMarker *marker;
+//    SlippyMapWidgetMarker *marker;
 
-    if (m_dataProviderAprsFiMarkers.contains(identifier)) {
-        marker = m_dataProviderAprsFiMarkers[identifier];
-        marker->setLabel(identifier);
-        marker->setPosition(position);
-    }
-    else {
-        marker = new SlippyMapWidgetMarker(position);
-        marker->setLabel(identifier);
-        m_markerModelGroup_aprsDotFiMarkers->addMarker(marker);
-        m_dataProviderAprsFiMarkers[identifier] = marker;
-        ui->slippyMap->addMarker(marker);
-    }
+//    if (m_dataProviderAprsFiMarkers.contains(identifier)) {
+//        marker = m_dataProviderAprsFiMarkers[identifier];
+//        marker->setLabel(identifier);
+//        marker->setPosition(position);
+//    }
+//    else {
+//        marker = new SlippyMapWidgetMarker(position);
+//        marker->setLabel(identifier);
+//        m_markerModelGroup_aprsDotFiMarkers->addMarker(marker);
+//        m_dataProviderAprsFiMarkers[identifier] = marker;
+//        ui->slippyMap->addMarker(marker);
+//    }
 
-    ui->slippyMap->update();
+//    ui->slippyMap->update();
 }
 
 void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
@@ -544,31 +543,11 @@ void MainWindow::refreshSettings()
     ui->slippyMap->setTileCacheDir(settings.value("map/cache/tiledir", QStandardPaths::writableLocation(QStandardPaths::CacheLocation)).toString());
     ui->slippyMap->setTileCachingEnabled(settings.value("map/cache/enable", true).toBool());
 
-    if (settings.contains("integrations/aprs.fi/apikey")) {
-        QString apiUrl = settings.value("integrations/aprs.fi/apiUrl").toString();
-        QString apiKey = settings.value("integrations/aprs.fi/apiKey").toString();
-        int updateInterval = settings.value("integrations/aprs.fi/updateInterval").toInt();
+    for (ExplorerPluginInterface *plugin : m_plugins) {
+        QList<LocationDataProvider*> providers = plugin->locationDataProviderList();
+        if (providers.length() > 0) {
 
-        QStringList callsigns;
-        int size = settings.beginReadArray("integrations/aprs.fi/callsigns");
-        for (int i = 0; i < size; i++) {
-            settings.setArrayIndex(i);
-            callsigns.append(settings.value("callsign").toString());
         }
-
-        if (m_dataProviderAprsFi == nullptr) {
-            m_dataProviderAprsFi = new AprsFiLocationDataProvider();
-            connect(m_dataProviderAprsFi,
-                    &AprsFiLocationDataProvider::positionUpdated,
-                    this,
-                    &MainWindow::onDataProviderAprsFiPositionUpdated);
-        }
-
-        m_dataProviderAprsFi->setApiUrl(apiUrl);
-        m_dataProviderAprsFi->setApiKey(apiKey);
-        m_dataProviderAprsFi->setUpdateInterval(updateInterval);
-        m_dataProviderAprsFi->setCallsigns(callsigns);
-        m_dataProviderAprsFi->start();
     }
 }
 
