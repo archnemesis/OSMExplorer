@@ -1,7 +1,6 @@
 #ifndef EXPLORERPLUGININTERFACE_H
 #define EXPLORERPLUGININTERFACE_H
 
-#include <QObject>
 #include <QList>
 #include <QAction>
 #include <QString>
@@ -11,12 +10,10 @@
 #include "slippymapwidgetmarkergroup.h"
 #include "locationdataprovider.h"
 
-class ExplorerPluginInterface : public QObject
+class ExplorerPluginInterface
 {
-    Q_OBJECT
 public:
-    ExplorerPluginInterface(QObject *parent = nullptr);
-    ~ExplorerPluginInterface();
+    virtual ~ExplorerPluginInterface();
 
     virtual QString name() const = 0;
     virtual QString description() const = 0;

@@ -9,7 +9,13 @@
 #include "slippymapwidgetmarker.h"
 #include "slippymapwidgetmarkergroup.h"
 
-class SlippyMapWidgetMarkerModel : public QAbstractItemModel
+#if defined EXPORT_SYMBOLS
+#define DECLARATION Q_DECL_EXPORT
+#else
+#define DECLARATION Q_DECL_IMPORT
+#endif
+
+class DECLARATION SlippyMapWidgetMarkerModel : public QAbstractItemModel
 {
     Q_OBJECT
 public:

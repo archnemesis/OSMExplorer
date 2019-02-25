@@ -32,7 +32,13 @@ class SlippyMapWidgetMarkerModel;
 class SlippyMapWidgetMarker;
 class SlippyMapWidgetLayer;
 
-class SlippyMapWidget : public QWidget
+#if defined EXPORT_SYMBOLS
+#define DECLARATION Q_DECL_EXPORT
+#else
+#define DECLARATION Q_DECL_IMPORT
+#endif
+
+class DECLARATION SlippyMapWidget : public QWidget
 {
     Q_OBJECT
 public:

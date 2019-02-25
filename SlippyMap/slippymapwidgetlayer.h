@@ -3,7 +3,13 @@
 
 #include <QObject>
 
-class SlippyMapWidgetLayer : public QObject
+#if defined EXPORT_SYMBOLS
+#define DECLARATION Q_DECL_EXPORT
+#else
+#define DECLARATION Q_DECL_IMPORT
+#endif
+
+class DECLARATION SlippyMapWidgetLayer : public QObject
 {
     Q_OBJECT
 public:

@@ -13,6 +13,12 @@ TEMPLATE = app
 
 QMAKE_PROJECT_NAME = OSMExplorer
 
+INCLUDEPATH += ../SlippyMap
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/SlippyMap/release/ -lSlippyMap
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/SlippyMap/debug/ -lSlippyMap
+else:unix: LIBS += -L$$OUT_PWD/SlippyMap/ -lSlippyMap
+
 win32 {
     INCLUDEPATH += "C:\Program Files\OpenSSL-1.0.2q-Win64\include"
     LIBS += -L"C:\Program Files\OpenSSL-1.0.2q-Win64\lib" -lssleay32 -llibeay32
@@ -39,7 +45,6 @@ CONFIG += c++11
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    slippymapwidget.cpp \
     markerdialog.cpp \
     markerlistitemwidget.cpp \
     directionlistitemwidget.cpp \
@@ -48,16 +53,11 @@ SOURCES += \
     layerpropertiesdialog.cpp \
     gpssourcedialog.cpp \
     nmeaseriallocationdataprovider.cpp \
-    slippymapwidgetmarker.cpp \
-    slippymapwidgetlayer.cpp \
     textlogviewerform.cpp \
-    slippymapwidgetmarkermodel.cpp \
-    slippymapwidgetmarkergroup.cpp \
     explorerplugininterface.cpp
 
 HEADERS += \
         mainwindow.h \
-    slippymapwidget.h \
     markerdialog.h \
     markerlistitemwidget.h \
     directionlistitemwidget.h \
@@ -67,12 +67,8 @@ HEADERS += \
     layerpropertiesdialog.h \
     gpssourcedialog.h \
     nmeaseriallocationdataprovider.h \
-    slippymapwidgetmarker.h \
-    slippymapwidgetlayer.h \
     textlogviewerform.h \
-    explorerplugininterface.h \
-    slippymapwidgetmarkermodel.h \
-    slippymapwidgetmarkergroup.h
+    explorerplugininterface.h
 
 FORMS += \
         mainwindow.ui \

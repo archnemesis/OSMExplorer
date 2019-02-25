@@ -463,7 +463,7 @@ font-weight: bold;
   <customwidget>
    <class>SlippyMapWidget</class>
    <extends>QWidget</extends>
-   <header>slippymapwidget.h</header>
+   <header location="global">slippymapwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

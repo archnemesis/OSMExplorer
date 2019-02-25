@@ -10,7 +10,13 @@
 
 class QPainter;
 
-class SlippyMapWidgetMarker : public QObject
+#if defined EXPORT_SYMBOLS
+#define DECLARATION Q_DECL_EXPORT
+#else
+#define DECLARATION Q_DECL_IMPORT
+#endif
+
+class DECLARATION  SlippyMapWidgetMarker : public QObject
 {
     Q_OBJECT
 public:

@@ -1,4 +1,7 @@
 TEMPLATE = subdirs
 SUBDIRS = explorer \
-            plugins/aprsfi
+            plugins/aprsfi \
+    SlippyMap
 
+INCLUDEPATH += $$PWD/SlippyMap
+DEPENDPATH += $$PWD/SlippyMap

@@ -1,0 +1,12 @@
+#ifndef SLIPPYMAP_GLOBAL_H
+#define SLIPPYMAP_GLOBAL_H
+
+#include <QtCore/qglobal.h>
+
+#if defined(SLIPPYMAP_LIBRARY)
+#  define SLIPPYMAPSHARED_EXPORT Q_DECL_EXPORT
+#else
+#  define SLIPPYMAPSHARED_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // SLIPPYMAP_GLOBAL_H

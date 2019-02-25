@@ -1,12 +1,18 @@
 TEMPLATE = lib
 
 CONFIG += plugin
+CONFIG += c++11
 
 QT     += core gui network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 INCLUDEPATH += ../../explorer
+INCLUDEPATH += ../../SlippyMap
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../../SlippyMap/release/ -lSlippyMap
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../../SlippyMap/debug/ -lSlippyMap
+else:unix: LIBS += -L$$OUT_PWD/SlippyMap/ -lSlippyMap
 
 HEADERS += aprsfiexplorerplugin.h \
     aprsfilocationdataprovider.h \

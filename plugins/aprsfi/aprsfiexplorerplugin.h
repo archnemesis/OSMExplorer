@@ -11,14 +11,12 @@
 
 class AprsFiLocationDataProvider;
 
-class AprsFiExplorerPlugin : public ExplorerPluginInterface
+class AprsFiExplorerPlugin : public QObject, public ExplorerPluginInterface
 {
     Q_OBJECT
     Q_PLUGIN_METADATA(IID "org.robingingras.osmexplorer.ExplorerPluginInterface")
     Q_INTERFACES(ExplorerPluginInterface)
 public:
-    AprsFiExplorerPlugin(QObject *parent = nullptr);
-
     QString name() const;
     QString description() const;
     QString authorName() const;

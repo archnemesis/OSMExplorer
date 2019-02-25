@@ -1,23 +1,9 @@
 #include "aprsfiexplorerplugin.h"
 #include "aprsdotficonfigurationdialog.h"
 #include "aprsfilocationdataprovider.h"
+#include "slippymapwidgetmarkergroup.h"
 
 #include <QSettings>
-
-AprsFiExplorerPlugin::AprsFiExplorerPlugin(QObject *parent) :
-    ExplorerPluginInterface (parent)
-{
-    m_markerGroup = new SlippyMapWidgetMarkerGroup("aprs.fi");
-
-    m_dataProvider = new AprsFiLocationDataProvider();
-    connect(
-        m_dataProvider,
-        &AprsFiLocationDataProvider::positionUpdated,
-        this,
-        &AprsFiExplorerPlugin::dataProviderPositionUpdated);
-
-    loadConfiguration();
-}
 
 QString AprsFiExplorerPlugin::name() const
 {
@@ -64,6 +50,10 @@ QDialog *AprsFiExplorerPlugin::configurationDialog(QWidget *parent)
 
 void AprsFiExplorerPlugin::dataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
 {
+    if (m_markerGroup == nullptr) {
+        m_markerGroup = new SlippyMapWidgetMarkerGroup("aprs.fi");
+    }
+
     for (SlippyMapWidgetMarker *marker : m_markerGroup->markers()) {
         if (marker->label() == identifier) {
             marker->setPosition(position);
@@ -80,6 +70,15 @@ void AprsFiExplorerPlugin::dataProviderPositionUpdated(QString identifier, QPoin
 void AprsFiExplorerPlugin::loadConfiguration()
 {
     QSettings settings;
+
+    if (m_dataProvider == nullptr) {
+        m_dataProvider = new AprsFiLocationDataProvider();
+        connect(
+            m_dataProvider,
+            &AprsFiLocationDataProvider::positionUpdated,
+            this,
+            &AprsFiExplorerPlugin::dataProviderPositionUpdated);
+    }
 
     if (settings.contains("integrations/aprs.fi/apikey")) {
         QString apiUrl = settings.value("integrations/aprs.fi/apiUrl").toString();
