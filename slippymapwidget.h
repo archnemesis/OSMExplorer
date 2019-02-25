@@ -12,6 +12,7 @@
 #include <QFont>
 #include <QRegularExpression>
 #include <QCryptographicHash>
+#include <QTimer>
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -26,42 +27,14 @@ class QCompleter;
 class QMenu;
 class QAction;
 class QClipboard;
+class QListWidget;
 class SlippyMapWidgetMarker;
+class SlippyMapWidgetLayer;
 
 class SlippyMapWidget : public QWidget
 {
     Q_OBJECT
 public:
-    class Layer {
-    public:
-        Layer(QString tileUrl) {
-            m_tileUrl = tileUrl;
-            m_visible = true;
-        }
-        void setTileUrl(QString tileUrl) { m_tileUrl = tileUrl; }
-        void setName(QString name) { m_name = name; }
-        void setDescription(QString description) { m_description = description; }
-        void setZOrder(int zOrder) { m_zOrder = zOrder; }
-        void setVisible(bool visible) { m_visible = visible; }
-        QString name() { return m_name; }
-        QString description() { return m_description; }
-        QString tileUrl() { return m_tileUrl; }
-        QString tileUrlHash() {
-            QByteArray hash = QCryptographicHash::hash(
-                        m_tileUrl.toLocal8Bit(),
-                        QCryptographicHash::Md5).toHex();
-            return QString::fromLocal8Bit(hash);
-        }
-        int zOrder() { return m_zOrder; }
-        bool isVisible() { return m_visible; }
-    private:
-        QString m_name;
-        QString m_description;
-        QString m_tileUrl;
-        int m_zOrder;
-        bool m_visible;
-    };
-
     class LineSet {
     public:
         LineSet(QVector<QPointF> *segments, int width = 1, QColor color = Qt::black) {
@@ -92,8 +65,9 @@ public:
     void deleteMarker(SlippyMapWidgetMarker *marker);
     void addLineSet(LineSet *lineSet);
     void removeLineSet(LineSet *lineSet);
-    void addLayer(Layer *layer);
-    QList<Layer*> layers();
+    void addLayer(SlippyMapWidgetLayer *layer);
+    QList<SlippyMapWidgetLayer*> layers();
+    void takeLayer(SlippyMapWidgetLayer *layer);
     void addContextMenuAction(QAction *action);
     void removeContextMenuAction(QAction *action);
     void setCenterOnCursorWhileZooming(bool enable);
@@ -124,6 +98,8 @@ protected slots:
     void copyLatitudeActionTriggered();
     void copyLongitudeActionTriggered();
     void onMarkerChanged();
+    void searchBarTextEdited(const QString &text);
+    void remap();
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -150,6 +126,7 @@ signals:
     void markerDeleted(SlippyMapWidgetMarker *marker);
     void markerUpdated(SlippyMapWidgetMarker *marker);
     void contextMenuActivated(double latitude, double longitude);
+    void searchTextChanged(const QString &searchText);
 
 private:
     class Tile {
@@ -201,7 +178,6 @@ private:
     double degPerPixelY();
     QRectF boundingBoxLatLon();
 
-    void remap();
     void setupContextMenu();
 
     bool m_dragging = false;
@@ -263,12 +239,15 @@ private:
 
     QClipboard *m_clipboard;
 
-    QMap<Layer*,QList<Tile*>> m_layerTileMaps;
-    QList<Layer*> m_layers;
+    QMap<SlippyMapWidgetLayer*,QList<Tile*>> m_layerTileMaps;
+    QList<SlippyMapWidgetLayer*> m_layers;
     QList<LineSet*> m_lineSets;
     QMap<LineSet*,QVector<QLineF>> m_lineSetPaths;
 
     QList<QAction*> m_contextMenuActions;
+
+    /* autocomplete */
+    QListWidget *m_searchSuggestionsList;
 
     /* configurable items */
     bool m_centerOnCursorWhileZooming = DEFAULT_CENTER_ON_CURSOR_ZOOM;

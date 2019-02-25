@@ -8,6 +8,8 @@
 #include <QTimer>
 #include "slippymapwidget.h"
 #include "slippymapwidgetmarker.h"
+#include "slippymapwidgetlayer.h"
+#include "mapmarkermodel.h"
 
 namespace Ui {
 class MainWindow;
@@ -23,6 +25,7 @@ class QNetworkReply;
 class QMessageBox;
 class LocationDataProvider;
 class AprsFiLocationDataProvider;
+class TextLogViewerForm;
 
 class MainWindow : public QMainWindow
 {
@@ -40,6 +43,7 @@ private:
     int m_requestCount = 0;
     QLabel *m_statusBarPositionLabel;
     QLabel *m_statusBarStatusLabel;
+    QLabel *m_statusBarGpsStatusLabel;
     QMap<SlippyMapWidgetMarker*,QListWidgetItem*> m_markerListItemMap;
     QColor m_directionLineColor;
     QListWidgetItem *m_currentRouteListItem = nullptr;
@@ -55,9 +59,14 @@ private:
     QMessageBox *m_loadingDialog = nullptr;
     AprsFiLocationDataProvider *m_dataProviderAprsFi = nullptr;
     QHash<QString,SlippyMapWidgetMarker*> m_dataProviderAprsFiMarkers;
-    QList<SlippyMapWidget::Layer*> m_layers;
+    QList<SlippyMapWidgetLayer*> m_layers;
     QList<LocationDataProvider*> m_gpsProviders;
     QHash<QString,SlippyMapWidgetMarker*> m_gpsMarkers;
+    TextLogViewerForm *m_nmeaLog = nullptr;
+    MapMarkerModel *m_markerModel = nullptr;
+    MapMarkerModel::MarkerGroup *m_markerModelGroup_myMarkers;
+    MapMarkerModel::MarkerGroup *m_markerModelGroup_gpsMarkers;
+    MapMarkerModel::MarkerGroup *m_markerModelGroup_aprsDotFiMarkers;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -71,6 +80,7 @@ protected slots:
     void onSlippyMapMarkerDeleted(SlippyMapWidgetMarker *marker);
     void onSlippyMapMarkerUpdated(SlippyMapWidgetMarker *marker);
     void onSlippyMapContextMenuActivated(double latitude, double longitude);
+    void onSlippyMapSearchTextChanged(const QString &text);
     void onDirectionsToHereTriggered();
     void onDirectionsFromHereTriggered();
     void onSplitterMoved(int pos, int index);
@@ -99,6 +109,7 @@ private slots:
     void on_actionFileSettings_triggered();
     void on_btnDirectionsGo_clicked();
     void on_actionMapGpsAddSource_triggered();
+    void on_actionViewGpsLog_triggered();
 };
 
 #endif // MAINWINDOW_H

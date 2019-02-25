@@ -30,6 +30,9 @@ public:
     void start() override;
     void stop() override;
 
+signals:
+    void lineReceived(const QString& line);
+
 protected slots:
     void onSerialPortReadyRead();
     void onSerialPortErrorOccurred(QSerialPort::SerialPortError error);

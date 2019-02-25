@@ -130,16 +130,10 @@ void NmeaSerialLocationDataProvider::stop()
 
 void NmeaSerialLocationDataProvider::onSerialPortReadyRead()
 {
-    if (!m_serialPort->canReadLine()) return;
-
-    QByteArray data = m_serialPort->readLine(1024);
-
-    //
-    // $GPGGA,010139.238,4532.4814,N,12259.9776,W,1,03,03.3,00061.6,M,-019.6,M,000.0,0000*49
-    //
-
-    do {
+    while (m_serialPort->canReadLine()) {
+        QByteArray data = m_serialPort->readLine();
         QString line = QString::fromLocal8Bit(data);
+        emit lineReceived(line.trimmed());
         QStringRef lineRef(&line);
         QVector<QStringRef> parts = lineRef.split(",");
 
@@ -159,13 +153,13 @@ void NmeaSerialLocationDataProvider::onSerialPortReadyRead()
                 double lat = parts[2].toDouble(&ok);
                 if (!ok) {
                     qDebug() << "Invalid latitude:" << parts[2];
-                    goto nextLine;
+                    continue;
                 }
 
                 double lon = parts[4].toDouble(&ok);
                 if (!ok) {
                     qDebug() << "Invalid longitude:" << parts[4];
-                    goto nextLine;
+                    continue;
                 }
 
                 double lat_deg = floor(lat / 100.0);
@@ -195,11 +189,7 @@ void NmeaSerialLocationDataProvider::onSerialPortReadyRead()
                             metadata);
             }
         }
-
-nextLine:
-        data = m_serialPort->readLine();
     }
-    while (data.length() > 0);
 }
 
 void NmeaSerialLocationDataProvider::onSerialPortErrorOccurred(QSerialPort::SerialPortError error)

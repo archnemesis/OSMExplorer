@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "slippymapwidget.h"
+#include "slippymapwidgetlayer.h"
 #include "markerdialog.h"
 #include "markerlistitemwidget.h"
 #include "directionlistitemwidget.h"
@@ -9,6 +10,8 @@
 #include "aprsfilocationdataprovider.h"
 #include "nmeaseriallocationdataprovider.h"
 #include "gpssourcedialog.h"
+#include "textlogviewerform.h"
+#include "mapmarkermodel.h"
 
 #include <math.h>
 #include <QGuiApplication>
@@ -39,7 +42,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    connect(ui->splitter, &QSplitter::splitterMoved, this, &MainWindow::onSplitterMoved);
+    //connect(ui->splitter, &QSplitter::splitterMoved, this, &MainWindow::onSplitterMoved);
 
     m_net = new QNetworkAccessManager();
     connect(m_net, &QNetworkAccessManager::finished, this, &MainWindow::onNetworkRequestFinished);
@@ -84,11 +87,11 @@ MainWindow::MainWindow(QWidget *parent) :
         QList<int> widths;
         widths.append(sidebar_width);
         widths.append(map_width);
-        ui->splitter->setSizes(widths);
+        //ui->splitter->setSizes(widths);
     }
 
     if (settings.contains("view/sidebarVisible")) {
-        ui->toolBox->setVisible(settings.value("view/sidebarVisible").toBool());
+        //ui->toolBox->setVisible(settings.value("view/sidebarVisible").toBool());
         ui->actionViewSidebar->setChecked(true);
     }
 
@@ -100,7 +103,7 @@ MainWindow::MainWindow(QWidget *parent) :
         QString tileUrl = settings.value("tileServer").toString();
         int zOrder = settings.value("zOrder").toInt();
         bool visible = settings.value("visible", true).toBool();
-        SlippyMapWidget::Layer *layer = new SlippyMapWidget::Layer(tileUrl);
+        SlippyMapWidgetLayer *layer = new SlippyMapWidgetLayer(tileUrl);
         layer->setName(name);
         layer->setDescription(description);
         layer->setZOrder(zOrder);
@@ -147,10 +150,16 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->slippyMap, &SlippyMapWidget::markerDeleted, this, &MainWindow::onSlippyMapMarkerDeleted);
     connect(ui->slippyMap, &SlippyMapWidget::markerUpdated, this, &MainWindow::onSlippyMapMarkerUpdated);
     connect(ui->slippyMap, &SlippyMapWidget::contextMenuActivated, this, &MainWindow::onSlippyMapContextMenuActivated);
+    connect(ui->slippyMap, &SlippyMapWidget::searchTextChanged, this, &MainWindow::onSlippyMapSearchTextChanged);
 
     m_statusBarPositionLabel = new QLabel();
     m_statusBarPositionLabel->setFrameStyle(QFrame::Sunken);
     m_statusBarStatusLabel = new QLabel();
+
+    m_statusBarGpsStatusLabel = new QLabel();
+    m_statusBarGpsStatusLabel->setFrameStyle(QFrame::Sunken);
+    m_statusBarGpsStatusLabel->setText("GPS Position: 0.000 N 0.000 E");
+    statusBar()->addPermanentWidget(m_statusBarGpsStatusLabel);
 
     statusBar()->addPermanentWidget(m_statusBarPositionLabel);
     ui->slippyMap->setFocus(Qt::OtherFocusReason);
@@ -183,6 +192,15 @@ MainWindow::MainWindow(QWidget *parent) :
         int height = settings.value("view/windowHeight").toInt();
         resize(width, height);
     }
+
+    m_markerModel = new MapMarkerModel();
+    m_markerModelGroup_myMarkers = new MapMarkerModel::MarkerGroup(tr("My Places"));
+    m_markerModelGroup_gpsMarkers = new MapMarkerModel::MarkerGroup(tr("GPS Sources"));
+    m_markerModelGroup_aprsDotFiMarkers = new MapMarkerModel::MarkerGroup(tr("aprs.fi"));
+    m_markerModel->addMarkerGroup(m_markerModelGroup_myMarkers);
+    m_markerModel->addMarkerGroup(m_markerModelGroup_gpsMarkers);
+    m_markerModel->addMarkerGroup(m_markerModelGroup_aprsDotFiMarkers);
+    ui->tvwMarkers->setModel(m_markerModel);
 }
 
 MainWindow::~MainWindow()
@@ -307,6 +325,11 @@ void MainWindow::onSlippyMapContextMenuActivated(double latitude, double longitu
     m_slippyContextMenuLocation.setY(latitude);
 }
 
+void MainWindow::onSlippyMapSearchTextChanged(const QString &text)
+{
+    qDebug() << "Search Text:" << text;
+}
+
 void MainWindow::onDirectionsToHereTriggered()
 {
     QString latlon = QString("%1,%2")
@@ -429,6 +452,7 @@ void MainWindow::onDataProviderAprsFiPositionUpdated(QString identifier, QPointF
     else {
         marker = new SlippyMapWidgetMarker(position);
         marker->setLabel(identifier);
+        m_markerModelGroup_aprsDotFiMarkers->addMarker(marker);
         m_dataProviderAprsFiMarkers[identifier] = marker;
         ui->slippyMap->addMarker(marker);
     }
@@ -449,16 +473,17 @@ void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF po
         marker = new SlippyMapWidgetMarker(position);
         marker->setLabel(metadata["gps_label"].toString());
         m_gpsMarkers[identifier] = marker;
+        m_markerModelGroup_gpsMarkers->addMarker(marker);
         ui->slippyMap->addMarker(marker);
     }
 }
 
 void MainWindow::onSplitterPosTimerTimeout()
 {
-    QSettings settings;
-    QList<int> widths = ui->splitter->sizes();
-    double ratio = static_cast<double>(widths[0]) / static_cast<double>(width());
-    settings.setValue("view/sidebarWidth", ratio);
+//    QSettings settings;
+//    QList<int> widths = ui->splitter->sizes();
+//    double ratio = static_cast<double>(widths[0]) / static_cast<double>(width());
+//    settings.setValue("view/sidebarWidth", ratio);
 }
 
 void MainWindow::onWindowSizeTimerTimeout()
@@ -515,7 +540,7 @@ void MainWindow::on_actionNewMarker_triggered()
 
 void MainWindow::on_actionViewSidebar_toggled(bool arg1)
 {
-    ui->toolBox->setVisible(arg1);
+    //ui->toolBox->setVisible(arg1);
     QSettings settings;
     settings.setValue("view/sidebarVisible", arg1);
 }
@@ -616,6 +641,39 @@ void MainWindow::on_actionMapGpsAddSource_triggered()
             connect(provider, &LocationDataProvider::positionUpdated, this, &MainWindow::onGpsDataProviderPositionUpdated);
             provider->start();
             m_gpsProviders.append(provider);
+
+            QAction *configAction = new QAction(this);
+            configAction->setText(QString("%1 (%2)").arg(source.label).arg(source.portName));
+            configAction->setCheckable(true);
+            configAction->setChecked(true);
+            ui->menuFileGps->addAction(configAction);
+            connect(configAction, &QAction::toggled, [=](bool value){
+                if (value) {
+                    provider->start();
+                }
+                else {
+                    provider->stop();
+                }
+            });
         }
     }
+}
+
+void MainWindow::on_actionViewGpsLog_triggered()
+{
+    if (m_nmeaLog == nullptr) {
+        m_nmeaLog = new TextLogViewerForm();
+        m_nmeaLog->setWindowTitle(tr("NMEA Log"));
+        for (LocationDataProvider *provider : m_gpsProviders) {
+            NmeaSerialLocationDataProvider *gpsProvider
+                    = qobject_cast<NmeaSerialLocationDataProvider*>(provider);
+            connect(
+                        gpsProvider,
+                        &NmeaSerialLocationDataProvider::lineReceived,
+                        m_nmeaLog,
+                        &TextLogViewerForm::addLine);
+        }
+    }
+
+    m_nmeaLog->show();
 }

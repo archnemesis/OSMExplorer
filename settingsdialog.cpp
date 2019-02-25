@@ -56,6 +56,16 @@ void SettingsDialog::loadSettings()
     ui->spnCacheSize->setEnabled(cacheEnabled);
     ui->btnClearCache->setEnabled(cacheEnabled);
 
+    QString latLonUnits = settings.value("units/latlon", "dec").toString();
+    if (latLonUnits == "dms") {
+        ui->chkLatLonDegMinSec->setChecked(true);
+        ui->chkLatLonDecimalDegrees->setChecked(false);
+    }
+    else {
+        ui->chkLatLonDegMinSec->setChecked(false);
+        ui->chkLatLonDecimalDegrees->setChecked(true);
+    }
+
     ui->lneCacheDir->setText(settings.value("map/cache/tiledir", QStandardPaths::writableLocation(QStandardPaths::CacheLocation)).toString());
     ui->hslCacheSize->setValue(settings.value("map/cache/maxsize", 100).toInt());
     ui->spnCacheSize->setValue(settings.value("map/cache/maxsize", 100).toInt());
@@ -114,6 +124,13 @@ void SettingsDialog::on_buttonBox_accepted()
         settings.setValue("zOrder", m_layers.at(i).zOrder);
     }
     settings.endArray();
+
+    if (ui->chkLatLonDegMinSec->isChecked()) {
+        settings.setValue("units/latlon", "dms");
+    }
+    else {
+        settings.setValue("units/latlon", "dec");
+    }
 
     accept();
 }

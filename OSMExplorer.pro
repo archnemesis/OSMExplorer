@@ -41,7 +41,11 @@ SOURCES += \
     layerpropertiesdialog.cpp \
     gpssourcedialog.cpp \
     nmeaseriallocationdataprovider.cpp \
-    slippymapwidgetmarker.cpp
+    slippymapwidgetmarker.cpp \
+    slippymapwidgetlayer.cpp \
+    textlogviewerform.cpp \
+    mapmarkermodel.cpp \
+    aprsfiexplorerplugin.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -57,7 +61,12 @@ HEADERS += \
     layerpropertiesdialog.h \
     gpssourcedialog.h \
     nmeaseriallocationdataprovider.h \
-    slippymapwidgetmarker.h
+    slippymapwidgetmarker.h \
+    slippymapwidgetlayer.h \
+    textlogviewerform.h \
+    mapmarkermodel.h \
+    explorerplugininterface.h \
+    aprsfiexplorerplugin.h
 
 FORMS += \
         mainwindow.ui \
@@ -67,7 +76,8 @@ FORMS += \
     settingsdialog.ui \
     aprsdotficonfigurationdialog.ui \
     layerpropertiesdialog.ui \
-    gpssourcedialog.ui
+    gpssourcedialog.ui \
+    textlogviewerform.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

@@ -1,5 +1,6 @@
 #include "slippymapwidget.h"
 #include "slippymapwidgetmarker.h"
+#include "slippymapwidgetlayer.h"
 #include "defaults.h"
 
 #include <math.h>
@@ -39,6 +40,8 @@
 #include <QClipboard>
 #include <QApplication>
 #include <QCryptographicHash>
+#include <QListWidget>
+#include <QListWidgetItem>
 
 SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
 {
@@ -91,9 +94,21 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_searchBar->setMinimumWidth(searchBarWidth);
     m_searchBar->setMaximumWidth(searchBarWidth);
 
+    m_searchSuggestionsList = new QListWidget(this);
+    m_searchSuggestionsList->move(55, 45);
+    m_searchSuggestionsList->setFixedSize(searchBarWidth, 100);
+
+    m_searchSuggestionsList->addItem("This is a test");
+    m_searchSuggestionsList->addItem("This is a test");
+    m_searchSuggestionsList->addItem("This is a test");
+    m_searchSuggestionsList->addItem("This is a test");
+    m_searchSuggestionsList->addItem("This is a test");
+    m_searchSuggestionsList->addItem("This is a test");
+
     connect(m_zoomInButton, &QPushButton::pressed, this, &SlippyMapWidget::increaseZoomLevel);
     connect(m_zoomOutButton, &QPushButton::pressed, this, &SlippyMapWidget::decreaseZoomLevel);
     connect(m_searchBar, &QLineEdit::returnPressed, this, &SlippyMapWidget::searchBarReturnPressed);
+    connect(m_searchBar, &QLineEdit::textEdited, this, &SlippyMapWidget::searchBarTextEdited);
 
     m_scaleBrush.setStyle(Qt::SolidPattern);
     m_scaleBrush.setColor(QColor(0,0,0,128));
@@ -269,16 +284,27 @@ void SlippyMapWidget::removeLineSet(SlippyMapWidget::LineSet *lineSet)
     m_lineSetPaths.remove(lineSet);
 }
 
-void SlippyMapWidget::addLayer(SlippyMapWidget::Layer *layer)
+void SlippyMapWidget::addLayer(SlippyMapWidgetLayer *layer)
 {
     m_layers.append(layer);
     m_layerTileMaps[layer] = QList<Tile*>();
+    connect(
+                layer,
+                &SlippyMapWidgetLayer::updated,
+                this,
+                static_cast<void (SlippyMapWidget::*)()>(&SlippyMapWidget::remap));
     remap();
 }
 
-QList<SlippyMapWidget::Layer *> SlippyMapWidget::layers()
+QList<SlippyMapWidgetLayer *> SlippyMapWidget::layers()
 {
     return m_layers;
+}
+
+void SlippyMapWidget::takeLayer(SlippyMapWidgetLayer *layer)
+{
+    m_layers.removeOne(layer);
+    remap();
 }
 
 void SlippyMapWidget::addContextMenuAction(QAction *action)
@@ -540,6 +566,11 @@ void SlippyMapWidget::onMarkerChanged()
     update();
 }
 
+void SlippyMapWidget::searchBarTextEdited(const QString &text)
+{
+    emit searchTextChanged(text);
+}
+
 void SlippyMapWidget::paintEvent(QPaintEvent *event)
 {
     (void)event;
@@ -547,7 +578,7 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
     QPainter painter(this);
     painter.setRenderHints(QPainter::TextAntialiasing | QPainter::Antialiasing);
 
-    for (Layer *layer : m_layers) {
+    for (SlippyMapWidgetLayer *layer : m_layers) {
         for (int i = 0; i < m_layerTileMaps[layer].size(); i++) {
             Tile *t = m_layerTileMaps[layer].at(i);
             if (t->isLoaded()) {
@@ -594,6 +625,7 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
     int searchBarWidth = width() - (55 + 10);
     m_searchBar->setMinimumWidth(searchBarWidth);
     m_searchBar->setMaximumWidth(searchBarWidth);
+    m_searchSuggestionsList->setFixedSize(searchBarWidth, 100);
 
     if (m_lineSets.length() > 0) {
         for (LineSet *lineSet : m_lineSets) {
@@ -705,7 +737,7 @@ void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
         markerPoint.setY(markerPoint.y() - (deg_per_pixel_y * diff.y()));
         markerPoint.setX(markerPoint.x() + (deg_per_pixel * diff.x()));
         m_dragMarker->setPosition(markerPoint);
-        remap();
+        update();
     }
     else if (m_dragging) {
         m_dragStart = pos;
@@ -908,7 +940,7 @@ void SlippyMapWidget::remap()
     qint32 startX = centerX - 128 - ((tiles_wide / 2) * 256) + diff_pix_x;
     qint32 startY = centerY - 128 - ((tiles_high / 2) * 256) - diff_pix_y;
 
-    for (Layer *layer : m_layers) {
+    for (SlippyMapWidgetLayer *layer : m_layers) {
         QList<Tile*> deleteList(m_layerTileMaps[layer]);
 
         if (layer->isVisible()) {
