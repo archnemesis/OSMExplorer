@@ -577,13 +577,7 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_7">
        <item>
-        <widget class="QListWidget" name="lstIntegrationList">
-         <item>
-          <property name="text">
-           <string>aprs.fi</string>
-          </property>
-         </item>
-        </widget>
+        <widget class="QListWidget" name="lstIntegrationList"/>
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_4">

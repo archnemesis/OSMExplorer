@@ -1,14 +1,15 @@
 #include "settingsdialog.h"
 #include "ui_settingsdialog.h"
 #include "defaults.h"
-#include "aprsdotficonfigurationdialog.h"
 #include "layerpropertiesdialog.h"
+#include "explorerplugininterface.h"
 
 #include <QDebug>
 #include <QSettings>
 #include <QStandardPaths>
 
-SettingsDialog::SettingsDialog(QWidget *parent) :
+SettingsDialog::SettingsDialog(QList<ExplorerPluginInterface *> plugins, QWidget *parent) :
+    m_plugins(plugins),
     QDialog(parent),
     ui(new Ui::SettingsDialog)
 {
@@ -17,6 +18,10 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     connect(ui->hslCacheSize, &QSlider::valueChanged, ui->spnCacheSize, &QSpinBox::setValue);
     connect(ui->spnCacheSize, QOverload<int>::of(&QSpinBox::valueChanged), ui->hslCacheSize, &QSlider::setValue);
     loadSettings();
+
+    for (ExplorerPluginInterface *plugin : m_plugins) {
+        ui->lstIntegrationList->addItem(plugin->name());
+    }
 }
 
 SettingsDialog::~SettingsDialog()
@@ -168,10 +173,13 @@ void SettingsDialog::on_chkCacheEnabled_toggled(bool checked)
 
 void SettingsDialog::on_btnIntegrationConfigure_clicked()
 {
-    if (ui->lstIntegrationList->currentItem()->text() == "aprs.fi") {
-        AprsDotFiConfigurationDialog dlg(this);
-        int result = dlg.exec();
-    }
+    qDebug() << "Showing config for plugin...";
+    int currentRow = ui->lstIntegrationList->currentRow();
+    QDialog *dlg = m_plugins.at(currentRow)->configurationDialog(this);
+    dlg->setParent(this);
+    dlg->setModal(true);
+    int result = dlg->exec();
+    delete dlg;
 }
 
 void SettingsDialog::on_btnLayerAdd_clicked()

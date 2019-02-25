@@ -9,12 +9,14 @@ namespace Ui {
 class SettingsDialog;
 }
 
+class ExplorerPluginInterface;
+
 class SettingsDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit SettingsDialog(QWidget *parent = nullptr);
+    explicit SettingsDialog(QList<ExplorerPluginInterface*> plugins = QList<ExplorerPluginInterface*>(), QWidget *parent = nullptr);
     ~SettingsDialog();
 
 public slots:
@@ -37,6 +39,7 @@ private slots:
 private:
     Ui::SettingsDialog *ui;
     QList<LayerPropertiesDialog::LayerProperties> m_layers;
+    QList<ExplorerPluginInterface*> m_plugins;
 };
 
 #endif // SETTINGSDIALOG_H
