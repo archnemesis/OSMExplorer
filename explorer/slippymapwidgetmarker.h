@@ -21,6 +21,7 @@ public:
     void setInformation(QString information);
     void setMarkerColor(QColor color);
     void setMovable(bool movable);
+    void setEditable(bool editable);
     QPointF position();
     double latitude();
     double longitude();
@@ -28,6 +29,7 @@ public:
     QString information();
     QColor color();
     bool isMovable();
+    bool isEditable();
     void drawMarker(QPainter *painter, QPoint pos);
 
 signals:
@@ -51,6 +53,7 @@ private:
     QPen m_labelTextPen;
     bool m_active = false;
     bool m_movable = true;
+    bool m_editable = true;
 };
 
 #endif // SLIPPYMAPWIDGETMARKER_H

@@ -1,25 +1,30 @@
 #ifndef EXPLORERPLUGININTERFACE_H
 #define EXPLORERPLUGININTERFACE_H
 
+#include <QObject>
 #include <QList>
 #include <QAction>
 #include <QString>
 
 #include "slippymapwidgetmarker.h"
-#include "mapmarkermodel.h"
+#include "slippymapwidgetmarkermodel.h"
+#include "slippymapwidgetmarkergroup.h"
 #include "locationdataprovider.h"
 
-class ExplorerPluginInterface
+class ExplorerPluginInterface : public QObject
 {
+    Q_OBJECT
 public:
-    virtual ~ExplorerPluginInterface() {}
+    ExplorerPluginInterface(QObject *parent = nullptr);
+    ~ExplorerPluginInterface();
 
     virtual QString name() const = 0;
     virtual QString description() const = 0;
+    virtual QString authorName() const = 0;
+    virtual QString homepage() const = 0;
     virtual QList<QAction*> mapContextMenuActionList() = 0;
-    virtual QList<MapMarkerModel::MarkerGroup*> markerGroupList() = 0;
+    virtual QList<SlippyMapWidgetMarkerGroup*> markerGroupList() = 0;
     virtual QDialog *configurationDialog(QWidget *parent = nullptr) = 0;
-    virtual QList<LocationDataProvider*> locationDataProviderList() = 0;
 };
 
 #define ExplorerPluginInterface_iid "com.robingingras.osmexplorer.ExplorerPluginInterface"

@@ -28,6 +28,7 @@ class QMenu;
 class QAction;
 class QClipboard;
 class QListWidget;
+class SlippyMapWidgetMarkerModel;
 class SlippyMapWidgetMarker;
 class SlippyMapWidgetLayer;
 
@@ -78,6 +79,7 @@ public:
     void setZoomSliderVisible(bool visible);
     void setTileCachingEnabled(bool enabled);
     void setTileCacheDir(QString dir);
+    void setModel(SlippyMapWidgetMarkerModel *model);
 
 public slots:
     void setCenter(double latitude, double longitude);
@@ -100,6 +102,8 @@ protected slots:
     void onMarkerChanged();
     void searchBarTextEdited(const QString &text);
     void remap();
+    void onMarkerModelMarkerAdded(SlippyMapWidgetMarker *marker);
+    void onMarkerModelMarkerRemoved(SlippyMapWidgetMarker *marker);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -215,6 +219,7 @@ private:
     QRegularExpression m_locationParser;
     QCompleter *m_locationCompleter;
 
+    SlippyMapWidgetMarkerModel *m_markerModel = nullptr;
     QList<SlippyMapWidgetMarker*> m_markers;
     SlippyMapWidgetMarker* m_activeMarker = nullptr;
     QBrush m_markerBrush;

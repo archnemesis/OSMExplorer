@@ -13,8 +13,15 @@ TEMPLATE = app
 
 QMAKE_PROJECT_NAME = OSMExplorer
 
-INCLUDEPATH += "C:\Program Files\OpenSSL-1.0.2q-Win64\include"
-LIBS += -L"C:\Program Files\OpenSSL-1.0.2q-Win64\lib" -lssleay32 -llibeay32
+win32 {
+    INCLUDEPATH += "C:\Program Files\OpenSSL-1.0.2q-Win64\include"
+    LIBS += -L"C:\Program Files\OpenSSL-1.0.2q-Win64\lib" -lssleay32 -llibeay32
+}
+
+macx {
+    QMAKE_CXXFLAGS += -stdlib=libc++
+    LIBS += -framework CoreFoundation
+}
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
@@ -44,7 +51,9 @@ SOURCES += \
     slippymapwidgetmarker.cpp \
     slippymapwidgetlayer.cpp \
     textlogviewerform.cpp \
-    mapmarkermodel.cpp
+    slippymapwidgetmarkermodel.cpp \
+    slippymapwidgetmarkergroup.cpp \
+    explorerplugininterface.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -61,8 +70,9 @@ HEADERS += \
     slippymapwidgetmarker.h \
     slippymapwidgetlayer.h \
     textlogviewerform.h \
-    mapmarkermodel.h \
-    explorerplugininterface.h
+    explorerplugininterface.h \
+    slippymapwidgetmarkermodel.h \
+    slippymapwidgetmarkergroup.h
 
 FORMS += \
         mainwindow.ui \

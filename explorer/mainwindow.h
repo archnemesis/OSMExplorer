@@ -9,7 +9,7 @@
 #include "slippymapwidget.h"
 #include "slippymapwidgetmarker.h"
 #include "slippymapwidgetlayer.h"
-#include "mapmarkermodel.h"
+#include "slippymapwidgetmarkermodel.h"
 
 namespace Ui {
 class MainWindow;
@@ -33,7 +33,7 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+    ~MainWindow() override;
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
@@ -62,10 +62,10 @@ private:
     QList<LocationDataProvider*> m_gpsProviders;
     QHash<QString,SlippyMapWidgetMarker*> m_gpsMarkers;
     TextLogViewerForm *m_nmeaLog = nullptr;
-    MapMarkerModel *m_markerModel = nullptr;
-    MapMarkerModel::MarkerGroup *m_markerModelGroup_myMarkers;
-    MapMarkerModel::MarkerGroup *m_markerModelGroup_gpsMarkers;
-    MapMarkerModel::MarkerGroup *m_markerModelGroup_aprsDotFiMarkers;
+    SlippyMapWidgetMarkerModel *m_markerModel = nullptr;
+    SlippyMapWidgetMarkerGroup *m_markerModelGroup_myMarkers;
+    SlippyMapWidgetMarkerGroup *m_markerModelGroup_gpsMarkers;
+    SlippyMapWidgetMarkerGroup *m_markerModelGroup_aprsDotFiMarkers;
     QList<ExplorerPluginInterface*> m_plugins;
 
 protected slots:

@@ -1,6 +1,7 @@
 #include "slippymapwidget.h"
 #include "slippymapwidgetmarker.h"
 #include "slippymapwidgetlayer.h"
+#include "slippymapwidgetmarkermodel.h"
 #include "defaults.h"
 
 #include <math.h>
@@ -369,6 +370,14 @@ void SlippyMapWidget::setTileCacheDir(QString dir)
     cacheDir.mkpath(".");
 }
 
+void SlippyMapWidget::setModel(SlippyMapWidgetMarkerModel *model)
+{
+    m_markerModel = model;
+    connect(m_markerModel, &SlippyMapWidgetMarkerModel::markerAdded, this, &SlippyMapWidget::onMarkerModelMarkerAdded);
+    connect(m_markerModel, &SlippyMapWidgetMarkerModel::markerRemoved, this, &SlippyMapWidget::onMarkerModelMarkerRemoved);
+    update();
+}
+
 void SlippyMapWidget::setCenter(double latitude, double longitude)
 {
     m_lat = latitude;
@@ -652,6 +661,16 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
         }
     }
 
+    if (m_markerModel != nullptr) {
+        QList<SlippyMapWidgetMarker *> markers = m_markerModel->markersForRect(boundingBoxLatLon());
+
+        for (SlippyMapWidgetMarker *marker : markers) {
+            qint32 x = long2widgetX(marker->position().x());
+            qint32 y = lat2widgety(marker->position().y());
+            marker->drawMarker(&painter, QPoint(x, y));
+        }
+    }
+
     if (m_markers.length() > 0) {
         QRectF bbox = boundingBoxLatLon();
 
@@ -674,6 +693,23 @@ void SlippyMapWidget::mousePressEvent(QMouseEvent *event)
     m_dragButton = event->button();
 
     if (event->button() == Qt::LeftButton) {
+        if (m_markerModel != nullptr) {
+            QList<SlippyMapWidgetMarker *> markers = m_markerModel->markersForRect(boundingBoxLatLon());
+
+            for (SlippyMapWidgetMarker *marker : markers) {
+                qint32 marker_x = long2widgetX(marker->longitude());
+                qint32 marker_y = lat2widgety(marker->latitude());
+                QRect marker_box(
+                            (marker_x - 5),
+                            (marker_y - 5),
+                            10, 10);
+                if (marker_box.contains(event->pos())) {
+                    m_dragMarker = marker;
+                    return;
+                }
+            }
+        }
+
         for (SlippyMapWidgetMarker *marker : m_markers) {
             if (marker->isMovable()) {
                 qint32 marker_x = long2widgetX(marker->longitude());
@@ -685,6 +721,7 @@ void SlippyMapWidget::mousePressEvent(QMouseEvent *event)
 
                 if (marker_box.contains(event->pos())) {
                     m_dragMarker = marker;
+                    return;
                 }
             }
         }
@@ -697,6 +734,25 @@ void SlippyMapWidget::mouseReleaseEvent(QMouseEvent *event)
     m_dragMarker = nullptr;
 
     if (event->button() == Qt::LeftButton && event->pos() == m_dragRealStart) {
+        if (m_markerModel != nullptr) {
+            QList<SlippyMapWidgetMarker *> markers = m_markerModel->markersForRect(boundingBoxLatLon());
+
+            for (SlippyMapWidgetMarker *marker : markers) {
+                qint32 marker_x = long2widgetX(marker->longitude());
+                qint32 marker_y = lat2widgety(marker->latitude());
+                QRect marker_box(
+                            (marker_x - 5),
+                            (marker_y - 5),
+                            10, 10);
+                if (marker_box.contains(event->pos())) {
+                    m_activeMarker = marker;
+                    emit markerActivated(marker);
+                    update();
+                    return;
+                }
+            }
+        }
+
         for (SlippyMapWidgetMarker *marker : m_markers) {
             qint32 marker_x = long2widgetX(marker->longitude());
             qint32 marker_y = lat2widgety(marker->latitude());
@@ -1046,6 +1102,22 @@ void SlippyMapWidget::remap()
                 delete todelete;
             }
         }
+    }
+}
+
+void SlippyMapWidget::onMarkerModelMarkerAdded(SlippyMapWidgetMarker *marker)
+{
+    QRectF currentViewport = boundingBoxLatLon();
+    if (currentViewport.contains(marker->position())) {
+        update();
+    }
+}
+
+void SlippyMapWidget::onMarkerModelMarkerRemoved(SlippyMapWidgetMarker *marker)
+{
+    QRectF currentViewport = boundingBoxLatLon();
+    if (currentViewport.contains(marker->position())) {
+        update();
     }
 }
 

@@ -18,8 +18,15 @@ SOURCES += aprsfiexplorerplugin.cpp \
 
 FORMS += aprsdotficonfigurationdialog.ui
 
-INCLUDEPATH += "C:\Program Files\OpenSSL-1.0.2q-Win64\include"
-LIBS += -L"C:\Program Files\OpenSSL-1.0.2q-Win64\lib" -lssleay32 -llibeay32
+win32 {
+    INCLUDEPATH += "C:\Program Files\OpenSSL-1.0.2q-Win64\include"
+    LIBS += -L"C:\Program Files\OpenSSL-1.0.2q-Win64\lib" -lssleay32 -llibeay32
+}
+
+macx {
+    QMAKE_CXXFLAGS += -stdlib=libc++
+    LIBS += -framework CoreFoundation
+}
 
 TARGET = $$qtLibraryTarget(aprsfi)
 DESTDIR = ../../plugins

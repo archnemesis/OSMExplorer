@@ -62,6 +62,11 @@ void SlippyMapWidgetMarker::setMovable(bool movable)
     m_movable = movable;
 }
 
+void SlippyMapWidgetMarker::setEditable(bool editable)
+{
+    m_editable = editable;
+}
+
 QPointF SlippyMapWidgetMarker::position()
 {
     return m_position;
@@ -90,6 +95,11 @@ QColor SlippyMapWidgetMarker::color()
 bool SlippyMapWidgetMarker::isMovable()
 {
     return m_movable;
+}
+
+bool SlippyMapWidgetMarker::isEditable()
+{
+    return m_editable;
 }
 
 void SlippyMapWidgetMarker::drawMarker(QPainter *painter, QPoint pos)

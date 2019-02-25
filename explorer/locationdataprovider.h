@@ -11,16 +11,17 @@ class LocationDataProvider : public QObject
 {
     Q_OBJECT
 public:
-    explicit LocationDataProvider(QObject *parent = nullptr);
+    LocationDataProvider(QObject *parent = nullptr);
     void setUpdateInterval(int interval);
     int updateInterval();
+
 signals:
     void positionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
     void dataProviderError();
 
 public slots:
-    virtual void start() = 0;
-    virtual void stop() = 0;
+    virtual void start() {}
+    virtual void stop() {}
 
 protected:
     int m_updateInterval;

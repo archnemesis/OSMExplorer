@@ -10,7 +10,7 @@
 #include "nmeaseriallocationdataprovider.h"
 #include "gpssourcedialog.h"
 #include "textlogviewerform.h"
-#include "mapmarkermodel.h"
+#include "slippymapwidgetmarkermodel.h"
 #include "explorerplugininterface.h"
 
 #include <math.h>
@@ -196,19 +196,19 @@ MainWindow::MainWindow(QWidget *parent) :
         resize(width, height);
     }
 
-    m_markerModel = new MapMarkerModel();
-    m_markerModelGroup_myMarkers = new MapMarkerModel::MarkerGroup(tr("My Places"));
-    m_markerModelGroup_gpsMarkers = new MapMarkerModel::MarkerGroup(tr("GPS Sources"));
-    m_markerModelGroup_aprsDotFiMarkers = new MapMarkerModel::MarkerGroup(tr("aprs.fi"));
+    m_markerModel = new SlippyMapWidgetMarkerModel();
+    m_markerModelGroup_myMarkers = new SlippyMapWidgetMarkerGroup(tr("My Places"));
+    m_markerModelGroup_gpsMarkers = new SlippyMapWidgetMarkerGroup(tr("GPS Sources"));
+    m_markerModelGroup_aprsDotFiMarkers = new SlippyMapWidgetMarkerGroup(tr("aprs.fi"));
     m_markerModel->addMarkerGroup(m_markerModelGroup_myMarkers);
     m_markerModel->addMarkerGroup(m_markerModelGroup_gpsMarkers);
 
     qDebug() << "Loading plugin marker groups...";
 
     for (ExplorerPluginInterface *plugin : m_plugins) {
-        QList<MapMarkerModel::MarkerGroup *> pluginGroups = plugin->markerGroupList();
+        QList<SlippyMapWidgetMarkerGroup *> pluginGroups = plugin->markerGroupList();
         if (pluginGroups.count() > 0) {
-            for (MapMarkerModel::MarkerGroup *group : pluginGroups) {
+            for (SlippyMapWidgetMarkerGroup *group : pluginGroups) {
                 m_markerModel->addMarkerGroup(group);
             }
         }
@@ -542,13 +542,6 @@ void MainWindow::refreshSettings()
 
     ui->slippyMap->setTileCacheDir(settings.value("map/cache/tiledir", QStandardPaths::writableLocation(QStandardPaths::CacheLocation)).toString());
     ui->slippyMap->setTileCachingEnabled(settings.value("map/cache/enable", true).toBool());
-
-    for (ExplorerPluginInterface *plugin : m_plugins) {
-        QList<LocationDataProvider*> providers = plugin->locationDataProviderList();
-        if (providers.length() > 0) {
-
-        }
-    }
 }
 
 void MainWindow::on_actionNewMarker_triggered()

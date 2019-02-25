@@ -5,29 +5,33 @@
 #include <QtPlugin>
 #include <QList>
 #include <QString>
-#include "mapmarkermodel.h"
+#include "slippymapwidgetmarkermodel.h"
 #include "slippymapwidgetmarker.h"
 #include "explorerplugininterface.h"
 
 class AprsFiLocationDataProvider;
 
-class AprsFiExplorerPlugin : public QObject, public ExplorerPluginInterface
+class AprsFiExplorerPlugin : public ExplorerPluginInterface
 {
     Q_OBJECT
     Q_PLUGIN_METADATA(IID "org.robingingras.osmexplorer.ExplorerPluginInterface")
     Q_INTERFACES(ExplorerPluginInterface)
 public:
-    AprsFiExplorerPlugin();
+    AprsFiExplorerPlugin(QObject *parent = nullptr);
 
     QString name() const;
     QString description() const;
+    QString authorName() const;
+    QString homepage() const;
     QList<QAction*> mapContextMenuActionList();
-    QList<MapMarkerModel::MarkerGroup*> markerGroupList();
+    QList<SlippyMapWidgetMarkerGroup *> markerGroupList();
     QDialog *configurationDialog(QWidget *parent = nullptr);
-    QList<LocationDataProvider*> locationDataProviderList();
+protected slots:
+    void dataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata);
+    void loadConfiguration();
 private:
     AprsFiLocationDataProvider *m_dataProvider = nullptr;
-    MapMarkerModel::MarkerGroup *m_markerGroup = nullptr;
+    SlippyMapWidgetMarkerGroup *m_markerGroup = nullptr;
 };
 
 #endif // APRSFIEXPLORERPLUGIN_H
