@@ -37,6 +37,8 @@
 #include <QStyleFactory>
 #include <QStandardPaths>
 #include <QPluginLoader>
+#include <QMenu>
+#include <QAction>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -45,7 +47,7 @@ MainWindow::MainWindow(QWidget *parent) :
     loadPlugins();
 
     ui->setupUi(this);
-    //connect(ui->splitter, &QSplitter::splitterMoved, this, &MainWindow::onSplitterMoved);
+    ui->tvwMarkers->setContextMenuPolicy(Qt::CustomContextMenu);
 
     m_net = new QNetworkAccessManager();
     connect(m_net, &QNetworkAccessManager::finished, this, &MainWindow::onNetworkRequestFinished);
@@ -110,6 +112,7 @@ MainWindow::MainWindow(QWidget *parent) :
         layer->setName(name);
         layer->setDescription(description);
         layer->setZOrder(zOrder);
+        layer->setVisible(visible);
         ui->slippyMap->addLayer(layer);
         m_layers.append(layer);
 
@@ -154,7 +157,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->slippyMap, &SlippyMapWidget::markerUpdated, this, &MainWindow::onSlippyMapMarkerUpdated);
     connect(ui->slippyMap, &SlippyMapWidget::contextMenuActivated, this, &MainWindow::onSlippyMapContextMenuActivated);
     connect(ui->slippyMap, &SlippyMapWidget::searchTextChanged, this, &MainWindow::onSlippyMapSearchTextChanged);
-
+    connect(ui->slippyMap, &SlippyMapWidget::markerEditRequested, this, &MainWindow::onSlippyMapMarkerEditRequested);
+    connect(ui->tvwMarkers, &QTreeView::customContextMenuRequested, this, &MainWindow::onTvwMarkersContextMenuRequested);
     m_statusBarPositionLabel = new QLabel();
     m_statusBarPositionLabel->setFrameStyle(QFrame::Sunken);
     m_statusBarStatusLabel = new QLabel();
@@ -203,6 +207,25 @@ MainWindow::MainWindow(QWidget *parent) :
     m_markerModel->addMarkerGroup(m_markerModelGroup_myMarkers);
     m_markerModel->addMarkerGroup(m_markerModelGroup_gpsMarkers);
 
+    m_markerMenu = new QMenu();
+    m_markerMenu->setTitle(tr("Marker"));
+
+    m_markerPropertiesAction = new QAction();
+    m_markerPropertiesAction->setText(tr("Properties..."));
+    m_markerMenu->addAction(m_markerPropertiesAction);
+    connect(m_markerPropertiesAction, &QAction::triggered, this, &MainWindow::onMarkerMenuPropertiesActionTriggered);
+
+    connect(
+        m_markerModelGroup_myMarkers,
+        &SlippyMapWidgetMarkerGroup::markerAdded,
+        this,
+        &MainWindow::saveMarkers);
+    connect(
+        m_markerModelGroup_myMarkers,
+        &SlippyMapWidgetMarkerGroup::markerRemoved,
+        this,
+        &MainWindow::saveMarkers);
+
     qDebug() << "Loading plugin marker groups...";
 
     for (ExplorerPluginInterface *plugin : m_plugins) {
@@ -215,6 +238,9 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     ui->tvwMarkers->setModel(m_markerModel);
+    ui->slippyMap->setModel(m_markerModel);
+
+    loadMarkers();
 }
 
 MainWindow::~MainWindow()
@@ -252,9 +278,33 @@ void MainWindow::loadPlugins()
         QPluginLoader pluginLoader(pluginsDir.absoluteFilePath(fileName));
         QObject *plugin = pluginLoader.instance();
         if (plugin) {
-            m_plugins.append(qobject_cast<ExplorerPluginInterface*>(plugin));
+            ExplorerPluginInterface *interface =
+                    qobject_cast<ExplorerPluginInterface*>(plugin);
+            interface->loadConfiguration();
+            m_plugins.append(interface);
+
         }
     }
+}
+
+void MainWindow::loadMarkers()
+{
+    QSettings settings;
+
+    int count = settings.beginReadArray("places/my-places");
+    for (int i = 0; i < count; i++) {
+        settings.setArrayIndex(i);
+        double lat = settings.value("latitude").toDouble();
+        double lon = settings.value("longitude").toDouble();
+        QPointF pos(lon, lat);
+        QString label = settings.value("name").toString();
+        SlippyMapWidgetMarker *marker =
+                new SlippyMapWidgetMarker(pos, label);
+        marker->setInformation(settings.value("information").toString());
+        m_markerModelGroup_myMarkers->addMarker(marker);
+        connect(marker, &SlippyMapWidgetMarker::changed, this, &MainWindow::saveMarkers);
+    }
+    settings.endArray();
 }
 
 void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
@@ -329,34 +379,26 @@ void MainWindow::onSlippyMapCursorLeft()
 
 void MainWindow::onSlippyMapMarkerAdded(SlippyMapWidgetMarker *marker)
 {
-    MarkerListItemWidget *itemWidget = new MarkerListItemWidget();
-    itemWidget->setName(marker->label());
-    itemWidget->setLatitude(marker->latitude());
-    itemWidget->setLongitude(marker->longitude());
-    QListWidgetItem *item = new QListWidgetItem();
-    item->setSizeHint(itemWidget->sizeHint());
-    ui->lstMarkers->addItem(item);
-    ui->lstMarkers->setItemWidget(item, itemWidget);
-    m_markerListItemMap[marker] = item;
-    connect(itemWidget, &MarkerListItemWidget::markerMapButtonPressed, ui->slippyMap, &SlippyMapWidget::setCenter);
+    m_markerModelGroup_myMarkers->addMarker(marker);
+    connect(marker, &SlippyMapWidgetMarker::changed, this, &MainWindow::saveMarkers);
+    ui->tvwMarkers->update();
 }
 
 void MainWindow::onSlippyMapMarkerDeleted(SlippyMapWidgetMarker *marker)
 {
-    if (m_markerListItemMap.contains(marker)) {
-        delete m_markerListItemMap[marker];
-        m_markerListItemMap.remove(marker);
-    }
+    m_markerModelGroup_myMarkers->removeMarker(marker);
+    ui->tvwMarkers->update();
 }
 
 void MainWindow::onSlippyMapMarkerUpdated(SlippyMapWidgetMarker *marker)
 {
-    if (m_markerListItemMap.contains(marker)) {
-        QListWidgetItem *item = m_markerListItemMap[marker];
-        MarkerListItemWidget *itemWidget = qobject_cast<MarkerListItemWidget*>(ui->lstMarkers->itemWidget(item));
-        itemWidget->setName(marker->label());
-        itemWidget->setLatitude(marker->latitude());
-        itemWidget->setLongitude(marker->longitude());
+
+}
+
+void MainWindow::onSlippyMapMarkerEditRequested(SlippyMapWidgetMarker *marker)
+{
+    if (MarkerDialog::getEditMarker(this, "Marker Properties", marker)) {
+        // ok...
     }
 }
 
@@ -369,6 +411,22 @@ void MainWindow::onSlippyMapContextMenuActivated(double latitude, double longitu
 void MainWindow::onSlippyMapSearchTextChanged(const QString &text)
 {
     qDebug() << "Search Text:" << text;
+}
+
+void MainWindow::saveMarkers()
+{
+    QSettings settings;
+
+    settings.beginWriteArray("places/my-places");
+    for (int i = 0; i < m_markerModelGroup_myMarkers->markers().length(); i++) {
+        SlippyMapWidgetMarker *marker = m_markerModelGroup_myMarkers->markers().at(i);
+        settings.setArrayIndex(i);
+        settings.setValue("name", marker->label());
+        settings.setValue("information", marker->information());
+        settings.setValue("latitude", marker->position().y());
+        settings.setValue("longitude", marker->position().x());
+    }
+    settings.endArray();
 }
 
 void MainWindow::onDirectionsToHereTriggered()
@@ -516,6 +574,24 @@ void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF po
         m_gpsMarkers[identifier] = marker;
         m_markerModelGroup_gpsMarkers->addMarker(marker);
         ui->slippyMap->addMarker(marker);
+    }
+}
+
+void MainWindow::onTvwMarkersContextMenuRequested(const QPoint &point)
+{
+    QModelIndex index = ui->tvwMarkers->indexAt(point);
+    if (index.isValid()) {
+        m_markerMenu->exec(ui->tvwMarkers->viewport()->mapToGlobal(point));
+    }
+}
+
+void MainWindow::onMarkerMenuPropertiesActionTriggered()
+{
+    QModelIndex index = ui->tvwMarkers->currentIndex();
+    SlippyMapWidgetMarker *marker =
+            static_cast<SlippyMapWidgetMarker *>(index.internalPointer());
+    if (m_markerModel->contains(marker)) {
+        MarkerDialog::getEditMarker(this, tr("Marker Properties"), marker);
     }
 }
 
@@ -690,4 +766,23 @@ void MainWindow::on_actionViewGpsLog_triggered()
     }
 
     m_nmeaLog->show();
+}
+
+void MainWindow::on_tvwMarkers_activated(const QModelIndex &index)
+{
+    SlippyMapWidgetMarker *marker =
+            static_cast<SlippyMapWidgetMarker *>(index.internalPointer());
+    if (m_markerModel->contains(marker)) {
+        ui->slippyMap->setCenter(marker->position());
+    }
+}
+
+void MainWindow::on_tvwMarkers_clicked(const QModelIndex &index)
+{
+    SlippyMapWidgetMarker *marker =
+            static_cast<SlippyMapWidgetMarker *>(index.internalPointer());
+    if (m_markerModel->contains(marker)) {
+        ui->lblMarkerName->setText(marker->label());
+        ui->lblMarkerInformation->setText(marker->information());
+    }
 }

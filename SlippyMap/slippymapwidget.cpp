@@ -147,7 +147,7 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     m_deleteMarkerAction = new QAction();
     m_deleteMarkerAction->setText(tr("Delete Marker"));
     m_setMarkerLabelAction = new QAction();
-    m_setMarkerLabelAction->setText(tr("Set Label..."));
+    m_setMarkerLabelAction->setText(tr("Properties..."));
     m_centerMapAction = new QAction();
     m_centerMapAction->setText(tr("Center Here"));
     m_zoomInHereMapAction = new QAction();
@@ -386,6 +386,13 @@ void SlippyMapWidget::setCenter(double latitude, double longitude)
     remap();
 }
 
+void SlippyMapWidget::setCenter(QPointF position)
+{
+    m_lat = position.y();
+    m_lon = position.x();
+    remap();
+}
+
 void SlippyMapWidget::setZoomLevel(int zoom)
 {
     if (zoom >= m_minZoom && zoom <= m_maxZoom) {
@@ -511,17 +518,7 @@ void SlippyMapWidget::deleteMarkerActionTriggered()
 void SlippyMapWidget::setMarkerLabelActionTriggered()
 {
     if (m_activeMarker != nullptr) {
-        QString label = QInputDialog::getText(
-                    this,
-                    latLonToString(m_activeMarker->latitude(), m_activeMarker->longitude()),
-                    tr("Enter new label"),
-                    QLineEdit::Normal,
-                    m_activeMarker->label());
-        if (label.length() > 0) {
-            m_activeMarker->setLabel(label);
-            update();
-            emit markerUpdated(m_activeMarker);
-        }
+        emit markerEditRequested(m_activeMarker);
     }
 }
 
@@ -858,6 +855,26 @@ void SlippyMapWidget::contextMenuEvent(QContextMenuEvent *event)
     m_deleteMarkerAction->setVisible(false);
     m_setMarkerLabelAction->setVisible(false);
     m_activeMarker = nullptr;
+
+    if (m_markerModel != nullptr) {
+        QList<SlippyMapWidgetMarker *> markers = m_markerModel->markersForRect(boundingBoxLatLon());
+
+        for (SlippyMapWidgetMarker *marker : markers) {
+            qint32 marker_x = long2widgetX(marker->longitude());
+            qint32 marker_y = lat2widgety(marker->latitude());
+            QRect marker_box(
+                        (marker_x - 5),
+                        (marker_y - 5),
+                        10, 10);
+            if (marker_box.contains(event->pos())) {
+                m_addMarkerAction->setVisible(false);
+                m_setMarkerLabelAction->setVisible(true);
+                m_deleteMarkerAction->setVisible(true);
+                m_activeMarker = marker;
+                break;
+            }
+        }
+    }
 
     for (SlippyMapWidgetMarker *marker : m_markers) {
         qint32 marker_x = long2widgetX(marker->longitude());

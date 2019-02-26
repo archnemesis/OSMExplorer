@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>939</width>
-    <height>623</height>
+    <height>545</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -164,10 +164,34 @@
    <widget class="QWidget" name="dockWidgetContents">
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
-      <widget class="QTreeView" name="tvwMarkers"/>
+      <widget class="QTreeView" name="tvwMarkers">
+       <property name="alternatingRowColors">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
      <item>
-      <widget class="QListWidget" name="lstMarkers"/>
+      <widget class="QGroupBox" name="groupBox">
+       <property name="title">
+        <string>Marker Info</string>
+       </property>
+       <layout class="QFormLayout" name="formLayout">
+        <item row="0" column="0" colspan="2">
+         <widget class="QLabel" name="lblMarkerName">
+          <property name="text">
+           <string>Name</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QLabel" name="lblMarkerInformation">
+          <property name="text">
+           <string>Information</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
      </item>
     </layout>
    </widget>

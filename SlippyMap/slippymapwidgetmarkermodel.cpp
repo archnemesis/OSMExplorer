@@ -64,7 +64,7 @@ int SlippyMapWidgetMarkerModel::rowCount(const QModelIndex &parent) const
     }
 
     SlippyMapWidgetMarkerGroup *group = static_cast<SlippyMapWidgetMarkerGroup*>(parent.internalPointer());
-    if (m_groups.contains(group)) {
+    if (group != nullptr && m_groups.contains(group)) {
         return group->markers().length();
     }
 
@@ -88,13 +88,13 @@ QVariant SlippyMapWidgetMarkerModel::data(const QModelIndex &index, int role) co
     }
 
     SlippyMapWidgetMarkerGroup *group = static_cast<SlippyMapWidgetMarkerGroup*>(index.internalPointer());
-    if (index.column() == 0 && m_groups.contains(group)) {
+    if (group != nullptr && index.column() == 0 && m_groups.contains(group)) {
         return group->label();
     }
 
     SlippyMapWidgetMarker *marker = static_cast<SlippyMapWidgetMarker*>(index.internalPointer());
     for (SlippyMapWidgetMarkerGroup *grp : m_groups) {
-        if (grp->markers().contains(marker)) {
+        if (marker != nullptr && grp->markers().contains(marker)) {
             switch (index.column()) {
             case 0:
                 return marker->label();
@@ -145,6 +145,7 @@ void SlippyMapWidgetMarkerModel::addMarkerGroup(SlippyMapWidgetMarkerGroup *grou
     connect(group, &SlippyMapWidgetMarkerGroup::markerAdded, this, &SlippyMapWidgetMarkerModel::onMarkerGroupMarkerAdded);
     connect(group, &SlippyMapWidgetMarkerGroup::markerRemoved, this, &SlippyMapWidgetMarkerModel::onMarkerGroupMarkerRemoved);
     emit groupAdded(group);
+    emit updated();
 }
 
 void SlippyMapWidgetMarkerModel::removeMarkerGroup(SlippyMapWidgetMarkerGroup *group)
@@ -153,14 +154,45 @@ void SlippyMapWidgetMarkerModel::removeMarkerGroup(SlippyMapWidgetMarkerGroup *g
     disconnect(group, &SlippyMapWidgetMarkerGroup::markerRemoved, this, &SlippyMapWidgetMarkerModel::onMarkerGroupMarkerRemoved);
     m_groups.removeOne(group);
     emit groupRemoved(group);
+    emit updated();
+}
+
+bool SlippyMapWidgetMarkerModel::contains(SlippyMapWidgetMarker *marker)
+{
+    for (SlippyMapWidgetMarkerGroup *group : m_groups) {
+        for (SlippyMapWidgetMarker *mkr : group->markers()) {
+            if (mkr == marker) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 void SlippyMapWidgetMarkerModel::onMarkerGroupMarkerAdded(SlippyMapWidgetMarker *marker)
 {
+    connect(
+        marker,
+        &SlippyMapWidgetMarker::changed,
+        this,
+        &SlippyMapWidgetMarkerModel::onMarkerChanged);
     emit markerAdded(marker);
+    emit updated();
 }
 
 void SlippyMapWidgetMarkerModel::onMarkerGroupMarkerRemoved(SlippyMapWidgetMarker *marker)
 {
+//    disconnect(
+//        marker,
+//        &SlippyMapWidgetMarker::changed,
+//        this,
+//        &SlippyMapWidgetMarkerModel::onMarkerChanged);
     emit markerRemoved(marker);
+    emit updated();
+}
+
+void SlippyMapWidgetMarkerModel::onMarkerChanged()
+{
+    emit updated();
 }

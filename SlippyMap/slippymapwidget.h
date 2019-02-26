@@ -89,6 +89,7 @@ public:
 
 public slots:
     void setCenter(double latitude, double longitude);
+    void setCenter(QPointF position);
     void setZoomLevel(int zoom);
     void increaseZoomLevel();
     void decreaseZoomLevel();
@@ -135,6 +136,7 @@ signals:
     void markerAdded(SlippyMapWidgetMarker *marker);
     void markerDeleted(SlippyMapWidgetMarker *marker);
     void markerUpdated(SlippyMapWidgetMarker *marker);
+    void markerEditRequested(SlippyMapWidgetMarker *marker);
     void contextMenuActivated(double latitude, double longitude);
     void searchTextChanged(const QString &searchText);
 

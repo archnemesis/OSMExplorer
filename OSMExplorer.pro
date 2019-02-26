@@ -1,7 +1,7 @@
 TEMPLATE = subdirs
-SUBDIRS = explorer \
-            plugins/aprsfi \
-    SlippyMap
-
-INCLUDEPATH += $$PWD/SlippyMap
-DEPENDPATH += $$PWD/SlippyMap
+CONFIG += ordered
+SUBDIRS = \
+    SlippyMap \
+    LocationServices \
+    explorer \
+    plugins/aprsfi

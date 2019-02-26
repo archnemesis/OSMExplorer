@@ -13,7 +13,7 @@
 class ExplorerPluginInterface
 {
 public:
-    virtual ~ExplorerPluginInterface();
+    virtual ~ExplorerPluginInterface() {}
 
     virtual QString name() const = 0;
     virtual QString description() const = 0;
@@ -22,6 +22,7 @@ public:
     virtual QList<QAction*> mapContextMenuActionList() = 0;
     virtual QList<SlippyMapWidgetMarkerGroup*> markerGroupList() = 0;
     virtual QDialog *configurationDialog(QWidget *parent = nullptr) = 0;
+    virtual void loadConfiguration() = 0;
 };
 
 #define ExplorerPluginInterface_iid "com.robingingras.osmexplorer.ExplorerPluginInterface"

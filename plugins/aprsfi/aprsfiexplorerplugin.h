@@ -24,9 +24,10 @@ public:
     QList<QAction*> mapContextMenuActionList();
     QList<SlippyMapWidgetMarkerGroup *> markerGroupList();
     QDialog *configurationDialog(QWidget *parent = nullptr);
+    void loadConfiguration();
 protected slots:
     void dataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata);
-    void loadConfiguration();
+
 private:
     AprsFiLocationDataProvider *m_dataProvider = nullptr;
     SlippyMapWidgetMarkerGroup *m_markerGroup = nullptr;

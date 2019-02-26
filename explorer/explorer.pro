@@ -13,11 +13,19 @@ TEMPLATE = app
 
 QMAKE_PROJECT_NAME = OSMExplorer
 
+DEPENDPATH += \
+    ../SlippyMap \
+    ../LocationServices
 INCLUDEPATH += ../SlippyMap
+INCLUDEPATH += ../LocationServices
 
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/SlippyMap/release/ -lSlippyMap
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/SlippyMap/debug/ -lSlippyMap
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../SlippyMap/release/ -lSlippyMap
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../SlippyMap/debug/ -lSlippyMap
 else:unix: LIBS += -L$$OUT_PWD/SlippyMap/ -lSlippyMap
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../LocationServices/release/ -lLocationServices
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../LocationServices/debug/ -lLocationServices
+else:unix: LIBS += -L$$OUT_PWD/LocationServices/ -lLocationServices
 
 win32 {
     INCLUDEPATH += "C:\Program Files\OpenSSL-1.0.2q-Win64\include"
@@ -49,12 +57,10 @@ SOURCES += \
     markerlistitemwidget.cpp \
     directionlistitemwidget.cpp \
     settingsdialog.cpp \
-    locationdataprovider.cpp \
     layerpropertiesdialog.cpp \
     gpssourcedialog.cpp \
     nmeaseriallocationdataprovider.cpp \
-    textlogviewerform.cpp \
-    explorerplugininterface.cpp
+    textlogviewerform.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -63,7 +69,6 @@ HEADERS += \
     directionlistitemwidget.h \
     settingsdialog.h \
     defaults.h \
-    locationdataprovider.h \
     layerpropertiesdialog.h \
     gpssourcedialog.h \
     nmeaseriallocationdataprovider.h \

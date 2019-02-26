@@ -30,16 +30,19 @@ public:
 
     void addMarkerGroup(SlippyMapWidgetMarkerGroup *group);
     void removeMarkerGroup(SlippyMapWidgetMarkerGroup *group);
+    bool contains(SlippyMapWidgetMarker *marker);
 
 protected slots:
     void onMarkerGroupMarkerAdded(SlippyMapWidgetMarker *marker);
     void onMarkerGroupMarkerRemoved(SlippyMapWidgetMarker *marker);
+    void onMarkerChanged();
 
 signals:
     void markerAdded(SlippyMapWidgetMarker *marker);
     void markerRemoved(SlippyMapWidgetMarker *marker);
     void groupAdded(SlippyMapWidgetMarkerGroup *group);
     void groupRemoved(SlippyMapWidgetMarkerGroup *group);
+    void updated();
 
 private:
     QList<SlippyMapWidgetMarkerGroup*> m_groups;

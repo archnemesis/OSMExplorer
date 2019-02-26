@@ -23,6 +23,8 @@ class SettingsDialog;
 class QNetworkAccessManager;
 class QNetworkReply;
 class QMessageBox;
+class QMenu;
+class QAction;
 class LocationDataProvider;
 class TextLogViewerForm;
 class ExplorerPluginInterface;
@@ -38,6 +40,7 @@ public:
 protected:
     void resizeEvent(QResizeEvent *event) override;
     void loadPlugins();
+    void loadMarkers();
 
 private:
     Ui::MainWindow *ui;
@@ -67,6 +70,9 @@ private:
     SlippyMapWidgetMarkerGroup *m_markerModelGroup_gpsMarkers;
     SlippyMapWidgetMarkerGroup *m_markerModelGroup_aprsDotFiMarkers;
     QList<ExplorerPluginInterface*> m_plugins;
+    QMenu *m_markerMenu = nullptr;
+    QAction *m_markerPropertiesAction = nullptr;
+    QAction *m_markerDeleteAction = nullptr;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -79,15 +85,18 @@ protected slots:
     void onSlippyMapMarkerAdded(SlippyMapWidgetMarker *marker);
     void onSlippyMapMarkerDeleted(SlippyMapWidgetMarker *marker);
     void onSlippyMapMarkerUpdated(SlippyMapWidgetMarker *marker);
+    void onSlippyMapMarkerEditRequested(SlippyMapWidgetMarker *marker);
     void onSlippyMapContextMenuActivated(double latitude, double longitude);
     void onSlippyMapSearchTextChanged(const QString &text);
+    void saveMarkers();
     void onDirectionsToHereTriggered();
     void onDirectionsFromHereTriggered();
     void onSplitterMoved(int pos, int index);
     void onNetworkRequestFinished(QNetworkReply *reply);
     void onDataProviderAprsFiPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
     void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
-
+    void onTvwMarkersContextMenuRequested(const QPoint& point);
+    void onMarkerMenuPropertiesActionTriggered();
     /**
      * @brief Save splitter position after finish moving.
      */
@@ -110,6 +119,8 @@ private slots:
     void on_btnDirectionsGo_clicked();
     void on_actionMapGpsAddSource_triggered();
     void on_actionViewGpsLog_triggered();
+    void on_tvwMarkers_activated(const QModelIndex &index);
+    void on_tvwMarkers_clicked(const QModelIndex &index);
 };
 
 #endif // MAINWINDOW_H

@@ -1,13 +1,15 @@
 #ifndef LOCATIONDATAPROVIDER_H
 #define LOCATIONDATAPROVIDER_H
 
+#include "locationservices_global.h"
+
 #include <QObject>
 #include <QHash>
 #include <QPointF>
 #include <QString>
 #include <QVariant>
 
-class LocationDataProvider : public QObject
+class LOCATIONSERVICESSHARED_EXPORT LocationDataProvider : public QObject
 {
     Q_OBJECT
 public:

@@ -51,6 +51,17 @@ void SlippyMapWidgetMarker::setLabel(QString label)
     }
 }
 
+void SlippyMapWidgetMarker::setInformation(QString information)
+{
+    bool chg = false;
+    if (m_information != information) chg = true;
+    m_information = information;
+    if (chg) {
+        emit informationTextChanged(m_information);
+        emit changed();
+    }
+}
+
 void SlippyMapWidgetMarker::setMarkerColor(QColor color)
 {
     m_markerColor = color;
@@ -65,6 +76,11 @@ void SlippyMapWidgetMarker::setMovable(bool movable)
 void SlippyMapWidgetMarker::setEditable(bool editable)
 {
     m_editable = editable;
+}
+
+void SlippyMapWidgetMarker::setMetadata(QHash<QString, QVariant> metadata)
+{
+    m_metadata = metadata;
 }
 
 QPointF SlippyMapWidgetMarker::position()
@@ -87,9 +103,19 @@ QString SlippyMapWidgetMarker::label()
     return m_label;
 }
 
+QString SlippyMapWidgetMarker::information()
+{
+    return m_information;
+}
+
 QColor SlippyMapWidgetMarker::color()
 {
     return m_markerColor;
+}
+
+QHash<QString, QVariant> SlippyMapWidgetMarker::metadata()
+{
+    return m_metadata;
 }
 
 bool SlippyMapWidgetMarker::isMovable()

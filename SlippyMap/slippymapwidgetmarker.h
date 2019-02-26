@@ -7,6 +7,8 @@
 #include <QPoint>
 #include <QBrush>
 #include <QPen>
+#include <QHash>
+#include <QVariant>
 
 class QPainter;
 
@@ -28,12 +30,14 @@ public:
     void setMarkerColor(QColor color);
     void setMovable(bool movable);
     void setEditable(bool editable);
+    void setMetadata(QHash<QString,QVariant> metadata);
     QPointF position();
     double latitude();
     double longitude();
     QString label();
     QString information();
     QColor color();
+    QHash<QString,QVariant> metadata();
     bool isMovable();
     bool isEditable();
     void drawMarker(QPainter *painter, QPoint pos);
@@ -47,6 +51,7 @@ signals:
 private:
     void initColors();
 
+    QHash<QString,QVariant> m_metadata;
     QPointF m_position;
     QString m_label;
     QString m_information;

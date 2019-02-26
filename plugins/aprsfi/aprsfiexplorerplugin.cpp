@@ -32,6 +32,10 @@ QList<QAction *> AprsFiExplorerPlugin::mapContextMenuActionList()
 
 QList<SlippyMapWidgetMarkerGroup *> AprsFiExplorerPlugin::markerGroupList()
 {
+    if (m_markerGroup == nullptr) {
+        m_markerGroup = new SlippyMapWidgetMarkerGroup("aprs.fi");
+    }
+
     QList<SlippyMapWidgetMarkerGroup *> list;
     list.append(m_markerGroup);
     return list;
@@ -43,7 +47,12 @@ QDialog *AprsFiExplorerPlugin::configurationDialog(QWidget *parent)
             new AprsDotFiConfigurationDialog(parent);
 
     /* Reload configuration after the dialog is accepted */
-    connect(dlg, &AprsDotFiConfigurationDialog::accepted, this, &AprsFiExplorerPlugin::loadConfiguration);
+    connect(
+                dlg,
+                &AprsDotFiConfigurationDialog::accepted,
+                [=](){
+        loadConfiguration();
+    });
 
     return dlg;
 }
@@ -61,10 +70,19 @@ void AprsFiExplorerPlugin::dataProviderPositionUpdated(QString identifier, QPoin
         }
     }
 
-    m_markerGroup->addMarker(
-                new SlippyMapWidgetMarker(
-                    position,
-                    identifier));
+    SlippyMapWidgetMarker *marker =
+        new SlippyMapWidgetMarker(
+            position,
+            identifier);
+    marker->setMetadata(metadata);
+
+    QStringList infoLines;
+    for (QString key : metadata.keys()) {
+        infoLines << QString("%1: %2").arg(key).arg(metadata[key].toString());
+    }
+    marker->setInformation(infoLines.join("<br/>"));
+
+    m_markerGroup->addMarker(marker);
 }
 
 void AprsFiExplorerPlugin::loadConfiguration()

@@ -112,25 +112,25 @@ void AprsFiLocationDataProvider::onNetworkRequestFinished(QNetworkReply *reply)
 
         QHash<QString,QVariant> meta;
 
-        if (meta.contains("class"))
+        if (entry.contains("class"))
             meta["aprs.fi_class"] = entry["class"].toVariant();
-        if (meta.contains("type"))
+        if (entry.contains("type"))
             meta["aprs.fi_type"] = entry["type"].toVariant();
-        if (meta.contains("time"))
+        if (entry.contains("time"))
             meta["aprs.fi_time"] = entry["time"].toVariant();
-        if (meta.contains("lasttime"))
+        if (entry.contains("lasttime"))
             meta["aprs.fi_lasttime"] = entry["lasttime"].toVariant();
-        if (meta.contains("symbol"))
+        if (entry.contains("symbol"))
             meta["aprs.fi_symbol"] = entry["symbol"].toVariant();
-        if (meta.contains("srccall"))
+        if (entry.contains("srccall"))
             meta["aprs.fi_srccall"] = entry["srccall"].toVariant();
-        if (meta.contains("dstcall"))
+        if (entry.contains("dstcall"))
             meta["aprs.fi_dstcall"] = entry["dstcall"].toVariant();
-        if (meta.contains("phg"))
+        if (entry.contains("phg"))
             meta["aprs.fi_phg"] = entry["phg"].toVariant();
-        if (meta.contains("comment"))
+        if (entry.contains("comment"))
             meta["aprs.fi_comment"] = entry["comment"].toVariant();
-        if (meta.contains("path"))
+        if (entry.contains("path"))
             meta["aprs.fi_path"] = entry["path"].toVariant();
 
         emit positionUpdated(ident, QPointF(lon,lat), meta);
