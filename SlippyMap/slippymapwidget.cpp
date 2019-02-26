@@ -4,6 +4,7 @@
 #include "slippymapwidgetmarkermodel.h"
 #include "defaults.h"
 
+#define _USE_MATH_DEFINES
 #include <math.h>
 
 #include <QDebug>
