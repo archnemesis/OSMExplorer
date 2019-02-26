@@ -4,3 +4,13 @@ SlippyMapWidgetMarkerProvider::SlippyMapWidgetMarkerProvider(QObject *parent) : 
 {
 
 }
+
+void SlippyMapWidgetMarkerProvider::start()
+{
+
+}
+
+void SlippyMapWidgetMarkerProvider::stop()
+{
+
+}

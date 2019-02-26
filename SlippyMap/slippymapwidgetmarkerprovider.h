@@ -9,15 +9,17 @@
 class SLIPPYMAPSHARED_EXPORT SlippyMapWidgetMarkerProvider : public QObject
 {
     Q_OBJECT
+
 public:
     explicit SlippyMapWidgetMarkerProvider(QObject *parent = nullptr);
+    virtual void start();
+    virtual void stop();
 
 
 signals:
     void markerCreated(SlippyMapWidgetMarker *marker);
     void markerRemoved(SlippyMapWidgetMarker *marker);
 
-public slots:
 };
 
 #endif // SLIPPYMAPWIDGETMARKERPROVIDER_H

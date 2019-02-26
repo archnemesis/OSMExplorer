@@ -21,11 +21,11 @@ INCLUDEPATH += ../LocationServices
 
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../SlippyMap/release/ -lSlippyMap
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../SlippyMap/debug/ -lSlippyMap
-else:unix: LIBS += -L$$OUT_PWD/SlippyMap/ -lSlippyMap
+else:unix: LIBS += -L$$OUT_PWD/../SlippyMap/ -lSlippyMap
 
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../LocationServices/release/ -lLocationServices
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../LocationServices/debug/ -lLocationServices
-else:unix: LIBS += -L$$OUT_PWD/LocationServices/ -lLocationServices
+else:unix: LIBS += -L$$OUT_PWD/../LocationServices/ -lLocationServices
 
 win32 {
     INCLUDEPATH += "C:\Program Files\OpenSSL-1.0.2q-Win64\include"
