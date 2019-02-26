@@ -229,12 +229,12 @@ MainWindow::MainWindow(QWidget *parent) :
     qDebug() << "Loading plugin marker groups...";
 
     for (ExplorerPluginInterface *plugin : m_plugins) {
-        QList<SlippyMapWidgetMarkerGroup *> pluginGroups = plugin->markerGroupList();
-        if (pluginGroups.count() > 0) {
-            for (SlippyMapWidgetMarkerGroup *group : pluginGroups) {
-                m_markerModel->addMarkerGroup(group);
-            }
+        QList<QDockWidget *> dockWidgets = plugin->dockWidgetList();
+        for (QDockWidget *dockWidget : dockWidgets) {
+            dockWidget->setParent(this);
+            addDockWidget(Qt::LeftDockWidgetArea, dockWidget);
         }
+
     }
 
     ui->tvwMarkers->setModel(m_markerModel);
@@ -282,7 +282,6 @@ void MainWindow::loadPlugins()
                     qobject_cast<ExplorerPluginInterface*>(plugin);
             interface->loadConfiguration();
             m_plugins.append(interface);
-
         }
     }
 }

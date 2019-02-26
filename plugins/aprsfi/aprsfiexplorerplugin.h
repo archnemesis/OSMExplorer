@@ -5,6 +5,7 @@
 #include <QtPlugin>
 #include <QList>
 #include <QString>
+#include <QDockWidget>
 #include "slippymapwidgetmarkermodel.h"
 #include "slippymapwidgetmarker.h"
 #include "explorerplugininterface.h"
@@ -22,7 +23,8 @@ public:
     QString authorName() const;
     QString homepage() const;
     QList<QAction*> mapContextMenuActionList();
-    QList<SlippyMapWidgetMarkerGroup *> markerGroupList();
+    QList<QDockWidget*> dockWidgetList();
+    QList<SlippyMapWidgetMarker*> markerList();
     QDialog *configurationDialog(QWidget *parent = nullptr);
     void loadConfiguration();
 protected slots:

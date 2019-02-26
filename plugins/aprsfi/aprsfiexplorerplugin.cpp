@@ -2,6 +2,7 @@
 #include "aprsdotficonfigurationdialog.h"
 #include "aprsfilocationdataprovider.h"
 #include "slippymapwidgetmarkergroup.h"
+#include "aprsstationlistform.h"
 
 #include <QSettings>
 
@@ -30,15 +31,21 @@ QList<QAction *> AprsFiExplorerPlugin::mapContextMenuActionList()
     return QList<QAction *>();
 }
 
-QList<SlippyMapWidgetMarkerGroup *> AprsFiExplorerPlugin::markerGroupList()
+QList<QDockWidget *> AprsFiExplorerPlugin::dockWidgetList()
 {
-    if (m_markerGroup == nullptr) {
-        m_markerGroup = new SlippyMapWidgetMarkerGroup("aprs.fi");
-    }
+    QList<QDockWidget *> ret;
 
-    QList<SlippyMapWidgetMarkerGroup *> list;
-    list.append(m_markerGroup);
-    return list;
+    QDockWidget *stationList = new QDockWidget();
+    stationList->setWindowTitle(tr("APRS Stations"));
+    stationList->setWidget(new AprsStationListForm());
+    ret.append(stationList);
+
+    return ret;
+}
+
+QList<SlippyMapWidgetMarker *> AprsFiExplorerPlugin::markerList()
+{
+    return QList<SlippyMapWidgetMarker*>();
 }
 
 QDialog *AprsFiExplorerPlugin::configurationDialog(QWidget *parent)
@@ -59,30 +66,9 @@ QDialog *AprsFiExplorerPlugin::configurationDialog(QWidget *parent)
 
 void AprsFiExplorerPlugin::dataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
 {
-    if (m_markerGroup == nullptr) {
-        m_markerGroup = new SlippyMapWidgetMarkerGroup("aprs.fi");
-    }
-
-    for (SlippyMapWidgetMarker *marker : m_markerGroup->markers()) {
-        if (marker->label() == identifier) {
-            marker->setPosition(position);
-            return;
-        }
-    }
-
-    SlippyMapWidgetMarker *marker =
-        new SlippyMapWidgetMarker(
-            position,
-            identifier);
-    marker->setMetadata(metadata);
-
-    QStringList infoLines;
-    for (QString key : metadata.keys()) {
-        infoLines << QString("%1: %2").arg(key).arg(metadata[key].toString());
-    }
-    marker->setInformation(infoLines.join("<br/>"));
-
-    m_markerGroup->addMarker(marker);
+    (void)identifier;
+    (void)position;
+    (void)metadata;
 }
 
 void AprsFiExplorerPlugin::loadConfiguration()

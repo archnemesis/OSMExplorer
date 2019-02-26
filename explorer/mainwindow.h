@@ -70,6 +70,7 @@ private:
     SlippyMapWidgetMarkerGroup *m_markerModelGroup_gpsMarkers;
     SlippyMapWidgetMarkerGroup *m_markerModelGroup_aprsDotFiMarkers;
     QList<ExplorerPluginInterface*> m_plugins;
+    QMap<ExplorerPluginInterface*,SlippyMapWidgetMarkerGroup> m_pluginMarkerGroupMap;
     QMenu *m_markerMenu = nullptr;
     QAction *m_markerPropertiesAction = nullptr;
     QAction *m_markerDeleteAction = nullptr;

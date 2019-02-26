@@ -29,7 +29,8 @@ SOURCES += \
     slippymapwidgetmarker.cpp \
     slippymapwidgetlayer.cpp \
     slippymapwidgetmarkermodel.cpp \
-    slippymapwidgetmarkergroup.cpp
+    slippymapwidgetmarkergroup.cpp \
+    slippymapwidgetmarkerprovider.cpp
 
 HEADERS += \
     slippymapwidget.h \
@@ -38,7 +39,8 @@ HEADERS += \
     slippymapwidgetmarkermodel.h \
     slippymapwidgetmarkergroup.h \
     slippymap_global.h \
-    defaults.h
+    defaults.h \
+    slippymapwidgetmarkerprovider.h
 
 unix {
     target.path = /usr/lib

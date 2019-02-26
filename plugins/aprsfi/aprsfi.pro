@@ -21,13 +21,16 @@ else:unix: LIBS += -L$$OUT_PWD/LocationServices/ -lLocationServices
 
 HEADERS += aprsfiexplorerplugin.h \
     aprsfilocationdataprovider.h \
-    aprsdotficonfigurationdialog.h
+    aprsdotficonfigurationdialog.h \
+    aprsstationlistform.h
 
 SOURCES += aprsfiexplorerplugin.cpp \
     aprsfilocationdataprovider.cpp \
-    aprsdotficonfigurationdialog.cpp
+    aprsdotficonfigurationdialog.cpp \
+    aprsstationlistform.cpp
 
-FORMS += aprsdotficonfigurationdialog.ui
+FORMS += aprsdotficonfigurationdialog.ui \
+    aprsstationlistform.ui
 
 win32 {
     INCLUDEPATH += "C:\Program Files\OpenSSL-1.0.2q-Win64\include"
