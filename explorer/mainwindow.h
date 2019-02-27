@@ -98,6 +98,7 @@ protected slots:
     void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
     void onTvwMarkersContextMenuRequested(const QPoint& point);
     void onMarkerMenuPropertiesActionTriggered();
+    void onPluginMarkerProviderMarkerAdded(SlippyMapWidgetMarker *marker);
     /**
      * @brief Save splitter position after finish moving.
      */

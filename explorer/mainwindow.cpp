@@ -282,6 +282,15 @@ void MainWindow::loadPlugins()
                     qobject_cast<ExplorerPluginInterface*>(plugin);
             interface->loadConfiguration();
             m_plugins.append(interface);
+
+            SlippyMapWidgetMarkerProvider *provider = interface->markerProvider();
+            if (provider != nullptr) {
+                connect(
+                    provider,
+                    &SlippyMapWidgetMarkerProvider::markerCreated,
+                    this,
+                    &MainWindow::onPluginMarkerProviderMarkerAdded);
+            }
         }
     }
 }
@@ -592,6 +601,11 @@ void MainWindow::onMarkerMenuPropertiesActionTriggered()
     if (m_markerModel->contains(marker)) {
         MarkerDialog::getEditMarker(this, tr("Marker Properties"), marker);
     }
+}
+
+void MainWindow::onPluginMarkerProviderMarkerAdded(SlippyMapWidgetMarker *marker)
+{
+    ui->slippyMap->addMarker(marker);
 }
 
 void MainWindow::onSplitterPosTimerTimeout()

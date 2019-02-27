@@ -3,6 +3,7 @@
 
 #include "slippymapwidgetmarkerprovider.h"
 
+#include <QMap>
 #include <QString>
 #include <QStringList>
 #include <QTimer>
@@ -31,6 +32,9 @@ public:
 public slots:
     void update();
 
+protected slots:
+    void onNetworkRequestFinished(QNetworkReply *reply);
+
 private:
     int m_updateInterval;
     QString m_apiUrl;
@@ -39,6 +43,7 @@ private:
     QNetworkAccessManager *m_net;
     QNetworkReply *m_reply;
     QTimer m_requestTimer;
+    QMap<QString,SlippyMapWidgetMarker*> m_markers;
 };
 
 #endif // APRSFIMARKERPROVIDER_H

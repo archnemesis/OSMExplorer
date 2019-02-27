@@ -9,6 +9,7 @@
 #include "slippymapwidgetmarkermodel.h"
 #include "slippymapwidgetmarker.h"
 #include "explorerplugininterface.h"
+#include "aprsfimarkerprovider.h"
 
 class AprsFiLocationDataProvider;
 
@@ -26,6 +27,7 @@ public:
     QList<QDockWidget*> dockWidgetList();
     QList<SlippyMapWidgetMarker*> markerList();
     QDialog *configurationDialog(QWidget *parent = nullptr);
+    SlippyMapWidgetMarkerProvider *markerProvider();
     void loadConfiguration();
 protected slots:
     void dataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata);
@@ -33,6 +35,7 @@ protected slots:
 private:
     AprsFiLocationDataProvider *m_dataProvider = nullptr;
     SlippyMapWidgetMarkerGroup *m_markerGroup = nullptr;
+    AprsFiMarkerProvider *m_markerProvider = nullptr;
 };
 
 #endif // APRSFIEXPLORERPLUGIN_H

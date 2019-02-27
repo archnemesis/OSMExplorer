@@ -9,6 +9,7 @@
 #include "slippymapwidgetmarker.h"
 #include "slippymapwidgetmarkermodel.h"
 #include "slippymapwidgetmarkergroup.h"
+#include "slippymapwidgetmarkerprovider.h"
 #include "locationdataprovider.h"
 
 class ExplorerPluginInterface
@@ -55,6 +56,7 @@ public:
     virtual QList<SlippyMapWidgetMarker*> markerList() = 0;
     virtual QDialog *configurationDialog(QWidget *parent = nullptr) = 0;
     virtual void loadConfiguration() = 0;
+    virtual SlippyMapWidgetMarkerProvider *markerProvider() = 0;
 };
 
 #define ExplorerPluginInterface_iid "com.robingingras.osmexplorer.ExplorerPluginInterface"

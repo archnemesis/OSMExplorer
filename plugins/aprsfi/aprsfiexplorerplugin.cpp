@@ -64,6 +64,14 @@ QDialog *AprsFiExplorerPlugin::configurationDialog(QWidget *parent)
     return dlg;
 }
 
+SlippyMapWidgetMarkerProvider *AprsFiExplorerPlugin::markerProvider()
+{
+    if (m_markerProvider == nullptr) {
+        m_markerProvider = new AprsFiMarkerProvider();
+    }
+    return m_markerProvider;
+}
+
 void AprsFiExplorerPlugin::dataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
 {
     (void)identifier;
