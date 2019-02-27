@@ -152,13 +152,52 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->slippyMap, &SlippyMapWidget::cursorPositionChanged, this, &MainWindow::onSlippyMapCursorPositionChanged);
     connect(ui->slippyMap, &SlippyMapWidget::cursorEntered, this, &MainWindow::onSlippyMapCursorEntered);
     connect(ui->slippyMap, &SlippyMapWidget::cursorLeft, this, &MainWindow::onSlippyMapCursorLeft);
-    connect(ui->slippyMap, &SlippyMapWidget::markerAdded, this, &MainWindow::onSlippyMapMarkerAdded);
-    connect(ui->slippyMap, &SlippyMapWidget::markerDeleted, this, &MainWindow::onSlippyMapMarkerDeleted);
-    connect(ui->slippyMap, &SlippyMapWidget::markerUpdated, this, &MainWindow::onSlippyMapMarkerUpdated);
-    connect(ui->slippyMap, &SlippyMapWidget::contextMenuActivated, this, &MainWindow::onSlippyMapContextMenuActivated);
+//    connect(ui->slippyMap, &SlippyMapWidget::markerAdded, this, &MainWindow::onSlippyMapMarkerAdded);
+//    connect(ui->slippyMap, &SlippyMapWidget::markerDeleted, this, &MainWindow::onSlippyMapMarkerDeleted);
+//    connect(ui->slippyMap, &SlippyMapWidget::markerUpdated, this, &MainWindow::onSlippyMapMarkerUpdated);
     connect(ui->slippyMap, &SlippyMapWidget::searchTextChanged, this, &MainWindow::onSlippyMapSearchTextChanged);
     connect(ui->slippyMap, &SlippyMapWidget::markerEditRequested, this, &MainWindow::onSlippyMapMarkerEditRequested);
+    connect(ui->slippyMap, &SlippyMapWidget::contextMenuRequested, this, &MainWindow::onSlippyMapContextMenuRequested);
+
+    m_coordAction = new QAction();
+    m_coordAction->setEnabled(false);
+
+    m_addMarkerAction = new QAction();
+    m_addMarkerAction->setText(tr("Add Marker"));
+    m_deleteMarkerAction = new QAction();
+    m_deleteMarkerAction->setText(tr("Delete Marker"));
+    m_setMarkerLabelAction = new QAction();
+    m_setMarkerLabelAction->setText(tr("Properties..."));
+    m_centerMapAction = new QAction();
+    m_centerMapAction->setText(tr("Center Here"));
+    m_zoomInHereMapAction = new QAction();
+    m_zoomInHereMapAction->setText(tr("Zoom In"));
+    m_zoomOutHereMapAction = new QAction();
+    m_zoomOutHereMapAction->setText(tr("Zoom Out"));
+    m_copyCoordinatesAction = new QAction();
+    m_copyCoordinatesAction->setText(tr("Copy Coordinates"));
+    m_copyLatitudeAction = new QAction();
+    m_copyLatitudeAction->setText(tr("Copy Latitude"));
+    m_copyLongitudeAction = new QAction();
+    m_copyLongitudeAction->setText(tr("Copy Longitude"));
+
+    m_contextMenu = new QMenu();
+    m_contextMenu->addAction(m_coordAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_addMarkerAction);
+    m_contextMenu->addAction(m_deleteMarkerAction);
+    m_contextMenu->addAction(m_setMarkerLabelAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_centerMapAction);
+    m_contextMenu->addAction(m_zoomInHereMapAction);
+    m_contextMenu->addAction(m_zoomOutHereMapAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_copyCoordinatesAction);
+    m_contextMenu->addAction(m_copyLatitudeAction);
+    m_contextMenu->addAction(m_copyLongitudeAction);
+
     connect(ui->tvwMarkers, &QTreeView::customContextMenuRequested, this, &MainWindow::onTvwMarkersContextMenuRequested);
+
     m_statusBarPositionLabel = new QLabel();
     m_statusBarPositionLabel->setFrameStyle(QFrame::Sunken);
     m_statusBarStatusLabel = new QLabel();
@@ -179,8 +218,6 @@ MainWindow::MainWindow(QWidget *parent) :
     m_directionsToHereAction = new QAction();
     m_directionsToHereAction->setText("Directions To Here");
 
-    ui->slippyMap->addContextMenuAction(m_directionsFromHereAction);
-    ui->slippyMap->addContextMenuAction(m_directionsToHereAction);
     connect(m_directionsFromHereAction, &QAction::triggered, this, &MainWindow::onDirectionsFromHereTriggered);
     connect(m_directionsToHereAction, &QAction::triggered, this, &MainWindow::onDirectionsToHereTriggered);
 
@@ -419,6 +456,11 @@ void MainWindow::onSlippyMapContextMenuActivated(double latitude, double longitu
 void MainWindow::onSlippyMapSearchTextChanged(const QString &text)
 {
     qDebug() << "Search Text:" << text;
+}
+
+void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
+{
+    m_contextMenu->exec(ui->slippyMap->mapToGlobal(point));
 }
 
 void MainWindow::saveMarkers()

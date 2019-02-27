@@ -65,7 +65,7 @@ QStringList AprsFiMarkerProvider::callsigns()
 
 void AprsFiMarkerProvider::start()
 {
-    m_requestTimer.setInterval(m_updateInterval);
+    m_requestTimer.setInterval(m_updateInterval * 60 * 1000);
     m_requestTimer.setSingleShot(false);
     m_requestTimer.start();
 }
@@ -156,11 +156,13 @@ void AprsFiMarkerProvider::onNetworkRequestFinished(QNetworkReply *reply)
             qDebug() << "Updating marker...";
             marker = m_markers[ident];
             marker->setPosition(point);
+            marker->setLabel(ident);
             marker->setInformation(tr("Testing"));
         }
         else {
             qDebug() << "Creating marker...";
             marker = new SlippyMapWidgetMarker(point);
+            marker->setLabel(ident);
             marker->setInformation(tr("Testing"));
             m_markers[ident] = marker;
             emit markerCreated(marker);

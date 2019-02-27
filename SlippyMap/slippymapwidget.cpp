@@ -139,41 +139,6 @@ SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
     QFont searchFont;
     searchFont.setPixelSize(18);
     m_searchBar->setFont(searchFont);
-
-    m_coordAction = new QAction();
-    m_coordAction->setEnabled(false);
-
-    m_addMarkerAction = new QAction();
-    m_addMarkerAction->setText(tr("Add Marker"));
-    m_deleteMarkerAction = new QAction();
-    m_deleteMarkerAction->setText(tr("Delete Marker"));
-    m_setMarkerLabelAction = new QAction();
-    m_setMarkerLabelAction->setText(tr("Properties..."));
-    m_centerMapAction = new QAction();
-    m_centerMapAction->setText(tr("Center Here"));
-    m_zoomInHereMapAction = new QAction();
-    m_zoomInHereMapAction->setText(tr("Zoom In"));
-    m_zoomOutHereMapAction = new QAction();
-    m_zoomOutHereMapAction->setText(tr("Zoom Out"));
-    m_copyCoordinatesAction = new QAction();
-    m_copyCoordinatesAction->setText(tr("Copy Coordinates"));
-    m_copyLatitudeAction = new QAction();
-    m_copyLatitudeAction->setText(tr("Copy Latitude"));
-    m_copyLongitudeAction = new QAction();
-    m_copyLongitudeAction->setText(tr("Copy Longitude"));
-
-    m_contextMenu = new QMenu();
-    setupContextMenu();
-
-    connect(m_addMarkerAction, &QAction::triggered, this, &SlippyMapWidget::addMarkerActionTriggered);
-    connect(m_deleteMarkerAction, &QAction::triggered, this, &SlippyMapWidget::deleteMarkerActionTriggered);
-    connect(m_setMarkerLabelAction, &QAction::triggered, this, &SlippyMapWidget::setMarkerLabelActionTriggered);
-    connect(m_zoomInHereMapAction, &QAction::triggered, this, &SlippyMapWidget::zoomInHereActionTriggered);
-    connect(m_zoomOutHereMapAction, &QAction::triggered, this, &SlippyMapWidget::zoomOutHereActionTriggered);
-    connect(m_centerMapAction, &QAction::triggered, this, &SlippyMapWidget::centerMapActionTriggered);
-    connect(m_copyCoordinatesAction, &QAction::triggered, this, &SlippyMapWidget::copyCoordinatesActionTriggered);
-    connect(m_copyLatitudeAction, &QAction::triggered, this, &SlippyMapWidget::copyLatitudeActionTriggered);
-    connect(m_copyLongitudeAction, &QAction::triggered, this, &SlippyMapWidget::copyLongitudeActionTriggered);
 }
 
 SlippyMapWidget::~SlippyMapWidget()
@@ -307,18 +272,6 @@ void SlippyMapWidget::takeLayer(SlippyMapWidgetLayer *layer)
 {
     m_layers.removeOne(layer);
     remap();
-}
-
-void SlippyMapWidget::addContextMenuAction(QAction *action)
-{
-    m_contextMenuActions.append(action);
-    setupContextMenu();
-}
-
-void SlippyMapWidget::removeContextMenuAction(QAction *action)
-{
-    m_contextMenuActions.removeOne(action);
-    setupContextMenu();
 }
 
 void SlippyMapWidget::setCenterOnCursorWhileZooming(bool enable)
@@ -850,50 +803,51 @@ void SlippyMapWidget::resizeEvent(QResizeEvent *event)
 
 void SlippyMapWidget::contextMenuEvent(QContextMenuEvent *event)
 {
-    m_coordAction->setText(latLonToString(widgetY2lat(event->y()), widgetX2long(event->x())));
-    m_contextMenuLocation = event->pos();
-    m_addMarkerAction->setVisible(true);
-    m_deleteMarkerAction->setVisible(false);
-    m_setMarkerLabelAction->setVisible(false);
-    m_activeMarker = nullptr;
+    emit contextMenuRequested(event->pos());
+//    m_coordAction->setText(latLonToString(widgetY2lat(event->y()), widgetX2long(event->x())));
+//    m_contextMenuLocation = event->pos();
+//    m_addMarkerAction->setVisible(true);
+//    m_deleteMarkerAction->setVisible(false);
+//    m_setMarkerLabelAction->setVisible(false);
+//    m_activeMarker = nullptr;
 
-    if (m_markerModel != nullptr) {
-        QList<SlippyMapWidgetMarker *> markers = m_markerModel->markersForRect(boundingBoxLatLon());
+//    if (m_markerModel != nullptr) {
+//        QList<SlippyMapWidgetMarker *> markers = m_markerModel->markersForRect(boundingBoxLatLon());
 
-        for (SlippyMapWidgetMarker *marker : markers) {
-            qint32 marker_x = long2widgetX(marker->longitude());
-            qint32 marker_y = lat2widgety(marker->latitude());
-            QRect marker_box(
-                        (marker_x - 5),
-                        (marker_y - 5),
-                        10, 10);
-            if (marker_box.contains(event->pos())) {
-                m_addMarkerAction->setVisible(false);
-                m_setMarkerLabelAction->setVisible(true);
-                m_deleteMarkerAction->setVisible(true);
-                m_activeMarker = marker;
-                break;
-            }
-        }
-    }
+//        for (SlippyMapWidgetMarker *marker : markers) {
+//            qint32 marker_x = long2widgetX(marker->longitude());
+//            qint32 marker_y = lat2widgety(marker->latitude());
+//            QRect marker_box(
+//                        (marker_x - 5),
+//                        (marker_y - 5),
+//                        10, 10);
+//            if (marker_box.contains(event->pos())) {
+//                m_addMarkerAction->setVisible(false);
+//                m_setMarkerLabelAction->setVisible(true);
+//                m_deleteMarkerAction->setVisible(true);
+//                m_activeMarker = marker;
+//                break;
+//            }
+//        }
+//    }
 
-    for (SlippyMapWidgetMarker *marker : m_markers) {
-        qint32 marker_x = long2widgetX(marker->longitude());
-        qint32 marker_y = lat2widgety(marker->latitude());
-        if (event->x() > (marker_x - 5) && event->x() < (marker_x + 5)) {
-            if (event->y() > (marker_y - 5) && event->y() < (marker_y + 5)) {
-                m_addMarkerAction->setVisible(false);
-                m_setMarkerLabelAction->setVisible(true);
-                m_deleteMarkerAction->setVisible(true);
-                m_activeMarker = marker;
-                break;
-            }
-        }
-    }
+//    for (SlippyMapWidgetMarker *marker : m_markers) {
+//        qint32 marker_x = long2widgetX(marker->longitude());
+//        qint32 marker_y = lat2widgety(marker->latitude());
+//        if (event->x() > (marker_x - 5) && event->x() < (marker_x + 5)) {
+//            if (event->y() > (marker_y - 5) && event->y() < (marker_y + 5)) {
+//                m_addMarkerAction->setVisible(false);
+//                m_setMarkerLabelAction->setVisible(true);
+//                m_deleteMarkerAction->setVisible(true);
+//                m_activeMarker = marker;
+//                break;
+//            }
+//        }
+//    }
 
-    update();
-    emit contextMenuActivated(widgetY2lat(event->y()), widgetX2long(event->x()));
-    m_contextMenu->exec(event->globalPos());
+//    update();
+//    emit contextMenuActivated(widgetY2lat(event->y()), widgetX2long(event->x()));
+//    m_contextMenu->exec(event->globalPos());
 }
 
 qint32 SlippyMapWidget::long2tilex(double lon, int z)
@@ -1136,30 +1090,5 @@ void SlippyMapWidget::onMarkerModelMarkerRemoved(SlippyMapWidgetMarker *marker)
     QRectF currentViewport = boundingBoxLatLon();
     if (currentViewport.contains(marker->position())) {
         update();
-    }
-}
-
-void SlippyMapWidget::setupContextMenu()
-{
-    m_contextMenu->clear();
-    m_contextMenu->addAction(m_coordAction);
-    m_contextMenu->addSeparator();
-    m_contextMenu->addAction(m_addMarkerAction);
-    m_contextMenu->addAction(m_deleteMarkerAction);
-    m_contextMenu->addAction(m_setMarkerLabelAction);
-    m_contextMenu->addSeparator();
-    m_contextMenu->addAction(m_centerMapAction);
-    m_contextMenu->addAction(m_zoomInHereMapAction);
-    m_contextMenu->addAction(m_zoomOutHereMapAction);
-    m_contextMenu->addSeparator();
-    m_contextMenu->addAction(m_copyCoordinatesAction);
-    m_contextMenu->addAction(m_copyLatitudeAction);
-    m_contextMenu->addAction(m_copyLongitudeAction);
-
-    if (m_contextMenuActions.length() > 0) {
-        m_contextMenu->addSeparator();
-        for (QAction *action : m_contextMenuActions) {
-            m_contextMenu->addAction(action);
-        }
     }
 }

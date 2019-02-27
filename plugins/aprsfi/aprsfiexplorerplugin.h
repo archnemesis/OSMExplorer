@@ -29,11 +29,8 @@ public:
     QDialog *configurationDialog(QWidget *parent = nullptr);
     SlippyMapWidgetMarkerProvider *markerProvider();
     void loadConfiguration();
-protected slots:
-    void dataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata);
 
 private:
-    AprsFiLocationDataProvider *m_dataProvider = nullptr;
     SlippyMapWidgetMarkerGroup *m_markerGroup = nullptr;
     AprsFiMarkerProvider *m_markerProvider = nullptr;
 };

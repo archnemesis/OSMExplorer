@@ -72,24 +72,12 @@ SlippyMapWidgetMarkerProvider *AprsFiExplorerPlugin::markerProvider()
     return m_markerProvider;
 }
 
-void AprsFiExplorerPlugin::dataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
-{
-    (void)identifier;
-    (void)position;
-    (void)metadata;
-}
-
 void AprsFiExplorerPlugin::loadConfiguration()
 {
     QSettings settings;
 
-    if (m_dataProvider == nullptr) {
-        m_dataProvider = new AprsFiLocationDataProvider();
-        connect(
-            m_dataProvider,
-            &AprsFiLocationDataProvider::positionUpdated,
-            this,
-            &AprsFiExplorerPlugin::dataProviderPositionUpdated);
+    if (m_markerProvider == nullptr) {
+        m_markerProvider = new AprsFiMarkerProvider();
     }
 
     if (settings.contains("integrations/aprs.fi/apikey")) {
@@ -105,17 +93,18 @@ void AprsFiExplorerPlugin::loadConfiguration()
                 callsigns.append(settings.value("callsign").toString());
             }
 
-            m_dataProvider->setApiUrl(apiUrl);
-            m_dataProvider->setApiKey(apiKey);
-            m_dataProvider->setUpdateInterval(updateInterval);
-            m_dataProvider->setCallsigns(callsigns);
-            m_dataProvider->start();
+            m_markerProvider->setApiUrl(apiUrl);
+            m_markerProvider->setApiKey(apiKey);
+            m_markerProvider->setUpdateInterval(updateInterval);
+            m_markerProvider->setCallsigns(callsigns);
+            m_markerProvider->start();
+            m_markerProvider->update();
         }
         else {
-            m_dataProvider->stop();
-            m_dataProvider->setApiUrl("");
-            m_dataProvider->setApiKey("");
-            m_dataProvider->setCallsigns(QStringList());
+            m_markerProvider->stop();
+            m_markerProvider->setApiUrl("");
+            m_markerProvider->setApiKey("");
+            m_markerProvider->setCallsigns(QStringList());
         }
     }
 }

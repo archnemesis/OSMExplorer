@@ -75,6 +75,19 @@ private:
     QAction *m_markerPropertiesAction = nullptr;
     QAction *m_markerDeleteAction = nullptr;
 
+
+    QMenu *m_contextMenu = nullptr;
+    QAction *m_coordAction = nullptr;
+    QAction *m_addMarkerAction = nullptr;
+    QAction *m_deleteMarkerAction = nullptr;
+    QAction *m_setMarkerLabelAction = nullptr;
+    QAction *m_centerMapAction = nullptr;
+    QAction *m_zoomInHereMapAction = nullptr;
+    QAction *m_zoomOutHereMapAction = nullptr;
+    QAction *m_copyCoordinatesAction = nullptr;
+    QAction *m_copyLatitudeAction = nullptr;
+    QAction *m_copyLongitudeAction = nullptr;
+
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
     void onSlippyMapZoomLevelChanged(int zoom);
@@ -89,6 +102,7 @@ protected slots:
     void onSlippyMapMarkerEditRequested(SlippyMapWidgetMarker *marker);
     void onSlippyMapContextMenuActivated(double latitude, double longitude);
     void onSlippyMapSearchTextChanged(const QString &text);
+    void onSlippyMapContextMenuRequested(const QPoint& point);
     void saveMarkers();
     void onDirectionsToHereTriggered();
     void onDirectionsFromHereTriggered();

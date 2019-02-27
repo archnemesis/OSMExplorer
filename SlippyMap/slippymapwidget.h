@@ -75,8 +75,6 @@ public:
     void addLayer(SlippyMapWidgetLayer *layer);
     QList<SlippyMapWidgetLayer*> layers();
     void takeLayer(SlippyMapWidgetLayer *layer);
-    void addContextMenuAction(QAction *action);
-    void removeContextMenuAction(QAction *action);
     void setCenterOnCursorWhileZooming(bool enable);
     bool centerOnCursorWhileZooming();
     void setSearchBarVisible(bool visible);
@@ -137,7 +135,7 @@ signals:
     void markerDeleted(SlippyMapWidgetMarker *marker);
     void markerUpdated(SlippyMapWidgetMarker *marker);
     void markerEditRequested(SlippyMapWidgetMarker *marker);
-    void contextMenuActivated(double latitude, double longitude);
+    void contextMenuRequested(const QPoint& point);
     void searchTextChanged(const QString &searchText);
 
 private:
@@ -190,8 +188,6 @@ private:
     double degPerPixelY();
     QRectF boundingBoxLatLon();
 
-    void setupContextMenu();
-
     bool m_dragging = false;
     QPoint m_dragRealStart;
     QPoint m_dragStart;
@@ -237,17 +233,6 @@ private:
     QBrush m_markerLabelTextBrush;
     QPen m_markerLabelTextPen;
 
-    QMenu *m_contextMenu;
-    QAction *m_coordAction;
-    QAction *m_addMarkerAction;
-    QAction *m_deleteMarkerAction;
-    QAction *m_setMarkerLabelAction;
-    QAction *m_centerMapAction;
-    QAction *m_zoomInHereMapAction;
-    QAction *m_zoomOutHereMapAction;
-    QAction *m_copyCoordinatesAction;
-    QAction *m_copyLatitudeAction;
-    QAction *m_copyLongitudeAction;
     QPoint m_contextMenuLocation;
 
     QClipboard *m_clipboard;
