@@ -114,7 +114,6 @@ protected slots:
     void onDirectionsFromHereTriggered();
     void onSplitterMoved(int pos, int index);
     void onNetworkRequestFinished(QNetworkReply *reply);
-    void onDataProviderAprsFiPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
     void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
     void onTvwMarkersContextMenuRequested(const QPoint& point);
     void onMarkerMenuPropertiesActionTriggered();

@@ -619,26 +619,6 @@ void MainWindow::onNetworkRequestFinished(QNetworkReply *reply)
     }
 }
 
-void MainWindow::onDataProviderAprsFiPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
-{
-//    SlippyMapWidgetMarker *marker;
-
-//    if (m_dataProviderAprsFiMarkers.contains(identifier)) {
-//        marker = m_dataProviderAprsFiMarkers[identifier];
-//        marker->setLabel(identifier);
-//        marker->setPosition(position);
-//    }
-//    else {
-//        marker = new SlippyMapWidgetMarker(position);
-//        marker->setLabel(identifier);
-//        m_markerModelGroup_aprsDotFiMarkers->addMarker(marker);
-//        m_dataProviderAprsFiMarkers[identifier] = marker;
-//        ui->slippyMap->addMarker(marker);
-//    }
-
-//    ui->slippyMap->update();
-}
-
 void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
 {
     SlippyMapWidgetMarker *marker;
@@ -651,8 +631,10 @@ void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF po
     else {
         marker = new SlippyMapWidgetMarker(position);
         marker->setLabel(metadata["gps_label"].toString());
+        marker->setMarkerColor(Qt::green);
+        marker->setEditable(false);
+        marker->setMovable(false);
         m_gpsMarkers[identifier] = marker;
-        m_markerModelGroup_gpsMarkers->addMarker(marker);
         ui->slippyMap->addMarker(marker);
     }
 }

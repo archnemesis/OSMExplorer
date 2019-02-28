@@ -41,6 +41,13 @@ void AprsFiMarkerProvider::setApiKey(QString key)
 void AprsFiMarkerProvider::setCallsigns(QStringList callsigns)
 {
     m_callsigns = callsigns;
+
+    for (QString ident : m_markers.keys()) {
+        if (!callsigns.contains(ident)) {
+            emit markerRemoved(m_markers[ident]);
+            m_markers.remove(ident);
+        }
+    }
 }
 
 int AprsFiMarkerProvider::updateInterval()
