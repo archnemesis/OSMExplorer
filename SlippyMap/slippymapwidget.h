@@ -61,6 +61,7 @@ public:
     explicit SlippyMapWidget(QWidget *parent = nullptr);
     virtual ~SlippyMapWidget() override;
     static QString latLonToString(double lat, double lon);
+    static QString geoCoordinatesToString(QPointF coords);
     void setTileServer(QString server);
     QString tileServer();
     QList<SlippyMapWidgetMarker*> markerList();
@@ -84,6 +85,14 @@ public:
     void setTileCachingEnabled(bool enabled);
     void setTileCacheDir(QString dir);
     void setModel(SlippyMapWidgetMarkerModel *model);
+    double widgetX2long(qint32 x);
+    double widgetY2lat(qint32 y);
+    double degPerPixelX();
+    double degPerPixelY();
+    QRectF boundingBoxLatLon();
+    qint32 long2widgetX(double lon);
+    qint32 lat2widgety(double lat);
+    QPointF widgetCoordsToGeoCoords(QPoint point);
 
 public slots:
     void setCenter(double latitude, double longitude);
@@ -180,13 +189,6 @@ private:
     qint32 lat2tiley(double lat, int z);
     double tilex2long(qint32 x, qint32 z);
     double tiley2lat(qint32 y, qint32 z);
-    qint32 long2widgetX(double lon);
-    qint32 lat2widgety(double lat);
-    double widgetX2long(qint32 x);
-    double widgetY2lat(qint32 y);
-    double degPerPixelX();
-    double degPerPixelY();
-    QRectF boundingBoxLatLon();
 
     bool m_dragging = false;
     QPoint m_dragRealStart;

@@ -48,102 +48,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->setupUi(this);
     ui->tvwMarkers->setContextMenuPolicy(Qt::CustomContextMenu);
+    m_defaultPalette = qApp->palette();
 
     m_net = new QNetworkAccessManager();
     connect(m_net, &QNetworkAccessManager::finished, this, &MainWindow::onNetworkRequestFinished);
-
-//    // set style
-//    qApp->setStyle(QStyleFactory::create("Fusion"));
-//    // increase font size for better reading
-//    QFont defaultFont = QApplication::font();
-//    defaultFont.setPointSize(defaultFont.pointSize()+2);
-//    qApp->setFont(defaultFont);
-//    // modify palette to dark
-//    QPalette darkPalette;
-//    darkPalette.setColor(QPalette::Window,QColor(53,53,53));
-//    darkPalette.setColor(QPalette::WindowText,Qt::white);
-//    darkPalette.setColor(QPalette::Disabled,QPalette::WindowText,QColor(127,127,127));
-//    darkPalette.setColor(QPalette::Base,QColor(42,42,42));
-//    darkPalette.setColor(QPalette::AlternateBase,QColor(66,66,66));
-//    darkPalette.setColor(QPalette::ToolTipBase,Qt::white);
-//    darkPalette.setColor(QPalette::ToolTipText,Qt::white);
-//    darkPalette.setColor(QPalette::Text,Qt::white);
-//    darkPalette.setColor(QPalette::Disabled,QPalette::Text,QColor(127,127,127));
-//    darkPalette.setColor(QPalette::Dark,QColor(35,35,35));
-//    darkPalette.setColor(QPalette::Shadow,QColor(20,20,20));
-//    darkPalette.setColor(QPalette::Button,QColor(53,53,53));
-//    darkPalette.setColor(QPalette::ButtonText,Qt::white);
-//    darkPalette.setColor(QPalette::Disabled,QPalette::ButtonText,QColor(127,127,127));
-//    darkPalette.setColor(QPalette::BrightText,Qt::red);
-//    darkPalette.setColor(QPalette::Link,QColor(42,130,218));
-//    darkPalette.setColor(QPalette::Highlight,QColor(42,130,218));
-//    darkPalette.setColor(QPalette::Disabled,QPalette::Highlight,QColor(80,80,80));
-//    darkPalette.setColor(QPalette::HighlightedText,Qt::white);
-//    darkPalette.setColor(QPalette::Disabled,QPalette::HighlightedText,QColor(127,127,127));
-
-//    qApp->setPalette(darkPalette);
-
-    QSettings settings;
-
-    if (settings.contains("view/sidebarWidth")) {
-        double ratio = settings.value("view/sidebarWidth").toDouble();
-        int sidebar_width = (int)((double)width() * ratio);
-        int map_width = width() - sidebar_width;
-        QList<int> widths;
-        widths.append(sidebar_width);
-        widths.append(map_width);
-        //ui->splitter->setSizes(widths);
-    }
-
-    if (settings.contains("view/sidebarVisible")) {
-        //ui->toolBox->setVisible(settings.value("view/sidebarVisible").toBool());
-        ui->actionViewSidebar->setChecked(true);
-    }
-
-    int layerCount = settings.beginReadArray("layers");
-    for (int i = 0; i < layerCount; i++) {
-        settings.setArrayIndex(i);
-        QString name = settings.value("name").toString();
-        QString description = settings.value("description").toString();
-        QString tileUrl = settings.value("tileServer").toString();
-        int zOrder = settings.value("zOrder").toInt();
-        bool visible = settings.value("visible", true).toBool();
-        SlippyMapWidgetLayer *layer = new SlippyMapWidgetLayer(tileUrl);
-        layer->setName(name);
-        layer->setDescription(description);
-        layer->setZOrder(zOrder);
-        layer->setVisible(visible);
-        ui->slippyMap->addLayer(layer);
-        m_layers.append(layer);
-
-        QAction *layerShowHide = new QAction();
-        layerShowHide->setCheckable(true);
-        layerShowHide->setChecked(visible);
-        layerShowHide->setText(name);
-        connect(layerShowHide, &QAction::triggered, [=]() {
-            layer->setVisible(layerShowHide->isChecked());
-            ui->slippyMap->update();
-        });
-        ui->menuFileLayers->addAction(layerShowHide);
-    }
-    settings.endArray();
-
-    if (layerCount == 0) {
-        QMessageBox::information(
-                    this,
-                    tr("OSMExplorer"),
-                    tr("There are no layers configured. To get started, add one or more layers in Settings."),
-                    QMessageBox::Ok);
-        on_actionFileSettings_triggered();
-    }
-
-    double defLat = settings.value("map/defaults/latitude", DEFAULT_LATITUDE).toDouble();
-    double defLon = settings.value("map/defaults/longitude", DEFAULT_LONGITUDE).toDouble();
-    int defZoom = settings.value("map/defaults/zoomLevel", DEFAULT_ZOOM).toInt();
-    ui->slippyMap->setCenter(defLat, defLon);
-    ui->slippyMap->setZoomLevel(defZoom);
-
-    refreshSettings();
 
     connect(ui->slippyMap, &SlippyMapWidget::centerChanged, this, &MainWindow::onSlippyMapCenterChanged);
     connect(ui->slippyMap, &SlippyMapWidget::zoomLevelChanged, this, &MainWindow::onSlippyMapZoomLevelChanged);
@@ -152,49 +60,13 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->slippyMap, &SlippyMapWidget::cursorPositionChanged, this, &MainWindow::onSlippyMapCursorPositionChanged);
     connect(ui->slippyMap, &SlippyMapWidget::cursorEntered, this, &MainWindow::onSlippyMapCursorEntered);
     connect(ui->slippyMap, &SlippyMapWidget::cursorLeft, this, &MainWindow::onSlippyMapCursorLeft);
-//    connect(ui->slippyMap, &SlippyMapWidget::markerAdded, this, &MainWindow::onSlippyMapMarkerAdded);
-//    connect(ui->slippyMap, &SlippyMapWidget::markerDeleted, this, &MainWindow::onSlippyMapMarkerDeleted);
-//    connect(ui->slippyMap, &SlippyMapWidget::markerUpdated, this, &MainWindow::onSlippyMapMarkerUpdated);
     connect(ui->slippyMap, &SlippyMapWidget::searchTextChanged, this, &MainWindow::onSlippyMapSearchTextChanged);
     connect(ui->slippyMap, &SlippyMapWidget::markerEditRequested, this, &MainWindow::onSlippyMapMarkerEditRequested);
     connect(ui->slippyMap, &SlippyMapWidget::contextMenuRequested, this, &MainWindow::onSlippyMapContextMenuRequested);
 
-    m_coordAction = new QAction();
-    m_coordAction->setEnabled(false);
-
-    m_addMarkerAction = new QAction();
-    m_addMarkerAction->setText(tr("Add Marker"));
-    m_deleteMarkerAction = new QAction();
-    m_deleteMarkerAction->setText(tr("Delete Marker"));
-    m_setMarkerLabelAction = new QAction();
-    m_setMarkerLabelAction->setText(tr("Properties..."));
-    m_centerMapAction = new QAction();
-    m_centerMapAction->setText(tr("Center Here"));
-    m_zoomInHereMapAction = new QAction();
-    m_zoomInHereMapAction->setText(tr("Zoom In"));
-    m_zoomOutHereMapAction = new QAction();
-    m_zoomOutHereMapAction->setText(tr("Zoom Out"));
-    m_copyCoordinatesAction = new QAction();
-    m_copyCoordinatesAction->setText(tr("Copy Coordinates"));
-    m_copyLatitudeAction = new QAction();
-    m_copyLatitudeAction->setText(tr("Copy Latitude"));
-    m_copyLongitudeAction = new QAction();
-    m_copyLongitudeAction->setText(tr("Copy Longitude"));
-
-    m_contextMenu = new QMenu();
-    m_contextMenu->addAction(m_coordAction);
-    m_contextMenu->addSeparator();
-    m_contextMenu->addAction(m_addMarkerAction);
-    m_contextMenu->addAction(m_deleteMarkerAction);
-    m_contextMenu->addAction(m_setMarkerLabelAction);
-    m_contextMenu->addSeparator();
-    m_contextMenu->addAction(m_centerMapAction);
-    m_contextMenu->addAction(m_zoomInHereMapAction);
-    m_contextMenu->addAction(m_zoomOutHereMapAction);
-    m_contextMenu->addSeparator();
-    m_contextMenu->addAction(m_copyCoordinatesAction);
-    m_contextMenu->addAction(m_copyLatitudeAction);
-    m_contextMenu->addAction(m_copyLongitudeAction);
+    loadStartupSettings();
+    setupContextMenus();
+    refreshSettings();
 
     connect(ui->tvwMarkers, &QTreeView::customContextMenuRequested, this, &MainWindow::onTvwMarkersContextMenuRequested);
 
@@ -213,14 +85,6 @@ MainWindow::MainWindow(QWidget *parent) :
     QPalette systemPalette = QGuiApplication::palette();
     m_directionLineColor = systemPalette.highlight().color();
 
-    m_directionsFromHereAction = new QAction();
-    m_directionsFromHereAction->setText("Directions From Here");
-    m_directionsToHereAction = new QAction();
-    m_directionsToHereAction->setText("Directions To Here");
-
-    connect(m_directionsFromHereAction, &QAction::triggered, this, &MainWindow::onDirectionsFromHereTriggered);
-    connect(m_directionsToHereAction, &QAction::triggered, this, &MainWindow::onDirectionsToHereTriggered);
-
     m_saveSplitterPosTimer = new QTimer();
     m_saveSplitterPosTimer->setSingleShot(true);
     m_saveSplitterPosTimer->setInterval(100);
@@ -230,12 +94,6 @@ MainWindow::MainWindow(QWidget *parent) :
     m_saveWindowSizeTimer->setSingleShot(true);
     m_saveWindowSizeTimer->setInterval(100);
     connect(m_saveWindowSizeTimer, &QTimer::timeout, this, &MainWindow::onWindowSizeTimerTimeout);
-
-    if (settings.contains("view/windowWidth") && settings.contains("view/windowHeight")) {
-        int width = settings.value("view/windowWidth").toInt();
-        int height = settings.value("view/windowHeight").toInt();
-        resize(width, height);
-    }
 
     m_markerModel = new SlippyMapWidgetMarkerModel();
     m_markerModelGroup_myMarkers = new SlippyMapWidgetMarkerGroup(tr("My Places"));
@@ -336,6 +194,12 @@ void MainWindow::loadMarkers()
 {
     QSettings settings;
 
+    for (SlippyMapWidgetMarker *marker : m_loadedMarkers) {
+        ui->slippyMap->deleteMarker(marker);
+        delete marker;
+    }
+    m_loadedMarkers.clear();
+
     int count = settings.beginReadArray("places/my-places");
     for (int i = 0; i < count; i++) {
         settings.setArrayIndex(i);
@@ -346,8 +210,138 @@ void MainWindow::loadMarkers()
         SlippyMapWidgetMarker *marker =
                 new SlippyMapWidgetMarker(pos, label);
         marker->setInformation(settings.value("information").toString());
-        m_markerModelGroup_myMarkers->addMarker(marker);
+        ui->slippyMap->addMarker(marker);
+        m_loadedMarkers.append(marker);
         connect(marker, &SlippyMapWidgetMarker::changed, this, &MainWindow::saveMarkers);
+    }
+    settings.endArray();
+}
+
+void MainWindow::setupContextMenus()
+{
+    m_coordAction = new QAction();
+    m_coordAction->setEnabled(false);
+
+    m_addMarkerAction = new QAction();
+    m_addMarkerAction->setText(tr("Add Marker"));
+    connect(m_addMarkerAction, &QAction::triggered, this, &MainWindow::onAddMarkerActionTriggered);
+
+    m_deleteMarkerAction = new QAction();
+    m_deleteMarkerAction->setText(tr("Delete Marker"));
+
+    m_setMarkerLabelAction = new QAction();
+    m_setMarkerLabelAction->setText(tr("Properties..."));
+    connect(m_setMarkerLabelAction, &QAction::triggered, this, &MainWindow::onEditMarkerActionTriggered);
+
+    m_centerMapAction = new QAction();
+    m_centerMapAction->setText(tr("Center Here"));
+    connect(m_centerMapAction, &QAction::triggered, this, &MainWindow::onCenterMapActionTriggered);
+
+    m_zoomInHereMapAction = new QAction();
+    m_zoomInHereMapAction->setText(tr("Zoom In"));
+    m_zoomOutHereMapAction = new QAction();
+    m_zoomOutHereMapAction->setText(tr("Zoom Out"));
+    m_copyCoordinatesAction = new QAction();
+    m_copyCoordinatesAction->setText(tr("Copy Coordinates"));
+    m_copyLatitudeAction = new QAction();
+    m_copyLatitudeAction->setText(tr("Copy Latitude"));
+    m_copyLongitudeAction = new QAction();
+    m_copyLongitudeAction->setText(tr("Copy Longitude"));
+
+    m_directionsFromHereAction = new QAction();
+    m_directionsFromHereAction->setText("Directions From Here");
+    m_directionsToHereAction = new QAction();
+    m_directionsToHereAction->setText("Directions To Here");
+
+    connect(m_directionsFromHereAction, &QAction::triggered, this, &MainWindow::onDirectionsFromHereTriggered);
+    connect(m_directionsToHereAction, &QAction::triggered, this, &MainWindow::onDirectionsToHereTriggered);
+
+    m_contextMenu = new QMenu();
+    m_contextMenu->addAction(m_coordAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_addMarkerAction);
+    m_contextMenu->addAction(m_deleteMarkerAction);
+    m_contextMenu->addAction(m_setMarkerLabelAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_centerMapAction);
+    m_contextMenu->addAction(m_zoomInHereMapAction);
+    m_contextMenu->addAction(m_zoomOutHereMapAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_copyCoordinatesAction);
+    m_contextMenu->addAction(m_copyLatitudeAction);
+    m_contextMenu->addAction(m_copyLongitudeAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_directionsFromHereAction);
+    m_contextMenu->addAction(m_directionsToHereAction);
+}
+
+void MainWindow::loadStartupSettings()
+{
+    QSettings settings;
+
+    if (settings.contains("view/windowWidth") && settings.contains("view/windowHeight")) {
+        int width = settings.value("view/windowWidth").toInt();
+        int height = settings.value("view/windowHeight").toInt();
+        resize(width, height);
+    }
+
+    int layerCount = settings.beginReadArray("layers");
+    for (int i = 0; i < layerCount; i++) {
+        settings.setArrayIndex(i);
+        QString name = settings.value("name").toString();
+        QString description = settings.value("description").toString();
+        QString tileUrl = settings.value("tileServer").toString();
+        int zOrder = settings.value("zOrder").toInt();
+        bool visible = settings.value("visible", true).toBool();
+        SlippyMapWidgetLayer *layer = new SlippyMapWidgetLayer(tileUrl);
+        layer->setName(name);
+        layer->setDescription(description);
+        layer->setZOrder(zOrder);
+        layer->setVisible(visible);
+        ui->slippyMap->addLayer(layer);
+        m_layers.append(layer);
+
+        QAction *layerShowHide = new QAction();
+        layerShowHide->setCheckable(true);
+        layerShowHide->setChecked(visible);
+        layerShowHide->setText(name);
+        connect(layerShowHide, &QAction::triggered, [=]() {
+            layer->setVisible(layerShowHide->isChecked());
+            ui->slippyMap->update();
+            saveLayers();
+        });
+        ui->menuFileLayers->addAction(layerShowHide);
+    }
+    settings.endArray();
+
+    if (layerCount == 0) {
+        QMessageBox::information(
+                    this,
+                    tr("Layers"),
+                    tr("There are no layers configured. To get started, add one or more layers in Settings."),
+                    QMessageBox::Ok);
+        on_actionFileSettings_triggered();
+    }
+
+    double defLat = settings.value("map/defaults/latitude", DEFAULT_LATITUDE).toDouble();
+    double defLon = settings.value("map/defaults/longitude", DEFAULT_LONGITUDE).toDouble();
+    int defZoom = settings.value("map/defaults/zoomLevel", DEFAULT_ZOOM).toInt();
+    ui->slippyMap->setCenter(defLat, defLon);
+    ui->slippyMap->setZoomLevel(defZoom);
+}
+
+void MainWindow::saveLayers()
+{
+    QSettings settings;
+
+    settings.beginWriteArray("layers");
+    for (int i = 0; i < m_layers.length(); i++) {
+        settings.setArrayIndex(i);
+        settings.setValue("name", m_layers.at(i)->name());
+        settings.setValue("description", m_layers.at(i)->description());
+        settings.setValue("tileServer", m_layers.at(i)->tileUrl());
+        settings.setValue("zOrder", m_layers.at(i)->zOrder());
+        settings.setValue("visible", m_layers.at(i)->isVisible());
     }
     settings.endArray();
 }
@@ -460,6 +454,42 @@ void MainWindow::onSlippyMapSearchTextChanged(const QString &text)
 
 void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
 {
+    m_contextMenuLocation = point;
+    m_coordAction->setText(SlippyMapWidget::latLonToString(
+                               ui->slippyMap->widgetY2lat(point.y()),
+                               ui->slippyMap->widgetX2long(point.x())));
+
+    m_addMarkerAction->setVisible(true);
+    m_deleteMarkerAction->setVisible(false);
+    m_setMarkerLabelAction->setVisible(false);
+
+    QRectF viewport = ui->slippyMap->boundingBoxLatLon();
+    for (SlippyMapWidgetMarker *marker : ui->slippyMap->markerList()) {
+        if (viewport.contains(marker->position())) {
+            int markerX = ui->slippyMap->long2widgetX(marker->longitude());
+            int markerY = ui->slippyMap->lat2widgety(marker->latitude());
+
+            QRect clickbox(
+                markerX - 5,
+                markerY - 5,
+                10, 10);
+
+            if (clickbox.contains(m_contextMenuLocation)) {
+                m_addMarkerAction->setVisible(false);
+                m_setMarkerLabelAction->setVisible(true);
+
+                if (!marker->isEditable()) {
+                    m_deleteMarkerAction->setVisible(false);
+                }
+                else {
+                    m_deleteMarkerAction->setVisible(true);
+                }
+
+                break;
+            }
+        }
+    }
+
     m_contextMenu->exec(ui->slippyMap->mapToGlobal(point));
 }
 
@@ -650,6 +680,88 @@ void MainWindow::onPluginMarkerProviderMarkerAdded(SlippyMapWidgetMarker *marker
     ui->slippyMap->addMarker(marker);
 }
 
+void MainWindow::onAddMarkerActionTriggered()
+{
+    double lon = ui->slippyMap->widgetX2long(m_contextMenuLocation.x());
+    double lat = ui->slippyMap->widgetY2lat(m_contextMenuLocation.y());
+    QPointF markerPoint(lon, lat);
+    SlippyMapWidgetMarker *marker = new SlippyMapWidgetMarker(markerPoint);
+    marker->setLabel(SlippyMapWidget::latLonToString(lat, lon));
+    marker->setInformation(tr("Test Label"));
+    ui->slippyMap->addMarker(marker);
+    m_loadedMarkers.append(marker);
+}
+
+void MainWindow::onDeleteMarkerActionTriggered()
+{
+
+}
+
+void MainWindow::onEditMarkerActionTriggered()
+{
+    QRectF viewport = ui->slippyMap->boundingBoxLatLon();
+    for (SlippyMapWidgetMarker *marker : ui->slippyMap->markerList()) {
+        if (viewport.contains(marker->position())) {
+            int markerX = ui->slippyMap->long2widgetX(marker->longitude());
+            int markerY = ui->slippyMap->lat2widgety(marker->latitude());
+            QRect clickbox(
+                markerX - 5,
+                markerY - 5,
+                10, 10);
+            if (clickbox.contains(m_contextMenuLocation)) {
+                MarkerDialog::getEditMarker(
+                    this,
+                    tr("Marker Properties"),
+                    marker);
+            }
+        }
+    }
+}
+
+void MainWindow::onCenterMapActionTriggered()
+{
+    QPointF coords = ui->slippyMap->widgetCoordsToGeoCoords(m_contextMenuLocation);
+    ui->slippyMap->setCenter(coords);
+}
+
+void MainWindow::setDarkModeEnabled(bool enabled)
+{
+    // increase font size for better reading
+    //QFont defaultFont = QApplication::font();
+    //defaultFont.setPointSize(defaultFont.pointSize()+2);
+    //qApp->setFont(defaultFont);
+    // modify palette to dark
+
+    if (enabled) {
+        QPalette darkPalette;
+        darkPalette.setColor(QPalette::Window,QColor(53,53,53));
+        darkPalette.setColor(QPalette::WindowText,Qt::white);
+        darkPalette.setColor(QPalette::Disabled,QPalette::WindowText,QColor(127,127,127));
+        darkPalette.setColor(QPalette::Base,QColor(42,42,42));
+        darkPalette.setColor(QPalette::AlternateBase,QColor(66,66,66));
+        darkPalette.setColor(QPalette::ToolTipBase,Qt::white);
+        darkPalette.setColor(QPalette::ToolTipText,Qt::white);
+        darkPalette.setColor(QPalette::Text,Qt::white);
+        darkPalette.setColor(QPalette::Disabled,QPalette::Text,QColor(127,127,127));
+        darkPalette.setColor(QPalette::Dark,QColor(35,35,35));
+        darkPalette.setColor(QPalette::Shadow,QColor(20,20,20));
+        darkPalette.setColor(QPalette::Button,QColor(53,53,53));
+        darkPalette.setColor(QPalette::ButtonText,Qt::white);
+        darkPalette.setColor(QPalette::Disabled,QPalette::ButtonText,QColor(127,127,127));
+        darkPalette.setColor(QPalette::BrightText,Qt::red);
+        darkPalette.setColor(QPalette::Link,QColor(42,130,218));
+        darkPalette.setColor(QPalette::Highlight,QColor(42,130,218));
+        darkPalette.setColor(QPalette::Disabled,QPalette::Highlight,QColor(80,80,80));
+        darkPalette.setColor(QPalette::HighlightedText,Qt::white);
+        darkPalette.setColor(QPalette::Disabled,QPalette::HighlightedText,QColor(127,127,127));
+
+        qApp->setPalette(darkPalette);
+    }
+    else {
+        qApp->setPalette(m_defaultPalette);
+    }
+}
+
 void MainWindow::onSplitterPosTimerTimeout()
 {
 //    QSettings settings;
@@ -670,7 +782,6 @@ void MainWindow::refreshSettings()
     QSettings settings;
     bool enable = settings.value("map/zoom/centerOnCursor", DEFAULT_CENTER_ON_CURSOR_ZOOM).toBool();
     ui->slippyMap->setCenterOnCursorWhileZooming(enable);
-
     ui->slippyMap->setTileCacheDir(settings.value("map/cache/tiledir", QStandardPaths::writableLocation(QStandardPaths::CacheLocation)).toString());
     ui->slippyMap->setTileCachingEnabled(settings.value("map/cache/enable", true).toBool());
 }

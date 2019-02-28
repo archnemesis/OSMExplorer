@@ -20,17 +20,7 @@ SlippyMapWidgetMarker *MarkerDialog::getNewMarker(QWidget *parent, QString title
     int result = dlg.exec();
 
     if (result == MarkerDialog::Accepted) {
-        bool ok;
-        double lat = dlg.ui->lblLatitude->text().toDouble(&ok);
-        double lon = dlg.ui->lblLongitude->text().toDouble(&ok);
-        QPointF pos(lon, lat);
-        QString name = dlg.ui->lblName->text();
-        QString description = dlg.ui->txtInformation->toHtml();
-        SlippyMapWidgetMarker *marker = new SlippyMapWidgetMarker(
-                    pos,
-                    name);
-        marker->setInformation(description);
-        return marker;
+        return nullptr;
     }
 
     return nullptr;
@@ -43,21 +33,22 @@ bool MarkerDialog::getEditMarker(QWidget *parent, QString title, SlippyMapWidget
 
     dlg.ui->lblName->setText(marker->label());
     dlg.ui->txtInformation->setHtml(marker->information());
-    dlg.ui->lblLatitude->setText(QString("%1").arg(marker->latitude(), 8, 'f', 4, '0'));
-    dlg.ui->lblLongitude->setText(QString("%1").arg(marker->longitude(), 8, 'f', 4, '0'));
+    dlg.ui->lblCoordinates->setText(tr("Coordinates: %1").arg(SlippyMapWidget::geoCoordinatesToString(marker->position())));
+
+    if (!marker->isEditable()) {
+        dlg.ui->lblName->setReadOnly(true);
+        dlg.ui->txtInformation->setReadOnly(true);
+    }
 
     int result = dlg.exec();
 
     if (result == MarkerDialog::Accepted) {
-        bool ok;
-        double lat = dlg.ui->lblLatitude->text().toDouble(&ok);
-        double lon = dlg.ui->lblLongitude->text().toDouble(&ok);
-        QPointF pos(lon, lat);
-        QString name = dlg.ui->lblName->text();
-        QString description = dlg.ui->txtInformation->toHtml();
-        marker->setLabel(name);
-        marker->setPosition(pos);
-        marker->setInformation(description);
+        if (marker->isEditable()) {
+            QString name = dlg.ui->lblName->text();
+            QString description = dlg.ui->txtInformation->toHtml();
+            marker->setLabel(name);
+            marker->setInformation(description);
+        }
         return true;
     }
 

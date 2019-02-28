@@ -66,6 +66,7 @@ void SlippyMapWidgetMarker::setMarkerColor(QColor color)
 {
     m_markerColor = color;
     m_dotBrush.setColor(color);
+    m_activeDotPen.setColor(color);
 }
 
 void SlippyMapWidgetMarker::setMovable(bool movable)
@@ -128,9 +129,15 @@ bool SlippyMapWidgetMarker::isEditable()
     return m_editable;
 }
 
-void SlippyMapWidgetMarker::drawMarker(QPainter *painter, QPoint pos)
+void SlippyMapWidgetMarker::drawMarker(QPainter *painter, QPoint pos, MarkerState state)
 {
-    qint32 rad = (m_active ? 10 : 5);
+    qint32 rad = 5;
+
+    if (state == ActiveState) {
+        painter->setBrush(m_activeDotBrush);
+        painter->setPen(m_activeDotPen);
+        painter->drawEllipse(pos, rad + 2, rad + 2);
+    }
 
     painter->setBrush(m_dotBrush);
     painter->setPen(m_dotPen);
@@ -162,13 +169,20 @@ void SlippyMapWidgetMarker::drawMarker(QPainter *painter, QPoint pos)
 void SlippyMapWidgetMarker::initColors()
 {
     QPalette systemPalette = QGuiApplication::palette();
+
     m_dotBrush.setStyle(Qt::SolidPattern);
     m_dotBrush.setColor(systemPalette.highlight().color());
     m_dotPen.setStyle(Qt::NoPen);
+
+    m_activeDotBrush.setStyle(Qt::NoBrush);
+    m_activeDotPen.setColor(systemPalette.highlight().color());
+    m_activeDotPen.setWidth(2);
+
     m_labelBrush.setStyle(Qt::SolidPattern);
     m_labelBrush.setColor(systemPalette.background().color());
     m_labelPen.setStyle(Qt::SolidLine);
     m_labelPen.setColor(systemPalette.dark().color());
+
     m_labelTextBrush.setStyle(Qt::NoBrush);
     m_labelTextPen.setStyle(Qt::SolidLine);
     m_labelTextPen.setColor(systemPalette.text().color());

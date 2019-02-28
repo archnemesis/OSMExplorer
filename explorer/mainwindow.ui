@@ -198,12 +198,7 @@
   </widget>
   <widget class="QDockWidget" name="dockWidget_2">
    <property name="styleSheet">
-    <string notr="true">QDockWidget {
-border: 1px solid lightgray;
-}
-QDockWidget::title {
-font-weight: bold;
-}</string>
+    <string notr="true"/>
    </property>
    <property name="features">
     <set>QDockWidget::AllDockWidgetFeatures</set>
@@ -276,6 +271,9 @@ font-weight: bold;
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+         <property name="styleSheet">
+          <string notr="true"/>
          </property>
          <property name="text">
           <string/>

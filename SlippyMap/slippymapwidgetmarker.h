@@ -22,6 +22,15 @@ class DECLARATION  SlippyMapWidgetMarker : public QObject
 {
     Q_OBJECT
 public:
+    enum MarkerState {
+        DefaultState,
+        SelectedState,
+        ActiveState,
+        DraggingState,
+        DisabledState,
+        HiddenState
+    };
+
     SlippyMapWidgetMarker(QPointF position, QObject *parent = nullptr);
     SlippyMapWidgetMarker(QPointF position, QString label, QObject *parent = nullptr);
     void setPosition(QPointF position);
@@ -40,7 +49,7 @@ public:
     QHash<QString,QVariant> metadata();
     bool isMovable();
     bool isEditable();
-    void drawMarker(QPainter *painter, QPoint pos);
+    virtual void drawMarker(QPainter *painter, QPoint pos, MarkerState state = DefaultState);
 
 signals:
     void labelTextChanged(QString text);
@@ -56,9 +65,11 @@ private:
     QString m_label;
     QString m_information;
     QColor m_markerColor;
+    QBrush m_activeDotBrush;
     QBrush m_dotBrush;
     QBrush m_labelBrush;
     QBrush m_labelTextBrush;
+    QPen m_activeDotPen;
     QPen m_dotPen;
     QPen m_labelPen;
     QPen m_labelTextPen;

@@ -174,6 +174,11 @@ QString SlippyMapWidget::latLonToString(double lat, double lon)
     return ret;
 }
 
+QString SlippyMapWidget::geoCoordinatesToString(QPointF coords)
+{
+    return latLonToString(coords.y(), coords.x());
+}
+
 void SlippyMapWidget::setTileServer(QString server)
 {
     m_tileServer = server;
@@ -629,7 +634,10 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
             if (bbox.contains(marker->position())) {
                 qint32 x = long2widgetX(marker->position().x());
                 qint32 y = lat2widgety(marker->position().y());
-                marker->drawMarker(&painter, QPoint(x, y));
+                SlippyMapWidgetMarker::MarkerState state = SlippyMapWidgetMarker::DefaultState;
+                if (m_activeMarker == marker) state = SlippyMapWidgetMarker::ActiveState;
+                else if (m_dragMarker == marker) state = SlippyMapWidgetMarker::DraggingState;
+                marker->drawMarker(&painter, QPoint(x, y), state);
             }
         }
     }
@@ -887,6 +895,11 @@ qint32 SlippyMapWidget::lat2widgety(double lat)
     double height_deg = deg_per_pixel_y * height();
     double top_deg = m_lat - (height_deg / 2);
     return height() - static_cast<qint32>((lat - top_deg) / deg_per_pixel_y);
+}
+
+QPointF SlippyMapWidget::widgetCoordsToGeoCoords(QPoint point)
+{
+    return QPointF(widgetX2long(point.x()), widgetY2lat(point.y()));
 }
 
 double SlippyMapWidget::widgetX2long(qint32 x)

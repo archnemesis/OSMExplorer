@@ -151,19 +151,30 @@ void AprsFiMarkerProvider::onNetworkRequestFinished(QNetworkReply *reply)
         if (entry.contains("path"))
             meta["aprs.fi_path"] = entry["path"].toVariant();
 
+        QStringList info;
+
+        for (QString key : meta.keys()) {
+            info << QString("%1: %2").arg(key).arg(meta[key].toString());
+        }
+
+        QString infoString = info.join("<br/>");
+
         SlippyMapWidgetMarker *marker;
         if (m_markers.contains(ident)) {
             qDebug() << "Updating marker...";
             marker = m_markers[ident];
             marker->setPosition(point);
             marker->setLabel(ident);
-            marker->setInformation(tr("Testing"));
+            marker->setInformation(infoString);
         }
         else {
             qDebug() << "Creating marker...";
             marker = new SlippyMapWidgetMarker(point);
             marker->setLabel(ident);
-            marker->setInformation(tr("Testing"));
+            marker->setInformation(infoString);
+            marker->setEditable(false);
+            marker->setMarkerColor(Qt::red);
+            marker->setMovable(false);
             m_markers[ident] = marker;
             emit markerCreated(marker);
         }

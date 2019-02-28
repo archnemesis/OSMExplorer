@@ -6,6 +6,7 @@
 #include <QHash>
 #include <QVariant>
 #include <QTimer>
+#include <QPalette>
 #include "slippymapwidget.h"
 #include "slippymapwidgetmarker.h"
 #include "slippymapwidgetlayer.h"
@@ -41,9 +42,13 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
     void loadPlugins();
     void loadMarkers();
+    void setupContextMenus();
+    void loadStartupSettings();
+    void saveLayers();
 
 private:
     Ui::MainWindow *ui;
+    QPalette m_defaultPalette;
     int m_requestCount = 0;
     QLabel *m_statusBarPositionLabel;
     QLabel *m_statusBarStatusLabel;
@@ -74,8 +79,9 @@ private:
     QMenu *m_markerMenu = nullptr;
     QAction *m_markerPropertiesAction = nullptr;
     QAction *m_markerDeleteAction = nullptr;
+    QList<SlippyMapWidgetMarker*> m_loadedMarkers;
 
-
+    QPoint m_contextMenuLocation;
     QMenu *m_contextMenu = nullptr;
     QAction *m_coordAction = nullptr;
     QAction *m_addMarkerAction = nullptr;
@@ -113,6 +119,11 @@ protected slots:
     void onTvwMarkersContextMenuRequested(const QPoint& point);
     void onMarkerMenuPropertiesActionTriggered();
     void onPluginMarkerProviderMarkerAdded(SlippyMapWidgetMarker *marker);
+    void onAddMarkerActionTriggered();
+    void onDeleteMarkerActionTriggered();
+    void onEditMarkerActionTriggered();
+    void onCenterMapActionTriggered();
+    void setDarkModeEnabled(bool enabled);
     /**
      * @brief Save splitter position after finish moving.
      */

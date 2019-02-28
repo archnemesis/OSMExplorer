@@ -4,4 +4,5 @@ SUBDIRS = \
     SlippyMap \
     LocationServices \
     explorer \
-    plugins/aprsfi
+    plugins/aprsfi \
+    APRS
