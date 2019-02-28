@@ -58,6 +58,13 @@ public:
         QColor m_color;
     };
 
+    enum DrawMode {
+        NoDrawing,
+        RectDrawing,
+        EllipseDrawing,
+        PolygonDrawing
+    };
+
     explicit SlippyMapWidget(QWidget *parent = nullptr);
     virtual ~SlippyMapWidget() override;
     static QString latLonToString(double lat, double lon);
@@ -93,6 +100,8 @@ public:
     qint32 long2widgetX(double lon);
     qint32 lat2widgety(double lat);
     QPointF widgetCoordsToGeoCoords(QPoint point);
+    void setDrawMode(DrawMode mode);
+    DrawMode drawMode();
 
 public slots:
     void setCenter(double latitude, double longitude);
@@ -146,6 +155,9 @@ signals:
     void markerEditRequested(SlippyMapWidgetMarker *marker);
     void contextMenuRequested(const QPoint& point);
     void searchTextChanged(const QString &searchText);
+    void rectSelected(const QRect &rect);
+    void ellipseSelected(const QRect &rect);
+    void polygonSelected(const QVector<QPoint> &points);
 
 private:
     class Tile {
@@ -257,6 +269,13 @@ private:
     bool m_zoomSliderVisible = true;
     bool m_cacheTiles = false;
     QString m_cacheTileDir;
+
+    /* drawing */
+    DrawMode m_drawMode = NoDrawing;
+    QPoint m_drawModeRect_topLeft;
+    QPoint m_drawModeRect_bottomRight;
+    QBrush m_drawBrush;
+    QPen m_drawPen;
 };
 
 #endif // SLIPPYMAPWIDGET_H

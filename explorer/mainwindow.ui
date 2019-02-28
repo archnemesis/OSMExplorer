@@ -72,7 +72,7 @@
      <x>0</x>
      <y>0</y>
      <width>939</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -143,10 +143,10 @@
     <property name="title">
      <string>Draw</string>
     </property>
-    <addaction name="actionLine"/>
-    <addaction name="actionCircle"/>
-    <addaction name="actionRectangle"/>
-    <addaction name="actionPolygon"/>
+    <addaction name="actionDrawLine"/>
+    <addaction name="actionDrawEllipse"/>
+    <addaction name="actionDrawRectangle"/>
+    <addaction name="actionDrawPolygon"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuDraw"/>
@@ -429,22 +429,25 @@
     <string>Settings...</string>
    </property>
   </action>
-  <action name="actionLine">
+  <action name="actionDrawLine">
    <property name="text">
     <string>Line</string>
    </property>
   </action>
-  <action name="actionCircle">
+  <action name="actionDrawEllipse">
    <property name="text">
-    <string>Circle</string>
+    <string>Ellipse</string>
+   </property>
+   <property name="toolTip">
+    <string>Ellipse</string>
    </property>
   </action>
-  <action name="actionRectangle">
+  <action name="actionDrawRectangle">
    <property name="text">
     <string>Rectangle</string>
    </property>
   </action>
-  <action name="actionPolygon">
+  <action name="actionDrawPolygon">
    <property name="text">
     <string>Polygon</string>
    </property>
@@ -485,7 +488,7 @@
   <customwidget>
    <class>SlippyMapWidget</class>
    <extends>QWidget</extends>
-   <header location="global">slippymapwidget.h</header>
+   <header>slippymapwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

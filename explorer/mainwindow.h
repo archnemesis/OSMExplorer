@@ -147,6 +147,8 @@ private slots:
     void on_actionViewGpsLog_triggered();
     void on_tvwMarkers_activated(const QModelIndex &index);
     void on_tvwMarkers_clicked(const QModelIndex &index);
+    void on_actionDrawRectangle_triggered();
+    void on_actionDrawEllipse_triggered();
 };
 
 #endif // MAINWINDOW_H

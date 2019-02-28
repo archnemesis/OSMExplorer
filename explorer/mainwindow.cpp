@@ -934,3 +934,13 @@ void MainWindow::on_tvwMarkers_clicked(const QModelIndex &index)
         ui->lblMarkerInformation->setText(marker->information());
     }
 }
+
+void MainWindow::on_actionDrawRectangle_triggered()
+{
+    ui->slippyMap->setDrawMode(SlippyMapWidget::RectDrawing);
+}
+
+void MainWindow::on_actionDrawEllipse_triggered()
+{
+    ui->slippyMap->setDrawMode(SlippyMapWidget::EllipseDrawing);
+}
