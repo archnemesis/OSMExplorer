@@ -27,6 +27,7 @@ NmeaSerialLocationDataProvider::NmeaSerialLocationDataProvider(QObject *parent) 
                 this,
                 &NmeaSerialLocationDataProvider::onSerialPortErrorOccurred);
     }
+    m_satellites.resize(16);
 }
 
 void NmeaSerialLocationDataProvider::setLabelText(QString labelText)
@@ -132,13 +133,27 @@ void NmeaSerialLocationDataProvider::onSerialPortReadyRead()
 {
     while (m_serialPort->canReadLine()) {
         QByteArray data = m_serialPort->readLine();
-        QString line = QString::fromLocal8Bit(data);
+        QString line = QString::fromLocal8Bit(data).trimmed();
         emit lineReceived(line.trimmed());
         QStringRef lineRef(&line);
         QVector<QStringRef> parts = lineRef.split(",");
 
         if (parts.count() > 1) {
             QStringRef lineType = parts[0];
+            QStringRef checksum = parts[parts.length()-1].split("*")[1];
+            unsigned int chkint_rx = checksum.toUInt(nullptr, 16);
+            unsigned int chkint_calc = static_cast<unsigned int>(line.at(1).toLatin1());
+
+            for (int i = 2; i < line.length() - 3; i++) {
+                chkint_calc = chkint_calc ^ static_cast<unsigned int>(line.at(i).toLatin1());
+            }
+
+            qDebug() << "Received Checksum:" << chkint_rx << "; Calculated:" << chkint_calc;
+
+            if (chkint_rx != chkint_calc) {
+                qWarning() << "Checksum mismatch:" << line;
+                continue;
+            }
 
             if (lineType == "$GPGGA" && parts.count() == 15) {
                 QStringRef time = parts[1];
@@ -187,6 +202,23 @@ void NmeaSerialLocationDataProvider::onSerialPortReadyRead()
                             portName(),
                             QPointF(lon_deg, lat_deg),
                             metadata);
+            }
+            else if (lineType == "$GPGSV" && parts.count() == 18) {
+                int num_msgs = parts[1].toInt();
+                int msg_seq = parts[2].toInt();
+                int num_svs = parts[3].toInt();
+
+                for (int i = 0; i < 4; i++) {
+                    int prn = parts[(i * 4) + 4].toInt();
+                    double elevation = parts[(i * 4) + 5].toInt();
+                    double azimuth = parts[(i * 4) + 6].toInt();
+                    int snr = parts[(i * 4) + 7].toInt();
+
+                    m_satellites[(i * 4) + 0].setPrn(prn);
+                    m_satellites[(i * 4) + 0].setElevation(elevation);
+                    m_satellites[(i * 4) + 0].setAzimuth(azimuth);
+                    m_satellites[(i * 4) + 0].setSnr(snr);
+                }
             }
         }
     }

@@ -4,6 +4,7 @@
 #include "locationdataprovider.h"
 #include <QSerialPort>
 #include <QTimer>
+#include <QVector>
 
 class NmeaSerialLocationDataProvider : public LocationDataProvider
 {
@@ -29,6 +30,28 @@ public:
 
     void start() override;
     void stop() override;
+
+    class SatelliteStatus {
+    public:
+        SatelliteStatus() {}
+        ~SatelliteStatus() {}
+        void setPrn(int prn) { m_prn = prn; }
+        void setElevation(double elev) { m_elevation = elev; }
+        void setAzimuth(double azim) { m_azimuth = azim; }
+        void setSnr(int snr) { m_snr = snr; }
+        int prn() { return m_prn; }
+        double elevation() { return m_elevation; }
+        double azimuth() { return m_azimuth; }
+        int snr() { return m_snr; }
+
+    private:
+        int m_prn;
+        double m_elevation;
+        double m_azimuth;
+        int m_snr;
+    };
+
+    QVector<SatelliteStatus> m_satellites;
 
 signals:
     void lineReceived(const QString& line);
