@@ -2,9 +2,13 @@
 #include "slippymapwidgetmarker.h"
 #include "slippymapwidgetlayer.h"
 #include "slippymapwidgetmarkermodel.h"
+#include "slippymapwidgetshape.h"
 #include "defaults.h"
 
+#ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
+#endif
+
 #include <math.h>
 
 #include <QDebug>
@@ -45,6 +49,7 @@
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QCursor>
+#include <QTransform>
 
 SlippyMapWidget::SlippyMapWidget(QWidget *parent) : QWidget(parent)
 {
@@ -283,6 +288,11 @@ void SlippyMapWidget::takeLayer(SlippyMapWidgetLayer *layer)
 {
     m_layers.removeOne(layer);
     remap();
+}
+
+void SlippyMapWidget::addShape(SlippyMapWidgetShape *shape)
+{
+    m_shapes.append(shape);
 }
 
 void SlippyMapWidget::setCenterOnCursorWhileZooming(bool enable)
@@ -648,6 +658,22 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
         }
     }
 
+    if (m_shapes.length() > 0) {
+        QRectF bbox = boundingBoxLatLon();
+
+        for (SlippyMapWidgetShape *shape : m_shapes) {
+            if (shape->isIntersectedBy(bbox)) {
+                QTransform m1;
+                m1.translate(-bbox.x(), -bbox.y());
+                QTransform m2;
+                m2.scale(1.0/degPerPixelX(), -(1.0/degPerPixelY()));
+                QTransform m3(m1 * m2);
+
+                shape->draw(&painter, m3);
+            }
+        }
+    }
+
     if (m_dragging == true && m_drawMode != NoDrawing) {
         switch (m_drawMode) {
         case RectDrawing:
@@ -779,8 +805,22 @@ void SlippyMapWidget::mouseReleaseEvent(QMouseEvent *event)
         }
     }
     else if (event->button() == Qt::LeftButton && m_drawMode != NoDrawing) {
+        switch (m_drawMode) {
+        case RectDrawing:
+            emit rectSelected(QRect(m_drawModeRect_topLeft, m_drawModeRect_bottomRight));
+            break;
+        case EllipseDrawing:
+            emit ellipseSelected(QRect(m_drawModeRect_topLeft, m_drawModeRect_bottomRight));
+            break;
+        case PolygonDrawing:
+            break;
+        default:
+            break;
+        }
+
         m_drawMode = NoDrawing;
         setCursor(Qt::ArrowCursor);
+        emit drawModeChanged(NoDrawing);
         update();
     }
 }

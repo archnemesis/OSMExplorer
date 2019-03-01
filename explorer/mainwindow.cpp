@@ -2,6 +2,8 @@
 #include "ui_mainwindow.h"
 #include "slippymapwidget.h"
 #include "slippymapwidgetlayer.h"
+#include "slippymapwidgetpolygon.h"
+#include "slippymapwidgetmarkermodel.h"
 #include "markerdialog.h"
 #include "markerlistitemwidget.h"
 #include "directionlistitemwidget.h"
@@ -10,7 +12,6 @@
 #include "nmeaseriallocationdataprovider.h"
 #include "gpssourcedialog.h"
 #include "textlogviewerform.h"
-#include "slippymapwidgetmarkermodel.h"
 #include "explorerplugininterface.h"
 
 #include <math.h>
@@ -63,10 +64,13 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->slippyMap, &SlippyMapWidget::searchTextChanged, this, &MainWindow::onSlippyMapSearchTextChanged);
     connect(ui->slippyMap, &SlippyMapWidget::markerEditRequested, this, &MainWindow::onSlippyMapMarkerEditRequested);
     connect(ui->slippyMap, &SlippyMapWidget::contextMenuRequested, this, &MainWindow::onSlippyMapContextMenuRequested);
+    connect(ui->slippyMap, &SlippyMapWidget::drawModeChanged, this, &MainWindow::onSlippyMapDrawModeChanged);
+    connect(ui->slippyMap, &SlippyMapWidget::rectSelected, this, &MainWindow::onSlippyMapRectSelected);
 
     loadStartupSettings();
     setupContextMenus();
     refreshSettings();
+    setupToolbar();
 
     connect(ui->tvwMarkers, &QTreeView::customContextMenuRequested, this, &MainWindow::onTvwMarkersContextMenuRequested);
 
@@ -346,6 +350,13 @@ void MainWindow::saveLayers()
     settings.endArray();
 }
 
+void MainWindow::setupToolbar()
+{
+    ui->toolBar->addAction(ui->actionDrawRectangle);
+    ui->toolBar->addAction(ui->actionDrawEllipse);
+    ui->toolBar->addAction(ui->actionDrawPolygon);
+}
+
 void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
 {
     (void)latitude;
@@ -491,6 +502,44 @@ void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
     }
 
     m_contextMenu->exec(ui->slippyMap->mapToGlobal(point));
+}
+
+void MainWindow::onSlippyMapRectSelected(QRect rect)
+{
+    QBrush br;
+    br.setStyle(Qt::SolidPattern);
+    br.setColor(QColor(0,0,0,128));
+
+    QPen pn;
+    pn.setStyle(Qt::NoPen);
+    pn.setColor(Qt::darkCyan);
+
+    QPointF topleft = ui->slippyMap->widgetCoordsToGeoCoords(rect.topLeft());
+    QPointF bottomRight = ui->slippyMap->widgetCoordsToGeoCoords(rect.bottomRight());
+
+    QVector<QPointF> points(4);
+    points[0] = QPointF(topleft);
+    points[1] = QPointF(bottomRight.x(), topleft.y());
+    points[2] = QPointF(bottomRight);
+    points[3] = QPointF(topleft.x(), bottomRight.y());
+    SlippyMapWidgetPolygon *poly = new SlippyMapWidgetPolygon(points);
+    poly->setBrush(br);
+    poly->setPen(pn);
+    ui->slippyMap->addShape(poly);
+}
+
+void MainWindow::onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode)
+{
+    switch (mode) {
+    case SlippyMapWidget::NoDrawing:
+        ui->actionDrawLine->setChecked(false);
+        ui->actionDrawRectangle->setChecked(false);
+        ui->actionDrawPolygon->setChecked(false);
+        ui->actionDrawEllipse->setChecked(false);
+        break;
+    default:
+        break;
+    }
 }
 
 void MainWindow::saveMarkers()

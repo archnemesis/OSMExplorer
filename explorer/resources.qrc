@@ -9,5 +9,7 @@
         <file alias="settings">resources/icons/settings.png</file>
         <file alias="layers.png">resources/icons/layers.png</file>
         <file alias="path.png">resources/icons/path.png</file>
+        <file alias="ellipse.png">resources/icons/ellipse.png</file>
+        <file alias="polygon.png">resources/icons/polygon.png</file>
     </qresource>
 </RCC>

@@ -31,6 +31,7 @@ class QListWidget;
 class SlippyMapWidgetMarkerModel;
 class SlippyMapWidgetMarker;
 class SlippyMapWidgetLayer;
+class SlippyMapWidgetShape;
 
 #if defined EXPORT_SYMBOLS
 #define DECLARATION Q_DECL_EXPORT
@@ -83,6 +84,7 @@ public:
     void addLayer(SlippyMapWidgetLayer *layer);
     QList<SlippyMapWidgetLayer*> layers();
     void takeLayer(SlippyMapWidgetLayer *layer);
+    void addShape(SlippyMapWidgetShape *shape);
     void setCenterOnCursorWhileZooming(bool enable);
     bool centerOnCursorWhileZooming();
     void setSearchBarVisible(bool visible);
@@ -158,6 +160,7 @@ signals:
     void rectSelected(const QRect &rect);
     void ellipseSelected(const QRect &rect);
     void polygonSelected(const QVector<QPoint> &points);
+    void drawModeChanged(DrawMode mode);
 
 private:
     class Tile {
@@ -276,6 +279,7 @@ private:
     QPoint m_drawModeRect_bottomRight;
     QBrush m_drawBrush;
     QPen m_drawPen;
+    QList<SlippyMapWidgetShape*> m_shapes;
 };
 
 #endif // SLIPPYMAPWIDGET_H

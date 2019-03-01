@@ -45,6 +45,7 @@ protected:
     void setupContextMenus();
     void loadStartupSettings();
     void saveLayers();
+    void setupToolbar();
 
 private:
     Ui::MainWindow *ui;
@@ -109,6 +110,8 @@ protected slots:
     void onSlippyMapContextMenuActivated(double latitude, double longitude);
     void onSlippyMapSearchTextChanged(const QString &text);
     void onSlippyMapContextMenuRequested(const QPoint& point);
+    void onSlippyMapRectSelected(QRect rect);
+    void onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode);
     void saveMarkers();
     void onDirectionsToHereTriggered();
     void onDirectionsFromHereTriggered();
