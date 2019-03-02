@@ -6,7 +6,8 @@ SlippyMapWidgetShape::SlippyMapWidgetShape(QObject *parent) : QObject(parent)
 {
     m_selectionHandlePen.setColor(Qt::black);
     m_selectionHandlePen.setStyle(Qt::SolidLine);
-    m_selectionHandlePen.setWidth(1);
+    m_selectionHandlePen.setWidth(0);
+    //m_selectionHandlePen.setJoinStyle(Qt::MiterJoin);
 
     m_selectionHandleBrush.setColor(Qt::white);
     m_selectionHandleBrush.setStyle(Qt::SolidPattern);
@@ -34,8 +35,8 @@ void SlippyMapWidgetShape::drawResizeHandle(QPainter *painter, QPoint point)
     painter->drawRect(
                 (point.x() - (m_resizeHandleWidth / 2)),
                 (point.y() - (m_resizeHandleWidth / 2)),
-                (point.x() + (m_resizeHandleWidth / 2)),
-                (point.y() + (m_resizeHandleWidth / 2)));
+                m_resizeHandleWidth,
+                m_resizeHandleWidth);
 }
 
 

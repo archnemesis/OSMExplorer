@@ -668,8 +668,10 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
                 QTransform m2;
                 m2.scale(1.0/degPerPixelX(), -(1.0/degPerPixelY()));
                 QTransform m3(m1 * m2);
+                SlippyMapWidgetShape::ShapeState state = SlippyMapWidgetShape::NormalState;
+                if (shape == m_activeShape) state = SlippyMapWidgetShape::SelectedState;
 
-                shape->draw(&painter, m3);
+                shape->draw(&painter, m3, state);
             }
         }
     }
@@ -702,36 +704,25 @@ void SlippyMapWidget::mousePressEvent(QMouseEvent *event)
 
     if (event->button() == Qt::LeftButton) {
         if (m_drawMode == NoDrawing) {
-            if (m_markerModel != nullptr) {
-                QList<SlippyMapWidgetMarker *> markers = m_markerModel->markersForRect(boundingBoxLatLon());
+            for (SlippyMapWidgetMarker *marker : m_markers) {
+                qint32 marker_x = long2widgetX(marker->longitude());
+                qint32 marker_y = lat2widgety(marker->latitude());
+                QRect marker_box(
+                            (marker_x - 5),
+                            (marker_y - 5),
+                            10, 10);
 
-                for (SlippyMapWidgetMarker *marker : markers) {
-                    qint32 marker_x = long2widgetX(marker->longitude());
-                    qint32 marker_y = lat2widgety(marker->latitude());
-                    QRect marker_box(
-                                (marker_x - 5),
-                                (marker_y - 5),
-                                10, 10);
-                    if (marker_box.contains(event->pos())) {
-                        m_dragMarker = marker;
-                        return;
-                    }
+                if (marker_box.contains(event->pos())) {
+                    m_dragMarker = marker;
+                    return;
                 }
             }
 
-            for (SlippyMapWidgetMarker *marker : m_markers) {
-                if (marker->isMovable()) {
-                    qint32 marker_x = long2widgetX(marker->longitude());
-                    qint32 marker_y = lat2widgety(marker->latitude());
-                    QRect marker_box(
-                                (marker_x - 5),
-                                (marker_y - 5),
-                                10, 10);
-
-                    if (marker_box.contains(event->pos())) {
-                        m_dragMarker = marker;
-                        return;
-                    }
+            QPointF geoPos = widgetCoordsToGeoCoords(event->pos());
+            for (SlippyMapWidgetShape *shape : m_shapes) {
+                if (shape->contains(geoPos)) {
+                    m_dragShape = shape;
+                    return;
                 }
             }
         }
@@ -753,48 +744,27 @@ void SlippyMapWidget::mousePressEvent(QMouseEvent *event)
 void SlippyMapWidget::mouseReleaseEvent(QMouseEvent *event)
 {
     m_dragging = false;
-    m_dragMarker = nullptr;
 
     if (event->button() == Qt::LeftButton && event->pos() == m_dragRealStart) {
         if (m_drawMode == NoDrawing) {
-            if (m_markerModel != nullptr) {
-                QList<SlippyMapWidgetMarker *> markers = m_markerModel->markersForRect(boundingBoxLatLon());
-
-                for (SlippyMapWidgetMarker *marker : markers) {
-                    qint32 marker_x = long2widgetX(marker->longitude());
-                    qint32 marker_y = lat2widgety(marker->latitude());
-                    QRect marker_box(
-                                (marker_x - 5),
-                                (marker_y - 5),
-                                10, 10);
-                    if (marker_box.contains(event->pos())) {
-                        m_activeMarker = marker;
-                        emit markerActivated(marker);
-                        update();
-                        return;
-                    }
-                }
+            if (m_dragMarker != nullptr) {
+                m_activeMarker = m_dragMarker;
+                emit markerActivated(m_activeMarker);
+                update();
             }
-
-            for (SlippyMapWidgetMarker *marker : m_markers) {
-                qint32 marker_x = long2widgetX(marker->longitude());
-                qint32 marker_y = lat2widgety(marker->latitude());
-                QRect marker_box(
-                            (marker_x - 5),
-                            (marker_y - 5),
-                            10, 10);
-
-                if (marker_box.contains(event->pos())) {
-                    m_activeMarker = marker;
-                    emit markerActivated(marker);
-                    update();
-                    return;
-                }
-            }
-
-            if (m_activeMarker != nullptr) {
+            else if (m_activeMarker != nullptr) {
                 emit markerDeactivated(m_activeMarker);
                 m_activeMarker = nullptr;
+                update();
+            }
+            else if (m_dragShape != nullptr) {
+                m_activeShape = m_dragShape;
+                emit shapeActivated(m_activeShape);
+                update();
+            }
+            else if (m_activeShape != nullptr) {
+                emit shapeDeactivated(m_activeShape);
+                m_activeShape = nullptr;
                 update();
             }
         }
@@ -823,6 +793,9 @@ void SlippyMapWidget::mouseReleaseEvent(QMouseEvent *event)
         emit drawModeChanged(NoDrawing);
         update();
     }
+
+    m_dragMarker = nullptr;
+    m_dragShape = nullptr;
 }
 
 void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
@@ -849,7 +822,7 @@ void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
         update();
     }
     else {
-        if (m_dragging && m_dragMarker != nullptr) {
+        if (m_dragging && m_dragMarker != nullptr && m_dragMarker->isMovable()) {
             QPointF markerPoint = m_dragMarker->position();
             m_dragStart = pos;
             markerPoint.setY(markerPoint.y() - (deg_per_pixel_y * diff.y()));

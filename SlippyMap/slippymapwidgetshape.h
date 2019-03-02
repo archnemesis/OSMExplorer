@@ -35,7 +35,7 @@ protected:
     QBrush m_selectionHandleBrush;
     QPen m_pen;
     QPen m_selectionHandlePen;
-    int m_resizeHandleWidth = 5;
+    int m_resizeHandleWidth = 6;
 
     void drawResizeHandle(QPainter *painter, QPoint point);
 };

@@ -24,6 +24,8 @@ public:
 
 protected:
     QVector<QPointF> m_points;
+
+    bool test_point(QPointF a, QPointF b, QPointF p);
 };
 
 #endif // SLIPPYMAPWIDGETPOLYGON_H
