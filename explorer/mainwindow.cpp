@@ -523,8 +523,8 @@ void MainWindow::onSlippyMapRectSelected(QRect rect)
     points[2] = QPointF(bottomRight);
     points[3] = QPointF(topleft.x(), bottomRight.y());
     SlippyMapWidgetPolygon *poly = new SlippyMapWidgetPolygon(points);
-    poly->setBrush(br);
-    poly->setPen(pn);
+//    poly->setBrush(br);
+//    poly->setPen(pn);
     ui->slippyMap->addShape(poly);
 }
 

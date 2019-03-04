@@ -32,8 +32,12 @@ signals:
 
 protected:
     QBrush m_brush;
+    QBrush m_activeBrush;
+    QBrush m_selectedBrush;
     QBrush m_selectionHandleBrush;
     QPen m_pen;
+    QPen m_activePen;
+    QPen m_selectedPen;
     QPen m_selectionHandlePen;
     int m_resizeHandleWidth = 6;
 

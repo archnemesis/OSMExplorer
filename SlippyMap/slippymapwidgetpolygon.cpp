@@ -18,20 +18,41 @@ SlippyMapWidgetPolygon::~SlippyMapWidgetPolygon()
 
 void SlippyMapWidgetPolygon::draw(QPainter *painter, const QTransform &transform, ShapeState state)
 {
-    painter->setPen(m_pen);
-    painter->setBrush(m_brush);
+    switch (state) {
+    case NormalState:
+        painter->setPen(m_pen);
+        painter->setBrush(m_brush);
 
-    painter->save();
-    painter->setWorldTransform(transform);
-    painter->drawConvexPolygon(m_points.data(), m_points.length());
-    painter->restore();
+        painter->save();
+        painter->setWorldTransform(transform);
+        painter->drawConvexPolygon(m_points.data(), m_points.length());
+        painter->restore();
 
-    if (state == SelectedState) {
+        break;
+    case SelectedState:
+
+        painter->save();
+
+        painter->setPen(QPen(Qt::NoPen));
+        painter->setBrush(m_selectedBrush);
+        painter->setWorldTransform(transform);
+        painter->drawConvexPolygon(m_points.data(), m_points.length());
+
+        painter->setPen(m_selectedPen);
+        painter->setBrush(QBrush(Qt::NoBrush));
+        painter->drawConvexPolygon(m_points.data(), m_points.length());
+
+        painter->restore();
+
+
         /* resize handles */
         for (QPointF point : m_points) {
             QPointF mapped = transform.map(point);
             drawResizeHandle(painter, QPoint(static_cast<int>(mapped.x()), static_cast<int>(mapped.y())));
         }
+        break;
+    default:
+        break;
     }
 }
 
