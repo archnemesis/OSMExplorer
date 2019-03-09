@@ -40,6 +40,12 @@
 #include <QPluginLoader>
 #include <QMenu>
 #include <QAction>
+#include <QToolBar>
+
+#ifdef __APPLE__
+#include <QMacToolBar>
+#include <QMacToolBarItem>
+#endif
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -50,6 +56,18 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     ui->tvwMarkers->setContextMenuPolicy(Qt::CustomContextMenu);
     m_defaultPalette = qApp->palette();
+
+#ifdef __APPLE__
+    setWindowFlag(Qt::MacWindowToolBarButtonHint, true);
+    ui->toolBar->setVisible(false);
+    m_macToolBar = new QMacToolBar(this);
+
+    QMacToolBarItem *item = m_macToolBar->addItem(QIcon(":/icons/settings.png"), "Settings");
+
+
+    this->window()->winId();
+    m_macToolBar->attachToWindow(this->window()->windowHandle());
+#endif
 
     m_net = new QNetworkAccessManager();
     connect(m_net, &QNetworkAccessManager::finished, this, &MainWindow::onNetworkRequestFinished);

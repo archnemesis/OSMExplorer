@@ -30,6 +30,10 @@ class LocationDataProvider;
 class TextLogViewerForm;
 class ExplorerPluginInterface;
 
+#ifdef __APPLE__
+class QMacToolBar;
+#endif
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -81,6 +85,10 @@ private:
     QAction *m_markerPropertiesAction = nullptr;
     QAction *m_markerDeleteAction = nullptr;
     QList<SlippyMapWidgetMarker*> m_loadedMarkers;
+
+#ifdef __APPLE__
+    QMacToolBar *m_macToolBar;
+#endif
 
     QPoint m_contextMenuLocation;
     QMenu *m_contextMenu = nullptr;

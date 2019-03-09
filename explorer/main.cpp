@@ -13,7 +13,10 @@ int main(int argc, char *argv[])
     QApplication::setApplicationName("OSMExplorer");
 
     QApplication a(argc, argv);
+
+#ifndef __APPLE__
     a.setStyle(QStyleFactory::create("Fusion"));
+#endif
     MainWindow w;
     w.show();
 

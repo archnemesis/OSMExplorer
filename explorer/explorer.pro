@@ -8,6 +8,8 @@ QT       += core gui network serialport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
+macx:QT += macextras
+
 TARGET = OSMExplorer
 TEMPLATE = app
 
