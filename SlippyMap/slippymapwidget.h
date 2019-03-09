@@ -161,6 +161,8 @@ signals:
     void ellipseSelected(const QRect &rect);
     void polygonSelected(const QVector<QPoint> &points);
     void drawModeChanged(DrawMode mode);
+    void shapeActivated(SlippyMapWidgetShape *shape);
+    void shapeDeactivated(SlippyMapWidgetShape *shape);
 
 private:
     class Tile {
@@ -280,6 +282,8 @@ private:
     QBrush m_drawBrush;
     QPen m_drawPen;
     QList<SlippyMapWidgetShape*> m_shapes;
+    SlippyMapWidgetShape *m_dragShape = nullptr;
+    SlippyMapWidgetShape *m_activeShape = nullptr;
 };
 
 #endif // SLIPPYMAPWIDGET_H

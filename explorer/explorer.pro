@@ -60,7 +60,8 @@ SOURCES += \
     layerpropertiesdialog.cpp \
     gpssourcedialog.cpp \
     nmeaseriallocationdataprovider.cpp \
-    textlogviewerform.cpp
+    textlogviewerform.cpp \
+    polygonshapepropertiesform.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -73,7 +74,8 @@ HEADERS += \
     gpssourcedialog.h \
     nmeaseriallocationdataprovider.h \
     textlogviewerform.h \
-    explorerplugininterface.h
+    explorerplugininterface.h \
+    polygonshapepropertiesform.h
 
 FORMS += \
         mainwindow.ui \
@@ -83,7 +85,8 @@ FORMS += \
     settingsdialog.ui \
     layerpropertiesdialog.ui \
     gpssourcedialog.ui \
-    textlogviewerform.ui
+    textlogviewerform.ui \
+    polygonshapepropertiesform.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
