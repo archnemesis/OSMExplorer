@@ -33,7 +33,9 @@ SOURCES += \
     slippymapwidgetmarkerprovider.cpp \
     slippymapwidgetpolygon.cpp \
     slippymapwidgetshape.cpp \
-    slippymapwidgetellipse.cpp
+    slippymapwidgetellipse.cpp \
+    slippymapshapepropertypage.cpp \
+    slippymappolygonpropertypage.cpp
 
 HEADERS += \
     slippymapwidget.h \
@@ -46,7 +48,9 @@ HEADERS += \
     slippymapwidgetmarkerprovider.h \
     slippymapwidgetpolygon.h \
     slippymapwidgetshape.h \
-    slippymapwidgetellipse.h
+    slippymapwidgetellipse.h \
+    slippymapshapepropertypage.h \
+    slippymappolygonpropertypage.h
 
 unix {
     target.path = /usr/lib

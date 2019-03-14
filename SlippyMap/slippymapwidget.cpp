@@ -295,6 +295,11 @@ void SlippyMapWidget::addShape(SlippyMapWidgetShape *shape)
     m_shapes.append(shape);
 }
 
+QList<SlippyMapWidgetShape *> SlippyMapWidget::shapes()
+{
+    return m_shapes;
+}
+
 void SlippyMapWidget::setCenterOnCursorWhileZooming(bool enable)
 {
     m_centerOnCursorWhileZooming = enable;
@@ -748,6 +753,9 @@ void SlippyMapWidget::mouseReleaseEvent(QMouseEvent *event)
     if (event->button() == Qt::LeftButton && event->pos() == m_dragRealStart) {
         if (m_drawMode == NoDrawing) {
             if (m_dragMarker != nullptr) {
+                if (m_activeMarker != nullptr) {
+                    emit markerDeactivated(m_activeMarker);
+                }
                 m_activeMarker = m_dragMarker;
                 emit markerActivated(m_activeMarker);
                 update();
@@ -758,6 +766,9 @@ void SlippyMapWidget::mouseReleaseEvent(QMouseEvent *event)
                 update();
             }
             else if (m_dragShape != nullptr) {
+                if (m_activeShape != nullptr) {
+                    emit shapeDeactivated(m_activeShape);
+                }
                 m_activeShape = m_dragShape;
                 emit shapeActivated(m_activeShape);
                 update();

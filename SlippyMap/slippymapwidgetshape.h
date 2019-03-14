@@ -8,6 +8,10 @@
 #include <QBrush>
 #include <QPen>
 #include <QTransform>
+#include <QPointF>
+#include <QSizeF>
+
+class SlippyMapShapePropertyPage;
 
 class SLIPPYMAPSHARED_EXPORT SlippyMapWidgetShape : public QObject
 {
@@ -26,6 +30,9 @@ public:
     void setPen(QPen pen);
     virtual bool contains(QPointF point) = 0;
     virtual bool isIntersectedBy(QRectF rect) = 0;
+    virtual QPointF position() = 0;
+    virtual QSizeF size() = 0;
+    virtual SlippyMapShapePropertyPage *propertyPage(QWidget *parent = nullptr) = 0;
 
 signals:
     void somethingHappened();

@@ -4,6 +4,7 @@
 #include "slippymapwidgetlayer.h"
 #include "slippymapwidgetpolygon.h"
 #include "slippymapwidgetmarkermodel.h"
+#include "slippymapshapepropertypage.h"
 #include "markerdialog.h"
 #include "markerlistitemwidget.h"
 #include "directionlistitemwidget.h"
@@ -13,6 +14,7 @@
 #include "gpssourcedialog.h"
 #include "textlogviewerform.h"
 #include "explorerplugininterface.h"
+#include "polygonshapepropertiesform.h"
 
 #include <math.h>
 #include <QGuiApplication>
@@ -49,6 +51,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->setupUi(this);
     ui->tvwMarkers->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->tabShapeEditor->setVisible(false);
     m_defaultPalette = qApp->palette();
 
     m_net = new QNetworkAccessManager();
@@ -66,6 +69,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->slippyMap, &SlippyMapWidget::contextMenuRequested, this, &MainWindow::onSlippyMapContextMenuRequested);
     connect(ui->slippyMap, &SlippyMapWidget::drawModeChanged, this, &MainWindow::onSlippyMapDrawModeChanged);
     connect(ui->slippyMap, &SlippyMapWidget::rectSelected, this, &MainWindow::onSlippyMapRectSelected);
+    connect(ui->slippyMap, &SlippyMapWidget::shapeActivated, this, &MainWindow::onSlippyMapShapeActivated);
+    connect(ui->slippyMap, &SlippyMapWidget::shapeDeactivated, this, &MainWindow::onSlippyMapShapeDeactivated);
 
     loadStartupSettings();
     setupContextMenus();
@@ -257,6 +262,14 @@ void MainWindow::setupContextMenus()
     m_directionsToHereAction = new QAction();
     m_directionsToHereAction->setText("Directions To Here");
 
+    m_editShapeAction = new QAction();
+    m_editShapeAction->setText(tr("Properties..."));
+    m_editShapeAction->setVisible(false);
+
+    m_deleteShapeAction = new QAction();
+    m_deleteShapeAction->setText(tr("Delete"));
+    m_deleteShapeAction->setVisible(false);
+
     connect(m_directionsFromHereAction, &QAction::triggered, this, &MainWindow::onDirectionsFromHereTriggered);
     connect(m_directionsToHereAction, &QAction::triggered, this, &MainWindow::onDirectionsToHereTriggered);
 
@@ -266,6 +279,8 @@ void MainWindow::setupContextMenus()
     m_contextMenu->addAction(m_addMarkerAction);
     m_contextMenu->addAction(m_deleteMarkerAction);
     m_contextMenu->addAction(m_setMarkerLabelAction);
+    m_contextMenu->addAction(m_editShapeAction);
+    m_contextMenu->addAction(m_deleteShapeAction);
     m_contextMenu->addSeparator();
     m_contextMenu->addAction(m_centerMapAction);
     m_contextMenu->addAction(m_zoomInHereMapAction);
@@ -473,6 +488,8 @@ void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
     m_addMarkerAction->setVisible(true);
     m_deleteMarkerAction->setVisible(false);
     m_setMarkerLabelAction->setVisible(false);
+    m_editShapeAction->setVisible(false);
+    m_deleteShapeAction->setVisible(false);
 
     QRectF viewport = ui->slippyMap->boundingBoxLatLon();
     for (SlippyMapWidgetMarker *marker : ui->slippyMap->markerList()) {
@@ -496,6 +513,21 @@ void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
                     m_deleteMarkerAction->setVisible(true);
                 }
 
+                break;
+            }
+        }
+    }
+
+    QPointF geoPoint;
+    geoPoint.setX(ui->slippyMap->widgetX2long(point.x()));
+    geoPoint.setY(ui->slippyMap->widgetY2lat(point.y()));
+
+    for (SlippyMapWidgetShape *shape : ui->slippyMap->shapes()) {
+        if (shape->isIntersectedBy(viewport)) {
+            if (shape->contains(geoPoint)) {
+                m_addMarkerAction->setVisible(false);
+                m_editShapeAction->setVisible(true);
+                m_deleteShapeAction->setVisible(true);
                 break;
             }
         }
@@ -542,6 +574,31 @@ void MainWindow::onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode)
     }
 }
 
+void MainWindow::onSlippyMapShapeActivated(SlippyMapWidgetShape *shape)
+{
+    if (m_selectedShape != nullptr && m_selectedShape == shape) {
+        return;
+    }
+
+    SlippyMapShapePropertyPage *ppage = shape->propertyPage(this);
+    ui->tabShapeEditor->insertTab(1, ppage, ppage->tabTitle());
+    ui->tabShapeEditor->setVisible(true);
+    ui->lblNoShapeSelected->setVisible(false);
+    m_selectedShape = shape;
+}
+
+void MainWindow::onSlippyMapShapeDeactivated(SlippyMapWidgetShape *shape)
+{
+    (void)shape;
+
+    if (m_selectedShape != nullptr) {
+        ui->tabShapeEditor->removeTab(1);
+        ui->tabShapeEditor->setVisible(false);
+        ui->lblNoShapeSelected->setVisible(true);
+        m_selectedShape = nullptr;
+    }
+}
+
 void MainWindow::saveMarkers()
 {
     QSettings settings;
@@ -574,14 +631,6 @@ void MainWindow::onDirectionsFromHereTriggered()
             .arg(m_slippyContextMenuLocation.y());
     ui->lneDirectionsStart->setText(latlon);
     ui->lneDirectionsFinish->setFocus();
-}
-
-void MainWindow::onSplitterMoved(int pos, int index)
-{
-    (void)pos;
-    (void)index;
-    m_saveSplitterPosTimer->stop();
-    m_saveSplitterPosTimer->start();
 }
 
 void MainWindow::onNetworkRequestFinished(QNetworkReply *reply)
@@ -790,6 +839,22 @@ void MainWindow::setDarkModeEnabled(bool enabled)
     }
     else {
         qApp->setPalette(m_defaultPalette);
+    }
+}
+
+void MainWindow::onEditShapeActionTriggered()
+{
+    QRectF viewport = ui->slippyMap->boundingBoxLatLon();
+    QPointF geoPoint;
+
+    geoPoint.setX(ui->slippyMap->widgetX2long(m_contextMenuLocation.x()));
+    geoPoint.setY(ui->slippyMap->widgetY2lat(m_contextMenuLocation.y()));
+
+    for (SlippyMapWidgetShape *shape : ui->slippyMap->shapes()) {
+        if (shape->isIntersectedBy(viewport)) {
+            if (shape->contains(geoPoint)) {
+            }
+        }
     }
 }
 

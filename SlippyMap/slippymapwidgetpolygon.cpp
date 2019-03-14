@@ -1,6 +1,9 @@
 #include "slippymapwidgetpolygon.h"
+#include "slippymappolygonpropertypage.h"
+
 #define NOMINMAX
 #include <algorithm>
+#include <QDebug>
 
 using namespace std;
 
@@ -85,7 +88,66 @@ bool SlippyMapWidgetPolygon::contains(QPointF point)
         }
     }
 
-    return count % 2 != 0;
+    if (test_point(m_points.last(), m_points.first(), point)) {
+        count++;
+    }
+
+    return (count % 2) != 0;
+}
+
+QPointF SlippyMapWidgetPolygon::position()
+{
+    const qreal MIN = numeric_limits<qreal>().min();
+    const qreal MAX = numeric_limits<qreal>().max();
+    qreal x = MAX;
+    qreal y = MIN;
+
+    for (QPointF point : m_points) {
+        if (point.x() < x) {
+            x = point.x();
+        }
+
+        if (point.y() > y) {
+            y = point.y();
+        }
+    }
+
+    return QPointF(x, y);
+}
+
+QSizeF SlippyMapWidgetPolygon::size()
+{
+    QPointF pos = position();
+
+    const qreal MIN = numeric_limits<qreal>().min();
+    const qreal MAX = numeric_limits<qreal>().max();
+    qreal x = -MAX;
+    qreal y = MAX;
+
+    for (QPointF point : m_points) {
+        qDebug() << "Point:" << point;
+
+        if (point.x() > x) {
+            x = point.x();
+        }
+
+        if (point.y() < y) {
+            y = point.y();
+        }
+    }
+
+    qDebug() << "Got X:" << x << "and Y:" << y;
+
+    qreal width = x - pos.x();
+    qreal height = pos.y() - y;
+    return QSizeF(width, height);
+}
+
+SlippyMapShapePropertyPage *SlippyMapWidgetPolygon::propertyPage(QWidget *parent)
+{
+    SlippyMapPolygonPropertyPage *ppage =
+            new SlippyMapPolygonPropertyPage(this, parent);
+    return ppage;
 }
 
 bool SlippyMapWidgetPolygon::test_point(QPointF a, QPointF b, QPointF p)

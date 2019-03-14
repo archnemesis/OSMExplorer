@@ -85,6 +85,7 @@ public:
     QList<SlippyMapWidgetLayer*> layers();
     void takeLayer(SlippyMapWidgetLayer *layer);
     void addShape(SlippyMapWidgetShape *shape);
+    QList<SlippyMapWidgetShape*> shapes();
     void setCenterOnCursorWhileZooming(bool enable);
     bool centerOnCursorWhileZooming();
     void setSearchBarVisible(bool visible);

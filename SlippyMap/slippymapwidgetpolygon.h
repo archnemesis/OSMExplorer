@@ -21,6 +21,9 @@ public:
     QVector<QPointF> points();
     bool isIntersectedBy(QRectF rect);
     bool contains(QPointF point);
+    QPointF position();
+    QSizeF size();
+    SlippyMapShapePropertyPage *propertyPage(QWidget *parent = nullptr);
 
 protected:
     QVector<QPointF> m_points;

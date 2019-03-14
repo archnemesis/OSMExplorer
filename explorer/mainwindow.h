@@ -11,6 +11,7 @@
 #include "slippymapwidgetmarker.h"
 #include "slippymapwidgetlayer.h"
 #include "slippymapwidgetmarkermodel.h"
+#include "slippymapwidgetshape.h"
 
 namespace Ui {
 class MainWindow;
@@ -29,6 +30,7 @@ class QAction;
 class LocationDataProvider;
 class TextLogViewerForm;
 class ExplorerPluginInterface;
+class SlippyMapShapePropertyPage;
 
 class MainWindow : public QMainWindow
 {
@@ -94,6 +96,10 @@ private:
     QAction *m_copyCoordinatesAction = nullptr;
     QAction *m_copyLatitudeAction = nullptr;
     QAction *m_copyLongitudeAction = nullptr;
+    QAction *m_editShapeAction = nullptr;
+    QAction *m_deleteShapeAction = nullptr;
+
+    SlippyMapWidgetShape *m_selectedShape = nullptr;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -112,10 +118,12 @@ protected slots:
     void onSlippyMapContextMenuRequested(const QPoint& point);
     void onSlippyMapRectSelected(QRect rect);
     void onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode);
+    void onSlippyMapShapeActivated(SlippyMapWidgetShape *shape);
+    void onSlippyMapShapeDeactivated(SlippyMapWidgetShape *shape);
+
     void saveMarkers();
     void onDirectionsToHereTriggered();
     void onDirectionsFromHereTriggered();
-    void onSplitterMoved(int pos, int index);
     void onNetworkRequestFinished(QNetworkReply *reply);
     void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
     void onTvwMarkersContextMenuRequested(const QPoint& point);
@@ -126,6 +134,7 @@ protected slots:
     void onEditMarkerActionTriggered();
     void onCenterMapActionTriggered();
     void setDarkModeEnabled(bool enabled);
+    void onEditShapeActionTriggered();
     /**
      * @brief Save splitter position after finish moving.
      */
