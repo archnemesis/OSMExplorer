@@ -6,9 +6,9 @@ ShapePropertyPageWidget::ShapePropertyPageWidget(QWidget *parent) :
 
 }
 
-ShapePropertyPageWidget::ShapePropertyPageWidget(SlippyMapWidgetShape *shape, QWidget *parent) :
+ShapePropertyPageWidget::ShapePropertyPageWidget(SlippyMapLayerObject *object, QWidget *parent) :
     QWidget (parent),
-    m_shape (shape)
+    m_object (object)
 {
 
 }

@@ -2,19 +2,19 @@
 #define SLIPPYMAPWIDGETELLIPSE_H
 
 #include "slippymap_global.h"
-#include "slippymapwidgetshape.h"
+#include "slippymaplayerobject.h"
 
 #include <QObject>
 #include <QPainter>
 #include <QRectF>
 
-class SLIPPYMAPSHARED_EXPORT SlippyMapWidgetEllipse : public SlippyMapWidgetShape
+class SLIPPYMAPSHARED_EXPORT SlippyMapEllipse : public SlippyMapLayerObject
 {
     Q_OBJECT
 public:
-    SlippyMapWidgetEllipse(QObject *parent = nullptr);
+    SlippyMapEllipse(QObject *parent = nullptr);
 
-    void draw(QPainter *painter, const QTransform &transform, ShapeState state = NormalState);
+    void draw(QPainter *painter, const QTransform &transform, ObjectState state = NormalState);
     void setRect(const QRectF &rect);
 
 private:

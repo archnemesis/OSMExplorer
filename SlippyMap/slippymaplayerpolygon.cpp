@@ -1,5 +1,5 @@
-#include "slippymapwidgetpolygon.h"
-#include "slippymappolygonpropertypage.h"
+#include "slippymaplayerpolygon.h"
+#include "slippymaplayerpolygonpropertypage.h"
 
 #define NOMINMAX
 #include <algorithm>
@@ -7,19 +7,19 @@
 
 using namespace std;
 
-SlippyMapWidgetPolygon::SlippyMapWidgetPolygon(QVector<QPointF> points, QObject *parent) :
-    SlippyMapWidgetShape(parent),
+SlippyMapLayerPolygon::SlippyMapLayerPolygon(QVector<QPointF> points, QObject *parent) :
+    SlippyMapLayerObject(parent),
     m_points(points)
 {
 
 }
 
-SlippyMapWidgetPolygon::~SlippyMapWidgetPolygon()
+SlippyMapLayerPolygon::~SlippyMapLayerPolygon()
 {
 
 }
 
-void SlippyMapWidgetPolygon::draw(QPainter *painter, const QTransform &transform, ShapeState state)
+void SlippyMapLayerPolygon::draw(QPainter *painter, const QTransform &transform, ObjectState state)
 {
     switch (state) {
     case NormalState:
@@ -59,12 +59,12 @@ void SlippyMapWidgetPolygon::draw(QPainter *painter, const QTransform &transform
     }
 }
 
-QVector<QPointF> SlippyMapWidgetPolygon::points()
+QVector<QPointF> SlippyMapLayerPolygon::points()
 {
     return m_points;
 }
 
-bool SlippyMapWidgetPolygon::isIntersectedBy(QRectF rect)
+bool SlippyMapLayerPolygon::isIntersectedBy(QRectF rect)
 {
     for (QPointF point : m_points) {
         if (rect.contains(point)) {
@@ -75,7 +75,7 @@ bool SlippyMapWidgetPolygon::isIntersectedBy(QRectF rect)
     return false;
 }
 
-bool SlippyMapWidgetPolygon::contains(QPointF point)
+bool SlippyMapLayerPolygon::contains(QPointF point, int zoom)
 {
     QPointF a, b;
     int count = 0;
@@ -95,7 +95,7 @@ bool SlippyMapWidgetPolygon::contains(QPointF point)
     return (count % 2) != 0;
 }
 
-QPointF SlippyMapWidgetPolygon::position()
+QPointF SlippyMapLayerPolygon::position()
 {
     const qreal MIN = numeric_limits<qreal>().min();
     const qreal MAX = numeric_limits<qreal>().max();
@@ -115,7 +115,7 @@ QPointF SlippyMapWidgetPolygon::position()
     return QPointF(x, y);
 }
 
-QSizeF SlippyMapWidgetPolygon::size()
+QSizeF SlippyMapLayerPolygon::size()
 {
     QPointF pos = position();
 
@@ -143,14 +143,14 @@ QSizeF SlippyMapWidgetPolygon::size()
     return QSizeF(width, height);
 }
 
-SlippyMapShapePropertyPage *SlippyMapWidgetPolygon::propertyPage(QWidget *parent)
+SlippyMapLayerObjectPropertyPage *SlippyMapLayerPolygon::propertyPage(QWidget *parent)
 {
-    SlippyMapPolygonPropertyPage *ppage =
-            new SlippyMapPolygonPropertyPage(this, parent);
+    SlippyMapLayerPolygonPropertyPage *ppage =
+            new SlippyMapLayerPolygonPropertyPage(this, parent);
     return ppage;
 }
 
-bool SlippyMapWidgetPolygon::test_point(QPointF a, QPointF b, QPointF p)
+bool SlippyMapLayerPolygon::test_point(QPointF a, QPointF b, QPointF p)
 {
     const qreal epsilon = numeric_limits<qreal>().epsilon();
     const numeric_limits<qreal> DOUBLE;

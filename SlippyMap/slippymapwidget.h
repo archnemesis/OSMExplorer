@@ -1,6 +1,8 @@
 #ifndef SLIPPYMAPWIDGET_H
 #define SLIPPYMAPWIDGET_H
 
+#include "slippymap_global.h"
+
 #include "defaults.h"
 #include <QWidget>
 #include <QPoint>
@@ -28,18 +30,11 @@ class QMenu;
 class QAction;
 class QClipboard;
 class QListWidget;
-class SlippyMapWidgetMarkerModel;
-class SlippyMapWidgetMarker;
 class SlippyMapWidgetLayer;
-class SlippyMapWidgetShape;
+class SlippyMapLayerManager;
+class SlippyMapLayerObject;
 
-#if defined EXPORT_SYMBOLS
-#define DECLARATION Q_DECL_EXPORT
-#else
-#define DECLARATION Q_DECL_IMPORT
-#endif
-
-class DECLARATION SlippyMapWidget : public QWidget
+class SLIPPYMAPSHARED_EXPORT SlippyMapWidget : public QWidget
 {
     Q_OBJECT
 public:
@@ -72,20 +67,9 @@ public:
     static QString geoCoordinatesToString(QPointF coords);
     void setTileServer(QString server);
     QString tileServer();
-    QList<SlippyMapWidgetMarker*> markerList();
-    SlippyMapWidgetMarker *addMarker(double latitude, double longitude);
-    SlippyMapWidgetMarker *addMarker(double latitude, double longitude, QString label);
-    SlippyMapWidgetMarker *addMarker(QPointF location);
-    SlippyMapWidgetMarker *addMarker(QPointF location, QString label);
-    void addMarker(SlippyMapWidgetMarker *marker);
-    void deleteMarker(SlippyMapWidgetMarker *marker);
-    void addLineSet(LineSet *lineSet);
-    void removeLineSet(LineSet *lineSet);
     void addLayer(SlippyMapWidgetLayer *layer);
     QList<SlippyMapWidgetLayer*> layers();
     void takeLayer(SlippyMapWidgetLayer *layer);
-    void addShape(SlippyMapWidgetShape *shape);
-    QList<SlippyMapWidgetShape*> shapes();
     void setCenterOnCursorWhileZooming(bool enable);
     bool centerOnCursorWhileZooming();
     void setSearchBarVisible(bool visible);
@@ -94,7 +78,7 @@ public:
     void setZoomSliderVisible(bool visible);
     void setTileCachingEnabled(bool enabled);
     void setTileCacheDir(QString dir);
-    void setModel(SlippyMapWidgetMarkerModel *model);
+    void setLayerManager(SlippyMapLayerManager *manager);
     double widgetX2long(qint32 x);
     double widgetY2lat(qint32 y);
     double degPerPixelX();
@@ -116,9 +100,9 @@ public slots:
 
 protected slots:
     void searchBarReturnPressed();
-    void addMarkerActionTriggered();
-    void deleteMarkerActionTriggered();
-    void setMarkerLabelActionTriggered();
+    //void addMarkerActionTriggered();
+    //void deleteMarkerActionTriggered();
+    //void setMarkerLabelActionTriggered();
     void centerMapActionTriggered();
     void zoomInHereActionTriggered();
     void zoomOutHereActionTriggered();
@@ -128,8 +112,6 @@ protected slots:
     void onMarkerChanged();
     void searchBarTextEdited(const QString &text);
     void remap();
-    void onMarkerModelMarkerAdded(SlippyMapWidgetMarker *marker);
-    void onMarkerModelMarkerRemoved(SlippyMapWidgetMarker *marker);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -150,20 +132,13 @@ signals:
     void cursorPositionChanged(double latitude, double longitude);
     void cursorLeft();
     void cursorEntered();
-    void markerActivated(SlippyMapWidgetMarker *marker);
-    void markerDeactivated(SlippyMapWidgetMarker *marker);
-    void markerAdded(SlippyMapWidgetMarker *marker);
-    void markerDeleted(SlippyMapWidgetMarker *marker);
-    void markerUpdated(SlippyMapWidgetMarker *marker);
-    void markerEditRequested(SlippyMapWidgetMarker *marker);
     void contextMenuRequested(const QPoint& point);
     void searchTextChanged(const QString &searchText);
     void rectSelected(const QRect &rect);
     void ellipseSelected(const QRect &rect);
     void polygonSelected(const QVector<QPoint> &points);
     void drawModeChanged(DrawMode mode);
-    void shapeActivated(SlippyMapWidgetShape *shape);
-    void shapeDeactivated(SlippyMapWidgetShape *shape);
+    void objectActivated(SlippyMapLayerObject *object);
 
 private:
     class Tile {
@@ -212,7 +187,6 @@ private:
     QPoint m_dragRealStart;
     QPoint m_dragStart;
     Qt::MouseButton m_dragButton;
-    SlippyMapWidgetMarker *m_dragMarker = nullptr;
     int m_zoomLevel = 0;
     int m_tileX = 0;
     int m_tileY = 0;
@@ -243,9 +217,6 @@ private:
     QRegularExpression m_locationParser;
     QCompleter *m_locationCompleter;
 
-    SlippyMapWidgetMarkerModel *m_markerModel = nullptr;
-    QList<SlippyMapWidgetMarker*> m_markers;
-    SlippyMapWidgetMarker* m_activeMarker = nullptr;
     QBrush m_markerBrush;
     QPen m_markerPen;
     QBrush m_markerLabelBrush;
@@ -282,9 +253,9 @@ private:
     QPoint m_drawModeRect_bottomRight;
     QBrush m_drawBrush;
     QPen m_drawPen;
-    QList<SlippyMapWidgetShape*> m_shapes;
-    SlippyMapWidgetShape *m_dragShape = nullptr;
-    SlippyMapWidgetShape *m_activeShape = nullptr;
+    SlippyMapLayerManager *m_layerManager = nullptr;
+    SlippyMapLayerObject *m_activeObject = nullptr;
+    SlippyMapLayerObject *m_dragObject = nullptr;
 };
 
 #endif // SLIPPYMAPWIDGET_H

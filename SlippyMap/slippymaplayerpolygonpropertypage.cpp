@@ -1,4 +1,4 @@
-#include "slippymappolygonpropertypage.h"
+#include "slippymaplayerpolygonpropertypage.h"
 
 #include <QLineEdit>
 #include <QLabel>
@@ -7,7 +7,8 @@
 #include <QFormLayout>
 #include <QPointF>
 
-SlippyMapPolygonPropertyPage::SlippyMapPolygonPropertyPage(QWidget *parent)
+SlippyMapLayerPolygonPropertyPage::SlippyMapLayerPolygonPropertyPage(QWidget *parent) :
+    SlippyMapLayerObjectPropertyPage (parent)
 {
     m_lneX = new QLineEdit();
     m_lneY = new QLineEdit();
@@ -38,13 +39,13 @@ SlippyMapPolygonPropertyPage::SlippyMapPolygonPropertyPage(QWidget *parent)
     setLayout(vbox);
 }
 
-SlippyMapPolygonPropertyPage::SlippyMapPolygonPropertyPage(SlippyMapWidgetShape *shape, QWidget *parent) :
-    SlippyMapPolygonPropertyPage (parent)
+SlippyMapLayerPolygonPropertyPage::SlippyMapLayerPolygonPropertyPage(SlippyMapLayerObject *object, QWidget *parent) :
+    SlippyMapLayerPolygonPropertyPage (parent)
 {
-    m_polygon = qobject_cast<SlippyMapWidgetPolygon*>(shape);
+    m_polygon = qobject_cast<SlippyMapLayerPolygon*>(object);
 
-    QPointF pos = shape->position();
-    QSizeF size = shape->size();
+    QPointF pos = object->position();
+    QSizeF size = object->size();
 
     m_lneX->setText(QString("%1").arg(pos.x()));
     m_lneY->setText(QString("%1").arg(pos.y()));
@@ -52,7 +53,7 @@ SlippyMapPolygonPropertyPage::SlippyMapPolygonPropertyPage(SlippyMapWidgetShape 
     m_lneHeight->setText(QString("%1").arg(size.height()));
 }
 
-QString SlippyMapPolygonPropertyPage::tabTitle()
+QString SlippyMapLayerPolygonPropertyPage::tabTitle()
 {
     return tr("Polygon");
 }

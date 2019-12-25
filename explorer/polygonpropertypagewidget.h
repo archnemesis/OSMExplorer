@@ -2,7 +2,7 @@
 #define POLYGONPROPERTYPAGEWIDGET_H
 
 #include "shapepropertypagewidget.h"
-#include "slippymapwidgetpolygon.h"
+#include "slippymaplayerpolygon.h"
 
 class QLineEdit;
 
@@ -11,9 +11,9 @@ class PolygonPropertyPageWidget : public ShapePropertyPageWidget
     Q_OBJECT
 public:
     PolygonPropertyPageWidget(QWidget *parent = nullptr);
-    PolygonPropertyPageWidget(SlippyMapWidgetShape *shape, QWidget *parent = nullptr);
+    PolygonPropertyPageWidget(SlippyMapLayerObject *object, QWidget *parent = nullptr);
 protected:
-    SlippyMapWidgetPolygon *m_polygon;
+    SlippyMapLayerPolygon *m_polygon;
     QLineEdit *m_lneX;
     QLineEdit *m_lneY;
     QLineEdit *m_lneWidth;

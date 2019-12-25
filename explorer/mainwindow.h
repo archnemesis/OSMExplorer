@@ -11,7 +11,10 @@
 #include "slippymapwidgetmarker.h"
 #include "slippymapwidgetlayer.h"
 #include "slippymapwidgetmarkermodel.h"
-#include "slippymapwidgetshape.h"
+#include "slippymaplayerobject.h"
+#include "slippymaplayermarker.h"
+#include "slippymaplayer.h"
+#include "slippymaplayermanager.h"
 
 namespace Ui {
 class MainWindow;
@@ -30,7 +33,7 @@ class QAction;
 class LocationDataProvider;
 class TextLogViewerForm;
 class ExplorerPluginInterface;
-class SlippyMapShapePropertyPage;
+class SlippyMapLayerObjectPropertyPage;
 
 class MainWindow : public QMainWindow
 {
@@ -51,38 +54,37 @@ protected:
 
 private:
     Ui::MainWindow *ui;
-    QPalette m_defaultPalette;
-    int m_requestCount = 0;
+    DirectionListItemWidget *m_currentRouteListItemWidget = nullptr;
+    QAction *m_directionsFromHereAction;
+    QAction *m_directionsToHereAction;
+    QAction *m_markerDeleteAction = nullptr;
+    QAction *m_markerPropertiesAction = nullptr;
+    QColor m_directionLineColor;
+    QHash<QString,SlippyMapLayerMarker*> m_gpsMarkers;
+    QLabel *m_statusBarGpsStatusLabel;
     QLabel *m_statusBarPositionLabel;
     QLabel *m_statusBarStatusLabel;
-    QLabel *m_statusBarGpsStatusLabel;
-    QMap<SlippyMapWidgetMarker*,QListWidgetItem*> m_markerListItemMap;
-    QColor m_directionLineColor;
+    QList<ExplorerPluginInterface*> m_plugins;
+    QList<LocationDataProvider*> m_gpsProviders;
+    QList<SlippyMapWidgetLayer*> m_layers;
+    QList<SlippyMapWidgetMarker*> m_loadedMarkers;
     QListWidgetItem *m_currentRouteListItem = nullptr;
-    DirectionListItemWidget *m_currentRouteListItemWidget = nullptr;
-    SlippyMapWidget::LineSet *m_currentRouteLineSet = nullptr;
+    QMap<ExplorerPluginInterface*,SlippyMapWidgetMarkerGroup> m_pluginMarkerGroupMap;
+    QMap<SlippyMapWidgetMarker*,QListWidgetItem*> m_markerListItemMap;
+    QMenu *m_markerMenu = nullptr;
+    QMessageBox *m_loadingDialog = nullptr;
+    QNetworkAccessManager *m_net;
+    QPalette m_defaultPalette;
     QPointF m_slippyContextMenuLocation;
-    QAction *m_directionsToHereAction;
-    QAction *m_directionsFromHereAction;
     QTimer *m_saveSplitterPosTimer = nullptr;
     QTimer *m_saveWindowSizeTimer = nullptr;
     SettingsDialog *m_settingsDialog = nullptr;
-    QNetworkAccessManager *m_net;
-    QMessageBox *m_loadingDialog = nullptr;
-    QList<SlippyMapWidgetLayer*> m_layers;
-    QList<LocationDataProvider*> m_gpsProviders;
-    QHash<QString,SlippyMapWidgetMarker*> m_gpsMarkers;
+    SlippyMapLayer *m_gpsMarkerLayer = nullptr;
+    SlippyMapLayer *m_defaultMarkerLayer = nullptr;
+    SlippyMapLayerManager *m_layerManager = nullptr;
+    SlippyMapWidget::LineSet *m_currentRouteLineSet = nullptr;
     TextLogViewerForm *m_nmeaLog = nullptr;
-    SlippyMapWidgetMarkerModel *m_markerModel = nullptr;
-    SlippyMapWidgetMarkerGroup *m_markerModelGroup_myMarkers;
-    SlippyMapWidgetMarkerGroup *m_markerModelGroup_gpsMarkers;
-    SlippyMapWidgetMarkerGroup *m_markerModelGroup_aprsDotFiMarkers;
-    QList<ExplorerPluginInterface*> m_plugins;
-    QMap<ExplorerPluginInterface*,SlippyMapWidgetMarkerGroup> m_pluginMarkerGroupMap;
-    QMenu *m_markerMenu = nullptr;
-    QAction *m_markerPropertiesAction = nullptr;
-    QAction *m_markerDeleteAction = nullptr;
-    QList<SlippyMapWidgetMarker*> m_loadedMarkers;
+    int m_requestCount = 0;
 
     QPoint m_contextMenuLocation;
     QMenu *m_contextMenu = nullptr;
@@ -99,7 +101,7 @@ private:
     QAction *m_editShapeAction = nullptr;
     QAction *m_deleteShapeAction = nullptr;
 
-    SlippyMapWidgetShape *m_selectedShape = nullptr;
+    SlippyMapLayerObject *m_selectedObject = nullptr;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -109,17 +111,17 @@ protected slots:
     void onSlippyMapCursorPositionChanged(double latitude, double longitude);
     void onSlippyMapCursorEntered();
     void onSlippyMapCursorLeft();
-    void onSlippyMapMarkerAdded(SlippyMapWidgetMarker *marker);
-    void onSlippyMapMarkerDeleted(SlippyMapWidgetMarker *marker);
-    void onSlippyMapMarkerUpdated(SlippyMapWidgetMarker *marker);
-    void onSlippyMapMarkerEditRequested(SlippyMapWidgetMarker *marker);
+    //void onSlippyMapMarkerAdded(SlippyMapWidgetMarker *marker);
+    //void onSlippyMapMarkerDeleted(SlippyMapWidgetMarker *marker);
+    //void onSlippyMapMarkerUpdated(SlippyMapWidgetMarker *marker);
+    //void onSlippyMapMarkerEditRequested(SlippyMapWidgetMarker *marker);
     void onSlippyMapContextMenuActivated(double latitude, double longitude);
     void onSlippyMapSearchTextChanged(const QString &text);
     void onSlippyMapContextMenuRequested(const QPoint& point);
     void onSlippyMapRectSelected(QRect rect);
     void onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode);
-    void onSlippyMapShapeActivated(SlippyMapWidgetShape *shape);
-    void onSlippyMapShapeDeactivated(SlippyMapWidgetShape *shape);
+    void onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object);
+    void onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object);
 
     void saveMarkers();
     void onDirectionsToHereTriggered();

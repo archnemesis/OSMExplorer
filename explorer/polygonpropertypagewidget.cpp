@@ -38,13 +38,13 @@ PolygonPropertyPageWidget::PolygonPropertyPageWidget(QWidget *parent) :
     setLayout(hbox);
 }
 
-PolygonPropertyPageWidget::PolygonPropertyPageWidget(SlippyMapWidgetShape *shape, QWidget *parent) :
+PolygonPropertyPageWidget::PolygonPropertyPageWidget(SlippyMapLayerObject *object, QWidget *parent) :
     PolygonPropertyPageWidget (parent)
 {
-    m_polygon = qobject_cast<SlippyMapWidgetPolygon*>(shape);
+    m_polygon = qobject_cast<SlippyMapLayerPolygon*>(object);
 
-    QPointF pos = shape->position();
-    QSizeF size = shape->size();
+    QPointF pos = object->position();
+    QSizeF size = object->size();
 
     m_lneX->setText(QString("%1").arg(pos.x()));
     m_lneY->setText(QString("%1").arg(pos.y()));

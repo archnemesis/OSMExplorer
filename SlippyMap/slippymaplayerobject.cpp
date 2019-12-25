@@ -1,8 +1,6 @@
-#include "slippymapwidgetshape.h"
-#include <QObject>
-#include <QColor>
+#include "slippymaplayerobject.h"
 
-SlippyMapWidgetShape::SlippyMapWidgetShape(QObject *parent) : QObject(parent)
+SlippyMapLayerObject::SlippyMapLayerObject(QObject *parent) : QObject(parent)
 {
     m_pen.setStyle(Qt::SolidLine);
     m_pen.setCosmetic(true);
@@ -39,22 +37,52 @@ SlippyMapWidgetShape::SlippyMapWidgetShape(QObject *parent) : QObject(parent)
     m_selectedBrush.setColor(Qt::lightGray);
 }
 
-SlippyMapWidgetShape::~SlippyMapWidgetShape()
+void SlippyMapLayerObject::setMovable(bool movable)
 {
-
+    m_movable = true;
 }
 
-void SlippyMapWidgetShape::setBrush(QBrush brush)
+QString SlippyMapLayerObject::name()
+{
+    return m_name;
+}
+
+void SlippyMapLayerObject::setName(const QString &name)
+{
+    m_name = name;
+}
+
+void SlippyMapLayerObject::setDescription(const QString &description)
+{
+    m_description = description;
+}
+
+void SlippyMapLayerObject::setVisible(bool visible)
+{
+    m_visible = visible;
+}
+
+bool SlippyMapLayerObject::isVisible()
+{
+    return m_visible;
+}
+
+void SlippyMapLayerObject::setBrush(QBrush brush)
 {
     m_brush = brush;
 }
 
-void SlippyMapWidgetShape::setPen(QPen pen)
+void SlippyMapLayerObject::setPen(QPen pen)
 {
     m_pen = pen;
 }
 
-void SlippyMapWidgetShape::drawResizeHandle(QPainter *painter, QPoint point)
+bool SlippyMapLayerObject::isMovable()
+{
+    return m_movable;
+}
+
+void SlippyMapLayerObject::drawResizeHandle(QPainter *painter, QPoint point)
 {
     painter->setBrush(m_selectionHandleBrush);
     painter->setPen(m_selectionHandlePen);
@@ -64,5 +92,6 @@ void SlippyMapWidgetShape::drawResizeHandle(QPainter *painter, QPoint point)
                 m_resizeHandleWidth,
                 m_resizeHandleWidth);
 }
+
 
 

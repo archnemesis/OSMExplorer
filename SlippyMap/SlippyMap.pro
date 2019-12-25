@@ -31,11 +31,15 @@ SOURCES += \
     slippymapwidgetmarkermodel.cpp \
     slippymapwidgetmarkergroup.cpp \
     slippymapwidgetmarkerprovider.cpp \
-    slippymapwidgetpolygon.cpp \
-    slippymapwidgetshape.cpp \
-    slippymapwidgetellipse.cpp \
-    slippymapshapepropertypage.cpp \
-    slippymappolygonpropertypage.cpp
+    slippymaplayermanager.cpp \
+    slippymaplayer.cpp \
+    slippymaplayerobject.cpp \
+    slippymaplayerpolygon.cpp \
+    slippymaplayerobjectpropertypage.cpp \
+    slippymaplayerpolygonpropertypage.cpp \
+    slippymaplayermarker.cpp \
+    slippymaplayermarkerpropertypage.cpp \
+    slippymapellipse.cpp
 
 HEADERS += \
     slippymapwidget.h \
@@ -46,11 +50,15 @@ HEADERS += \
     slippymap_global.h \
     defaults.h \
     slippymapwidgetmarkerprovider.h \
-    slippymapwidgetpolygon.h \
-    slippymapwidgetshape.h \
-    slippymapwidgetellipse.h \
-    slippymapshapepropertypage.h \
-    slippymappolygonpropertypage.h
+    slippymaplayermanager.h \
+    slippymaplayer.h \
+    slippymaplayerobject.h \
+    slippymaplayerpolygon.h \
+    slippymaplayerobjectpropertypage.h \
+    slippymaplayerpolygonpropertypage.h \
+    slippymaplayermarker.h \
+    slippymaplayermarkerpropertypage.h \
+    slippymapellipse.h
 
 unix {
     target.path = /usr/lib
