@@ -47,6 +47,11 @@ QString SlippyMapLayerObject::name()
     return m_name;
 }
 
+QString SlippyMapLayerObject::description()
+{
+    return m_description;
+}
+
 void SlippyMapLayerObject::setName(const QString &name)
 {
     m_name = name;
@@ -80,6 +85,11 @@ void SlippyMapLayerObject::setPen(QPen pen)
 bool SlippyMapLayerObject::isMovable()
 {
     return m_movable;
+}
+
+QString SlippyMapLayerObject::statusBarText()
+{
+    return QString("");
 }
 
 void SlippyMapLayerObject::drawResizeHandle(QPainter *painter, QPoint point)

@@ -16,8 +16,11 @@ QMAKE_PROJECT_NAME = OSMExplorer
 DEPENDPATH += \
     ../SlippyMap \
     ../LocationServices
-INCLUDEPATH += ../SlippyMap
-INCLUDEPATH += ../LocationServices
+
+INCLUDEPATH += \
+    "../SlippyMap" \
+    "../LocationServices" \
+    "../Poopoo"
 
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../SlippyMap/release/ -lSlippyMap
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../SlippyMap/debug/ -lSlippyMap
@@ -64,7 +67,18 @@ SOURCES += \
     polygonshapepropertiesform.cpp \
     polygonpropertypageform.cpp \
     shapepropertypagewidget.cpp \
-    polygonpropertypagewidget.cpp
+    polygonpropertypagewidget.cpp \
+    gpxparser.cpp \
+    gpxtrack.cpp \
+    gpxtracksegment.cpp \
+    gpxtracklink.cpp \
+    gpxwaypoint.cpp \
+    gpxmetadata.cpp \
+    gpxperson.cpp \
+    gpxcopyright.cpp \
+    slippymaplayertrack.cpp \
+    slippymaplayertrackpropertypageform.cpp \
+    mapdataimportdialog.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -81,7 +95,18 @@ HEADERS += \
     polygonshapepropertiesform.h \
     polygonpropertypageform.h \
     shapepropertypagewidget.h \
-    polygonpropertypagewidget.h
+    polygonpropertypagewidget.h \
+    gpxparser.h \
+    gpxtrack.h \
+    gpxtracksegment.h \
+    gpxtracklink.h \
+    gpxwaypoint.h \
+    gpxmetadata.h \
+    gpxperson.h \
+    gpxcopyright.h \
+    slippymaplayertrack.h \
+    slippymaplayertrackpropertypageform.h \
+    mapdataimportdialog.h
 
 FORMS += \
         mainwindow.ui \
@@ -93,7 +118,9 @@ FORMS += \
     gpssourcedialog.ui \
     textlogviewerform.ui \
     polygonshapepropertiesform.ui \
-    polygonpropertypageform.ui
+    polygonpropertypageform.ui \
+    slippymaplayertrackpropertypageform.ui \
+    mapdataimportdialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

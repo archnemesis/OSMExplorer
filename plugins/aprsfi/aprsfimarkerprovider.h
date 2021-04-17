@@ -1,7 +1,7 @@
 #ifndef APRSFIMARKERPROVIDER_H
 #define APRSFIMARKERPROVIDER_H
 
-#include "slippymapwidgetmarkerprovider.h"
+#include "slippymaplayerobjectprovider.h"
 
 #include <QMap>
 #include <QString>
@@ -10,7 +10,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 
-class AprsFiMarkerProvider : public SlippyMapWidgetMarkerProvider
+class AprsFiMarkerProvider : public SlippyMapLayerObjectProvider
 {
     Q_OBJECT
 
@@ -43,7 +43,7 @@ private:
     QNetworkAccessManager *m_net;
     QNetworkReply *m_reply;
     QTimer m_requestTimer;
-    QMap<QString,SlippyMapWidgetMarker*> m_markers;
+    QMap<QString,SlippyMapLayerObject*> m_objects;
 };
 
 #endif // APRSFIMARKERPROVIDER_H

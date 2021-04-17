@@ -16,6 +16,7 @@ SlippyMapLayerMarker::SlippyMapLayerMarker(const QPointF &position, QObject *par
 {
     m_position = position;
     m_radius = 5;
+    initStyle();
 }
 
 void SlippyMapLayerMarker::draw(QPainter *painter, const QTransform &transform, SlippyMapLayerObject::ObjectState state)

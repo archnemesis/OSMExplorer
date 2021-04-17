@@ -1,4 +1,5 @@
 #include "aprsfimarkerprovider.h"
+#include "slippymaplayermarker.h"
 
 #include <QDebug>
 
@@ -16,7 +17,7 @@
 #include <QPointF>
 
 AprsFiMarkerProvider::AprsFiMarkerProvider(QObject *parent) :
-    SlippyMapWidgetMarkerProvider (parent),
+    SlippyMapLayerObjectProvider (parent),
     m_net (new QNetworkAccessManager())
 {
     connect(&m_requestTimer, &QTimer::timeout, this, &AprsFiMarkerProvider::update);
@@ -42,10 +43,10 @@ void AprsFiMarkerProvider::setCallsigns(QStringList callsigns)
 {
     m_callsigns = callsigns;
 
-    for (QString ident : m_markers.keys()) {
+    for (QString ident : m_objects.keys()) {
         if (!callsigns.contains(ident)) {
-            emit markerRemoved(m_markers[ident]);
-            m_markers.remove(ident);
+            emit objectRemoved(m_objects[ident]);
+            m_objects.remove(ident);
         }
     }
 }
@@ -166,24 +167,27 @@ void AprsFiMarkerProvider::onNetworkRequestFinished(QNetworkReply *reply)
 
         QString infoString = info.join("<br/>");
 
-        SlippyMapWidgetMarker *marker;
-        if (m_markers.contains(ident)) {
+        SlippyMapLayerMarker *marker;
+
+        if (m_objects.contains(ident)) {
             qDebug() << "Updating marker...";
-            marker = m_markers[ident];
+            marker = dynamic_cast<SlippyMapLayerMarker*>(m_objects[ident]);
             marker->setPosition(point);
             marker->setLabel(ident);
-            marker->setInformation(infoString);
+            marker->setDescription(infoString);
+            marker->setVisible(true);
         }
         else {
             qDebug() << "Creating marker...";
-            marker = new SlippyMapWidgetMarker(point);
+            marker = new SlippyMapLayerMarker(point);
             marker->setLabel(ident);
-            marker->setInformation(infoString);
+            marker->setDescription(infoString);
             marker->setEditable(false);
-            marker->setMarkerColor(Qt::red);
+            marker->setColor(Qt::red);
             marker->setMovable(false);
-            m_markers[ident] = marker;
-            emit markerCreated(marker);
+            marker->setVisible(true);
+            m_objects[ident] = static_cast<SlippyMapLayerObject*>(marker);
+            emit objectCreated(marker);
         }
     }
 }

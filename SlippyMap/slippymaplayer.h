@@ -24,6 +24,7 @@ public:
     void setName(const QString &name);
     void setDescription(const QString &description);
     void setVisible(const bool visible);
+    bool contains(SlippyMapLayerObject *object);
 
 signals:
     void objectAdded(SlippyMapLayerObject *shape);

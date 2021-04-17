@@ -102,6 +102,7 @@
      <addaction name="separator"/>
     </widget>
     <addaction name="actionFilePrint"/>
+    <addaction name="actionImport"/>
     <addaction name="actionFileExport"/>
     <addaction name="separator"/>
     <addaction name="menuFileGps"/>
@@ -148,10 +149,17 @@
     <addaction name="actionDrawRectangle"/>
     <addaction name="actionDrawPolygon"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionToolsOSMImport"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuDraw"/>
    <addaction name="menuMarker"/>
    <addaction name="menuView"/>
+   <addaction name="menuTools"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QDockWidget" name="dockWidget">
@@ -614,6 +622,16 @@
   <action name="actionViewGpsLog">
    <property name="text">
     <string>GPS Log</string>
+   </property>
+  </action>
+  <action name="actionImport">
+   <property name="text">
+    <string>Import...</string>
+   </property>
+  </action>
+  <action name="actionToolsOSMImport">
+   <property name="text">
+    <string>OSM Import...</string>
    </property>
   </action>
  </widget>

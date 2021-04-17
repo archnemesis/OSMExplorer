@@ -5,4 +5,4 @@ SUBDIRS = \
     LocationServices \
     explorer \
     plugins/aprsfi \
-    APRS
+    plugins/APRS

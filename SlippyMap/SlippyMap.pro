@@ -39,7 +39,9 @@ SOURCES += \
     slippymaplayerpolygonpropertypage.cpp \
     slippymaplayermarker.cpp \
     slippymaplayermarkerpropertypage.cpp \
-    slippymapellipse.cpp
+    slippymapellipse.cpp \
+    slippymaplayerobjectprovider.cpp \
+    slippymaprenderer.cpp
 
 HEADERS += \
     slippymapwidget.h \
@@ -58,7 +60,9 @@ HEADERS += \
     slippymaplayerpolygonpropertypage.h \
     slippymaplayermarker.h \
     slippymaplayermarkerpropertypage.h \
-    slippymapellipse.h
+    slippymapellipse.h \
+    slippymaplayerobjectprovider.h \
+    slippymaprenderer.h
 
 unix {
     target.path = /usr/lib

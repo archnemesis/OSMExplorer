@@ -9,6 +9,8 @@ class APRSSHARED_EXPORT APRSParser : public QObject
     Q_OBJECT
 public:
     APRSParser();
+
+
 };
 
 #endif // APRSPARSER_H

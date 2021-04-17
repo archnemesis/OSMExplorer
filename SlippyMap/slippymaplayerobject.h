@@ -34,7 +34,9 @@ public:
     virtual QPointF position() = 0;
     virtual QSizeF size() = 0;
     virtual SlippyMapLayerObjectPropertyPage *propertyPage(QWidget *parent = nullptr) = 0;
+    virtual QString statusBarText();
     QString name();
+    QString description();
     void setName(const QString& name);
     void setDescription(const QString& description);
     void setVisible(bool visible);

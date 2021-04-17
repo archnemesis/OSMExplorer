@@ -2,15 +2,15 @@
 #define EXPLORERPLUGININTERFACE_H
 
 #include <QList>
-#include <QAction>
 #include <QString>
-#include <QDockWidget>
 
-#include "slippymapwidgetmarker.h"
-#include "slippymapwidgetmarkermodel.h"
-#include "slippymapwidgetmarkergroup.h"
-#include "slippymapwidgetmarkerprovider.h"
+#include "slippymaplayerobjectprovider.h"
+#include "slippymaplayer.h"
 #include "locationdataprovider.h"
+
+class QMenu;
+class QAction;
+class QDockWidget;
 
 class ExplorerPluginInterface
 {
@@ -49,14 +49,19 @@ public:
     virtual QList<QAction*> mapContextMenuActionList() = 0;
 
     /**
+     * @brief Menus to be added to the main window menubar
+     * @return
+     */
+    virtual QList<QMenu*> mainMenuList() = 0;
+
+    /**
      * @brief Dock widgets added to the main wnidow.
      * @return
      */
     virtual QList<QDockWidget*> dockWidgetList() = 0;
-    virtual QList<SlippyMapWidgetMarker*> markerList() = 0;
     virtual QDialog *configurationDialog(QWidget *parent = nullptr) = 0;
     virtual void loadConfiguration() = 0;
-    virtual SlippyMapWidgetMarkerProvider *markerProvider() = 0;
+    virtual QList<SlippyMapLayer*> layers() = 0;
 };
 
 #define ExplorerPluginInterface_iid "com.robingingras.osmexplorer.ExplorerPluginInterface"

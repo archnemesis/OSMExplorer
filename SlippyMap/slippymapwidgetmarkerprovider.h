@@ -15,7 +15,6 @@ public:
     virtual void start();
     virtual void stop();
 
-
 signals:
     void markerCreated(SlippyMapWidgetMarker *marker);
     void markerRemoved(SlippyMapWidgetMarker *marker);

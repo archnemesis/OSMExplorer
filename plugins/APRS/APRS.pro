@@ -1,3 +1,9 @@
+#-------------------------------------------------
+#
+# Project created by QtCreator 2019-02-27T16:17:20
+#
+#-------------------------------------------------
+
 TEMPLATE = lib
 
 CONFIG += plugin
@@ -19,30 +25,29 @@ win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../../LocationServices
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../../LocationServices/debug/ -lLocationServices
 else:unix: LIBS += -L$$OUT_PWD/../../LocationServices/ -lLocationServices
 
-HEADERS += aprsfiexplorerplugin.h \
-    aprsfilocationdataprovider.h \
-    aprsdotficonfigurationdialog.h \
-    aprsstationlistform.h \
-    aprsfimarkerprovider.h \
-    aprsstationpropertypagewidget.h
+DEFINES += APRS_LIBRARY
+DEFINES += QT_DEPRECATED_WARNINGS
 
-SOURCES += aprsfiexplorerplugin.cpp \
-    aprsfilocationdataprovider.cpp \
-    aprsdotficonfigurationdialog.cpp \
-    aprsstationlistform.cpp \
-    aprsfimarkerprovider.cpp \
-    aprsstationpropertypagewidget.cpp
+SOURCES += \
+        aprsparser.cpp \
+    aprsmessage.cpp \
+    aprsexplorerplugin.cpp
 
-FORMS += aprsdotficonfigurationdialog.ui \
-    aprsstationlistform.ui \
-    aprsstationpropertypagewidget.ui
+HEADERS += \
+        aprsparser.h \
+        aprs_global.h \ 
+    aprsmessage.h \
+    aprsexplorerplugin.h
+
+unix {
+    target.path = /usr/lib
+    INSTALLS += target
+}
 
 win32 {
     INCLUDEPATH += "C:\Program Files\OpenSSL-1.0.2q-Win64\include"
     LIBS += -L"C:\Program Files\OpenSSL-1.0.2q-Win64\lib" -lssleay32 -llibeay32
 }
 
-TARGET = $$qtLibraryTarget(aprsfi)
+TARGET = $$qtLibraryTarget(APRS)
 DESTDIR = ../../plugins
-
-EXAMPLE_FILES = aprsfiplugin.json

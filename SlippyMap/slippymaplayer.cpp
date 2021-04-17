@@ -51,6 +51,11 @@ void SlippyMapLayer::setVisible(const bool visible)
     m_visible = visible;
 }
 
+bool SlippyMapLayer::contains(SlippyMapLayerObject *object)
+{
+    return m_objects.contains(object);
+}
+
 QDataStream &operator<<(QDataStream &stream, const SlippyMapLayer *layer)
 {
     stream << layer->name();

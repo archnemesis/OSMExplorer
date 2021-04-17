@@ -34,6 +34,7 @@ class LocationDataProvider;
 class TextLogViewerForm;
 class ExplorerPluginInterface;
 class SlippyMapLayerObjectPropertyPage;
+class MapDataImportDialog;
 
 class MainWindow : public QMainWindow
 {
@@ -79,6 +80,7 @@ private:
     QTimer *m_saveSplitterPosTimer = nullptr;
     QTimer *m_saveWindowSizeTimer = nullptr;
     SettingsDialog *m_settingsDialog = nullptr;
+    MapDataImportDialog *m_importDialog = nullptr;
     SlippyMapLayer *m_gpsMarkerLayer = nullptr;
     SlippyMapLayer *m_defaultMarkerLayer = nullptr;
     SlippyMapLayerManager *m_layerManager = nullptr;
@@ -130,7 +132,7 @@ protected slots:
     void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
     void onTvwMarkersContextMenuRequested(const QPoint& point);
     void onMarkerMenuPropertiesActionTriggered();
-    void onPluginMarkerProviderMarkerAdded(SlippyMapWidgetMarker *marker);
+    void onPluginLayerObjectProviderMarkerAdded(SlippyMapLayerObject *object);
     void onAddMarkerActionTriggered();
     void onDeleteMarkerActionTriggered();
     void onEditMarkerActionTriggered();
@@ -163,6 +165,9 @@ private slots:
     void on_tvwMarkers_clicked(const QModelIndex &index);
     void on_actionDrawRectangle_triggered();
     void on_actionDrawEllipse_triggered();
+    void on_actionImport_triggered();
+    void on_actionMarkerImport_triggered();
+    void on_actionToolsOSMImport_triggered();
 };
 
 #endif // MAINWINDOW_H

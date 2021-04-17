@@ -89,10 +89,6 @@ QVariant SlippyMapLayerManager::data(const QModelIndex &index, int role) const
         return QVariant();
     }
 
-    if (role != Qt::DisplayRole) {
-        return QVariant();
-    }
-
     SlippyMapLayer *layer = static_cast<SlippyMapLayer*>(index.internalPointer());
     if (layer != nullptr && index.column() == 0 && m_layers.contains(layer)) {
         switch (role) {
@@ -105,6 +101,7 @@ QVariant SlippyMapLayerManager::data(const QModelIndex &index, int role) const
             if (m_activeLayer == layer) {
                 return m_activeFont;
             }
+        default:
             return QVariant();
         }
     }
@@ -231,6 +228,16 @@ void SlippyMapLayerManager::saveToFile(QString fileName)
 
         }
     }
+}
+
+bool SlippyMapLayerManager::contains(SlippyMapLayerObject *object)
+{
+    for (SlippyMapLayer *layer : m_layers) {
+        if (layer->contains(object)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 QList<SlippyMapLayer *> SlippyMapLayerManager::layers()

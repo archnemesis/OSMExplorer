@@ -469,6 +469,8 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
         }
     }
 
+    /* ----- Scale Bar ----- */
+
     double C = 40075016.686;
     double S = C * cos(m_lat * (M_PI/180.0)) / pow(2.0, m_zoomLevel + 8);
     double len = S * 100;
@@ -523,6 +525,9 @@ void SlippyMapWidget::paintEvent(QPaintEvent *event)
 
     if (m_layerManager != nullptr) {
         for (SlippyMapLayer *layer : m_layerManager->layers()) {
+
+            qDebug() << "Processing layer:" << layer->name();
+
             if (layer->isVisible()) {
                 for (SlippyMapLayerObject *obj : layer->objects()) {
                     SlippyMapLayerObject::ObjectState state = SlippyMapLayerObject::NormalState;
@@ -638,6 +643,8 @@ void SlippyMapWidget::mouseMoveEvent(QMouseEvent *event)
     double deg_per_pixel_y = deg_per_pixel / scale_factor;
     QPoint pos = event->pos();
     QPoint diff = pos - m_dragStart;
+
+    //qreal distance = sqrt(pow(diff.x(), 2) + pow(diff.y(), 2));
 
     if (m_drawMode != NoDrawing) {
         switch (m_drawMode) {
@@ -766,11 +773,23 @@ void SlippyMapWidget::contextMenuEvent(QContextMenuEvent *event)
 //    m_contextMenu->exec(event->globalPos());
 }
 
+/**
+ * @brief SlippyMapWidget::long2tilex returns the tile X coordinate for the given longitude and zoom level
+ * @param lon
+ * @param z
+ * @return X coordinate of the tile for lon and zoom level z
+ */
 qint32 SlippyMapWidget::long2tilex(double lon, int z)
 {
     return static_cast<qint32>(floor((lon + 180.0) / 360.0 * pow(2.0, z)));
 }
 
+/**
+ * @brief SlippyMapWidget::lat2tiley returns the tile Y coordinate for the given latitude and zoom level
+ * @param lat
+ * @param z
+ * @return Y coordinate of the tile for lat and zoom level z
+ */
 qint32 SlippyMapWidget::lat2tiley(double lat, int z)
 {
     return static_cast<qint32>(floor((1.0 - log( tan(lat * M_PI/180.0) + 1.0 / cos(lat * M_PI/180.0)) / M_PI) / 2.0 * pow(2.0, z)));
@@ -872,11 +891,15 @@ void SlippyMapWidget::remap()
     qint32 tiles_high = static_cast<qint32>(ceil(static_cast<double>(height()) / 256.0));
     if ((tiles_high % 2) == 0) tiles_high++;
 
+    // always include what's immediately off screen
     tiles_wide += 2;
     tiles_high += 2;
 
+    // tile_x and tile_y are the tile coords for the center tile
     qint32 tile_x = long2tilex(m_lon, m_zoomLevel);
     qint32 tile_y = lat2tiley(m_lat, m_zoomLevel);
+
+    // tile coords for top left tile
     qint32 tile_x_start = tile_x - (tiles_wide - 1) / 2;
     qint32 tile_y_start = tile_y - (tiles_high - 1) / 2;
 
@@ -886,9 +909,11 @@ void SlippyMapWidget::remap()
     double scale_factor = 1 / cos(m_lat * (M_PI / 180.0));
     double deg_per_pixel = (360.0 / pow(2.0, m_zoomLevel)) / 256.0;
     double deg_per_pixel_y = deg_per_pixel / scale_factor;
+
+    // calculate offset between widget center and center tile center
     double snapped_lon = tilex2long(long2tilex(m_lon, m_zoomLevel), m_zoomLevel);
-    double diff_lon = snapped_lon - m_lon;
     double snapped_lat = tiley2lat(lat2tiley(m_lat, m_zoomLevel), m_zoomLevel);
+    double diff_lon = snapped_lon - m_lon;
     double diff_lat = snapped_lat - m_lat;
 
     qint32 diff_pix_x = 255 + static_cast<qint32>(diff_lon / deg_per_pixel) - 128;

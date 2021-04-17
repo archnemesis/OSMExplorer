@@ -32,6 +32,8 @@ public:
     void setDefaultLayer(SlippyMapLayer *layer);
     void saveToFile(QString fileName);
 
+    bool contains(SlippyMapLayerObject *object);
+
     QList<SlippyMapLayer*> layers();
     SlippyMapLayer *activeLayer();
     SlippyMapLayer *defaultLayer();
