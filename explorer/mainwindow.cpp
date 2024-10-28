@@ -924,10 +924,10 @@ void MainWindow::on_btnDirectionsGo_clicked()
                     .arg(ui->lneDirectionsFinish->text());
             qDebug() << "Requesting from" << req;
 
-            QSslConfiguration config = QSslConfiguration::defaultConfiguration();
-            config.setProtocol(QSsl::TlsV1_2);
+            //QSslConfiguration config = QSslConfiguration::defaultConfiguration();
+            //config.setProtocol(QSsl::TlsV1_2);
             QNetworkRequest request(req);
-            request.setSslConfiguration(config);
+            //request.setSslConfiguration(config);
             m_net->get(request);
 
             if (m_loadingDialog == nullptr) {

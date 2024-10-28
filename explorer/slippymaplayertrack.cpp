@@ -1,6 +1,8 @@
 #include "slippymaplayertrack.h"
 #include "slippymaplayertrackpropertypageform.h"
 
+#include <cmath>
+
 #include <QPainter>
 #include <QPointF>
 #include <QBrush>

@@ -1,5 +1,7 @@
 #include "slippymaplayermarker.h"
 
+#include <cmath>
+
 #include <QPainter>
 #include <QPoint>
 #include <QPointF>
@@ -10,6 +12,8 @@
 #include <QFontMetrics>
 #include <QPalette>
 #include <QGuiApplication>
+
+using namespace std;
 
 SlippyMapLayerMarker::SlippyMapLayerMarker(const QPointF &position, QObject *parent) :
     SlippyMapLayerObject (parent)

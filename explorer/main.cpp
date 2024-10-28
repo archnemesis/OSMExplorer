@@ -6,8 +6,6 @@
 
 int main(int argc, char *argv[])
 {
-    qDebug() << "SSL Version:" << QSslSocket::sslLibraryBuildVersionString();
-
     QApplication::setOrganizationName("Robin Gingras");
     QApplication::setOrganizationDomain("robingingras.com");
     QApplication::setApplicationName("OSMExplorer");
