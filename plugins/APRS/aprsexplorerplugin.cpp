@@ -2,7 +2,12 @@
 
 #include <QMenu>
 #include <QAction>
+#include <QDialog>
 #include <QList>
+#include <QDockWidget>
+
+#include <SlippyMap/SlippyMapLayer.h>
+#include <SlippyMap/SlippyMapWidgetLayer.h>
 
 APRSExplorerPlugin::APRSExplorerPlugin()
 {
@@ -46,13 +51,18 @@ QList<QDockWidget *> APRSExplorerPlugin::dockWidgetList()
 
 QDialog *APRSExplorerPlugin::configurationDialog(QWidget *parent)
 {
-    (void)parent;
-    return nullptr;
+    auto *dialog = new QDialog();
+    dialog->setWindowTitle(tr("APRS Plugin Settings"));
+    return dialog;
 }
 
-QList<SlippyMapLayer *> APRSExplorerPlugin::layers()
+QList<SlippyMapLayer*> APRSExplorerPlugin::layers()
 {
     return QList<SlippyMapLayer *>();
+}
+
+QList<SlippyMapWidgetLayer*> APRSExplorerPlugin::tileLayers() {
+    return QList<SlippyMapWidgetLayer*>();
 }
 
 void APRSExplorerPlugin::loadConfiguration()

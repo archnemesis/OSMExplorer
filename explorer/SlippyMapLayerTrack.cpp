@@ -121,9 +121,9 @@ void SlippyMapLayerTrack::initStyle()
     m_dotBrush.setStyle(Qt::SolidPattern);
     m_dotPen.setColor(Qt::green);
     m_dotPen.setStyle(Qt::SolidLine);
-    m_dotPen.setWidth(2);
+    m_dotPen.setWidth(8);
 
     m_linePen.setStyle(Qt::SolidLine);
-    m_linePen.setColor(Qt::white);
-    m_linePen.setWidth(3);
+    m_linePen.setColor(Qt::darkGray);
+    m_linePen.setWidth(8);
 }

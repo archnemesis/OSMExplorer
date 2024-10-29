@@ -14,6 +14,7 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedi
 
 add_subdirectory(SlippyMap)
 add_subdirectory(LocationServices)
+add_subdirectory(plugins)
 
 set(PROJECT_SOURCES
         explorer/main.cpp
@@ -76,6 +77,14 @@ set(PROJECT_SOURCES
         explorer/textlogviewerform.cpp
         explorer/textlogviewerform.h
         explorer/textlogviewerform.ui
+        explorer/SlippyMapWeatherMarker.cpp
+        explorer/SlippyMapWeatherMarker.h
+        explorer/Weather/NationalWeatherServiceInterface.cpp
+        explorer/Weather/NationalWeatherServiceInterface.h
+        explorer/Weather/WeatherStationPropertyPage.cpp
+        explorer/Weather/WeatherStationPropertyPage.h
+        explorer/Weather/WeatherStationMarker.cpp
+        explorer/Weather/WeatherStationMarker.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

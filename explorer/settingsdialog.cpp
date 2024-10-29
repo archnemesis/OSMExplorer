@@ -179,7 +179,7 @@ void SettingsDialog::on_btnIntegrationConfigure_clicked()
     dlg->setParent(this);
     dlg->setModal(true);
     int result = dlg->exec();
-    //delete dlg;
+    dlg->deleteLater();
 }
 
 void SettingsDialog::on_btnLayerAdd_clicked()

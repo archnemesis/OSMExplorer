@@ -2,40 +2,41 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QMap>
 #include <QHash>
-#include <QVariant>
-#include <QTimer>
 #include <QPalette>
 
 #include <SlippyMap/SlippyMapWidget.h>
 
+#include "Weather/NationalWeatherServiceInterface.h"
 #include "slippymapwidgetmarkergroup.h"
+
+class WeatherStationMarker;
 
 namespace Ui {
 class MainWindow;
 }
 
+class DirectionListItemWidget;
+class ExplorerPluginInterface;
+class LocationDataProvider;
+class MapDataImportDialog;
+class QAction;
 class QComboBox;
 class QLabel;
 class QListWidgetItem;
-class DirectionListItemWidget;
-class SettingsDialog;
+class QMenu;
+class QMessageBox;
 class QNetworkAccessManager;
 class QNetworkReply;
-class QMessageBox;
-class QMenu;
-class QAction;
-class LocationDataProvider;
-class TextLogViewerForm;
-class ExplorerPluginInterface;
+class SettingsDialog;
 class SlippyMapLayerObjectPropertyPage;
-class MapDataImportDialog;
+class TextLogViewerForm;
 
 namespace SlippyMap
 {
     class SlippyMapWidgetMarker;
     class SlippyMapLayer;
+    class SlippyMapLayerPolygon;
 };
 
 using namespace SlippyMap;
@@ -60,10 +61,13 @@ protected:
 private:
     Ui::MainWindow *ui;
     DirectionListItemWidget *m_currentRouteListItemWidget = nullptr;
+    MapDataImportDialog *m_importDialog = nullptr;
+    NationalWeatherServiceInterface *m_weatherService = nullptr;
     QAction *m_directionsFromHereAction;
     QAction *m_directionsToHereAction;
     QAction *m_markerDeleteAction = nullptr;
     QAction *m_markerPropertiesAction = nullptr;
+    QAction *m_markerVisibilityAction;
     QColor m_directionLineColor;
     QHash<QString,SlippyMapWidgetMarker*> m_gpsMarkers;
     QLabel *m_statusBarGpsStatusLabel;
@@ -73,22 +77,28 @@ private:
     QList<LocationDataProvider*> m_gpsProviders;
     QList<SlippyMapWidgetLayer*> m_layers;
     QList<SlippyMapWidgetMarker*> m_loadedMarkers;
+    QList<SlippyMapWidgetMarker*> m_weatherStationMarkers;
     QListWidgetItem *m_currentRouteListItem = nullptr;
     QMap<ExplorerPluginInterface*,SlippyMapWidgetMarkerGroup> m_pluginMarkerGroupMap;
     QMap<SlippyMapWidgetMarker*,QListWidgetItem*> m_markerListItemMap;
     QMenu *m_markerMenu = nullptr;
     QMessageBox *m_loadingDialog = nullptr;
     QNetworkAccessManager *m_net;
+    QNetworkAccessManager *m_weatherNetworkAccessManager;
     QPalette m_defaultPalette;
     QPointF m_slippyContextMenuLocation;
     QTimer *m_saveSplitterPosTimer = nullptr;
     QTimer *m_saveWindowSizeTimer = nullptr;
     SettingsDialog *m_settingsDialog = nullptr;
-    MapDataImportDialog *m_importDialog = nullptr;
-    SlippyMapLayer *m_gpsMarkerLayer = nullptr;
     SlippyMapLayer *m_defaultMarkerLayer = nullptr;
+    SlippyMapLayer *m_gpsMarkerLayer = nullptr;
+    SlippyMapLayer* m_weatherLayer;
     SlippyMapLayerManager *m_layerManager = nullptr;
+    SlippyMapLayerObject *m_selectedObject = nullptr;
+    SlippyMapLayerObjectPropertyPage *m_selectedObjectPropertyPage = nullptr;
+    SlippyMapLayerPolygon *m_forecastZonePolygon;
     SlippyMapWidget::LineSet *m_currentRouteLineSet = nullptr;
+    WeatherStationMarker *m_weatherStationMarker;
     TextLogViewerForm *m_nmeaLog = nullptr;
     int m_requestCount = 0;
 
@@ -107,9 +117,6 @@ private:
     QAction *m_editShapeAction = nullptr;
     QAction *m_deleteShapeAction = nullptr;
 
-    SlippyMapLayerObject *m_selectedObject = nullptr;
-    SlippyMapLayerObjectPropertyPage *m_selectedObjectPropertyPage = nullptr;
-
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
     void onSlippyMapZoomLevelChanged(int zoom);
@@ -118,10 +125,6 @@ protected slots:
     void onSlippyMapCursorPositionChanged(double latitude, double longitude);
     void onSlippyMapCursorEntered();
     void onSlippyMapCursorLeft();
-    //void onSlippyMapMarkerAdded(SlippyMapWidgetMarker *marker);
-    //void onSlippyMapMarkerDeleted(SlippyMapWidgetMarker *marker);
-    //void onSlippyMapMarkerUpdated(SlippyMapWidgetMarker *marker);
-    //void onSlippyMapMarkerEditRequested(SlippyMapWidgetMarker *marker);
     void onSlippyMapContextMenuActivated(double latitude, double longitude);
     void onSlippyMapSearchTextChanged(const QString &text);
     void onSlippyMapContextMenuRequested(const QPoint& point);
@@ -130,11 +133,14 @@ protected slots:
     void onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object);
     void onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object);
     void onSlippyMapLayerObjectDoubleClicked(SlippyMapLayerObject *object);
+    void onSlippyMapDragFinished();
+    void onWeatherService_forecastReady();
 
     void saveMarkers();
     void onDirectionsToHereTriggered();
     void onDirectionsFromHereTriggered();
     void onNetworkRequestFinished(QNetworkReply *reply);
+    void weatherNetworkAccessManager_onRequestFinished(QNetworkReply *reply);
     void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
     void onTvwMarkersContextMenuRequested(const QPoint& point);
     void onMarkerMenuPropertiesActionTriggered();

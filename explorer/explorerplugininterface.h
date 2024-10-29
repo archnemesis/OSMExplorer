@@ -1,12 +1,13 @@
 #ifndef EXPLORERPLUGININTERFACE_H
 #define EXPLORERPLUGININTERFACE_H
 
+#include <locationdataprovider.h>
+
 #include <QList>
 #include <QString>
-#include <SlippyMap/SlippyMapLayer.h>
 
-#include "slippymaplayerobjectprovider.h"
-#include "locationdataprovider.h"
+#include <SlippyMap/SlippyMapWidgetLayer.h>
+#include <SlippyMap/SlippyMapLayer.h>
 
 using namespace SlippyMap;
 
@@ -57,13 +58,34 @@ public:
     virtual QList<QMenu*> mainMenuList() = 0;
 
     /**
-     * @brief Dock widgets added to the main wnidow.
+     * @brief Dock widgets added to the main window..
      * @return
      */
     virtual QList<QDockWidget*> dockWidgetList() = 0;
+
+    /**
+     * @brief Returns a wiget used for configuration.
+     * @param parent
+     * @return
+     */
     virtual QDialog *configurationDialog(QWidget *parent = nullptr) = 0;
+
+    /**
+     * @brief Load configuration data.
+     */
     virtual void loadConfiguration() = 0;
+
+    /**
+     * @brief Return layers to be shown on the map.
+     * @return
+     */
     virtual QList<SlippyMapLayer*> layers() = 0;
+
+    /**
+     * @brief Return tile layers available on the map.
+     * @return
+     */
+     virtual QList<SlippyMapWidgetLayer*> tileLayers() = 0;
 };
 
 #define ExplorerPluginInterface_iid "com.robingingras.osmexplorer.ExplorerPluginInterface"

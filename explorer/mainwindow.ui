@@ -77,19 +77,8 @@
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>Map</string>
+     <string>File</string>
     </property>
-    <widget class="QMenu" name="menuFileLayers">
-     <property name="title">
-      <string>Layers</string>
-     </property>
-     <property name="icon">
-      <iconset resource="resources.qrc">
-       <normaloff>:/icons/layers.png</normaloff>:/icons/layers.png</iconset>
-     </property>
-     <addaction name="actionFileLayersConfigure"/>
-     <addaction name="separator"/>
-    </widget>
     <widget class="QMenu" name="menuFileGps">
      <property name="title">
       <string>GPS</string>
@@ -101,13 +90,22 @@
      <addaction name="actionMapGpsAddSource"/>
      <addaction name="separator"/>
     </widget>
-    <addaction name="actionFilePrint"/>
+    <widget class="QMenu" name="menuRecent">
+     <property name="title">
+      <string>Recent</string>
+     </property>
+     <addaction name="actionFile_Recent_ClearMenu"/>
+     <addaction name="separator"/>
+    </widget>
+    <addaction name="actionFile_NewWorkspace"/>
+    <addaction name="actionFile_OpenWorkspace"/>
+    <addaction name="menuRecent"/>
+    <addaction name="separator"/>
+    <addaction name="actionFile_Print"/>
     <addaction name="actionImport"/>
     <addaction name="actionFileExport"/>
     <addaction name="separator"/>
     <addaction name="menuFileGps"/>
-    <addaction name="menuFileLayers"/>
-    <addaction name="actionFileSettings"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -154,8 +152,39 @@
      <string>Tools</string>
     </property>
     <addaction name="actionToolsOSMImport"/>
+    <addaction name="separator"/>
+    <addaction name="actionFileSettings"/>
+   </widget>
+   <widget class="QMenu" name="menuLayer">
+    <property name="title">
+     <string>Layer</string>
+    </property>
+    <widget class="QMenu" name="menuLayer_TileLayers">
+     <property name="title">
+      <string>Tile Layers</string>
+     </property>
+     <addaction name="actionLayer_TileLayers_HideAll"/>
+     <addaction name="actionLayer_TileLayers_ShowAll"/>
+     <addaction name="separator"/>
+    </widget>
+    <addaction name="actionLayer_New"/>
+    <addaction name="actionLayer_Rename"/>
+    <addaction name="actionLayer_Delete"/>
+    <addaction name="separator"/>
+    <addaction name="actionLayer_SortAscending"/>
+    <addaction name="actionLayer_SortDescending"/>
+    <addaction name="separator"/>
+    <addaction name="menuLayer_TileLayers"/>
+   </widget>
+   <widget class="QMenu" name="menuWeather">
+    <property name="title">
+     <string>Weather</string>
+    </property>
+    <addaction name="actionWeather_ShowWFOGrid"/>
    </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuLayer"/>
+   <addaction name="menuWeather"/>
    <addaction name="menuDraw"/>
    <addaction name="menuMarker"/>
    <addaction name="menuView"/>
@@ -604,7 +633,7 @@
     <string>Configure...</string>
    </property>
   </action>
-  <action name="actionFilePrint">
+  <action name="actionFile_Print">
    <property name="text">
     <string>Print...</string>
    </property>
@@ -632,6 +661,64 @@
   <action name="actionToolsOSMImport">
    <property name="text">
     <string>OSM Import...</string>
+   </property>
+  </action>
+  <action name="actionLayer_New">
+   <property name="text">
+    <string>New...</string>
+   </property>
+  </action>
+  <action name="actionLayer_Delete">
+   <property name="text">
+    <string>Delete</string>
+   </property>
+  </action>
+  <action name="actionLayer_Rename">
+   <property name="text">
+    <string>Rename...</string>
+   </property>
+  </action>
+  <action name="actionLayer_SortAscending">
+   <property name="text">
+    <string>Sort Ascending</string>
+   </property>
+  </action>
+  <action name="actionLayer_SortDescending">
+   <property name="text">
+    <string>Sort Descending</string>
+   </property>
+  </action>
+  <action name="actionLayer_TileLayers_HideAll">
+   <property name="text">
+    <string>Hide All</string>
+   </property>
+  </action>
+  <action name="actionLayer_TileLayers_ShowAll">
+   <property name="text">
+    <string>Show All</string>
+   </property>
+  </action>
+  <action name="actionFile_NewWorkspace">
+   <property name="text">
+    <string>New Workspace...</string>
+   </property>
+  </action>
+  <action name="actionFile_OpenWorkspace">
+   <property name="text">
+    <string>Open Workspace...</string>
+   </property>
+  </action>
+  <action name="actionFile_Recent_ClearMenu">
+   <property name="text">
+    <string>Clear Menu</string>
+   </property>
+  </action>
+  <action name="actionWeather_ShowWFOGrid">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show WFO Grid</string>
    </property>
   </action>
  </widget>
