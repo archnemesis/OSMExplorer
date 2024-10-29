@@ -7,8 +7,9 @@ class GPXTrackLink : public QObject
 {
     Q_OBJECT
 public:
-    explicit GPXTrackLink(QObject *parent = nullptr);
-    explicit GPXTrackLink(QString href, QString text, QString type, QObject *parent = nullptr);
+    GPXTrackLink() = default;
+    GPXTrackLink(const GPXTrackLink& other);
+    GPXTrackLink& operator=(const GPXTrackLink& other);
     QString href() const;
     QString text() const;
     QString type() const;

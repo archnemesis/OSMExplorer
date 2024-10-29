@@ -6,16 +6,35 @@ GPXMetadata::GPXMetadata(QObject *parent) : QObject(parent)
 
 }
 
+GPXMetadata::GPXMetadata(const GPXMetadata& other) {
+    setName(other.name());
+    setDescription(other.description());
+    setAuthor(other.author());
+    setCopyright(other.copyright());
+    setTime(other.time());
+    setBounds(other.bounds());
+
+    for (const auto& link : other.links())
+        addLink(link);
+}
+
+GPXMetadata& GPXMetadata::operator=(const GPXMetadata& other) {
+    setName(other.name());
+    setDescription(other.description());
+    setAuthor(other.author());
+    setCopyright(other.copyright());
+    setTime(other.time());
+    setBounds(other.bounds());
+
+    for (const auto& link : other.links())
+        addLink(link);
+
+    return *this;
+}
+
 GPXMetadata::~GPXMetadata()
 {
-    for (GPXTrackLink *link : m_links) {
-        delete link;
-    }
     m_links.clear();
-
-    if (m_copyright != nullptr) {
-        delete m_copyright;
-    }
 }
 
 QString GPXMetadata::name() const
@@ -38,22 +57,22 @@ void GPXMetadata::setDescription(const QString &description)
     m_description = description;
 }
 
-GPXPerson *GPXMetadata::author()
+const GPXPerson& GPXMetadata::author() const
 {
     return m_author;
 }
 
-void GPXMetadata::setAuthor(GPXPerson *author)
+void GPXMetadata::setAuthor(const GPXPerson& author)
 {
     m_author = author;
 }
 
-GPXCopyright *GPXMetadata::copyright() const
+const GPXCopyright& GPXMetadata::copyright() const
 {
     return m_copyright;
 }
 
-void GPXMetadata::setCopyright(GPXCopyright *copyright)
+void GPXMetadata::setCopyright(const GPXCopyright& copyright)
 {
     m_copyright = copyright;
 }
@@ -88,12 +107,12 @@ void GPXMetadata::setBounds(const QRectF &bounds)
     m_bounds = bounds;
 }
 
-QList<GPXTrackLink *> GPXMetadata::links() const
+const QList<GPXTrackLink>& GPXMetadata::links() const
 {
     return m_links;
 }
 
-void GPXMetadata::addLink(GPXTrackLink *link)
+void GPXMetadata::addLink(const GPXTrackLink& link)
 {
     m_links.append(link);
 }

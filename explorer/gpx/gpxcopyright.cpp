@@ -5,6 +5,19 @@ GPXCopyright::GPXCopyright(QObject *parent) : QObject(parent)
 
 }
 
+GPXCopyright::GPXCopyright(const GPXCopyright& other) {
+    setAuthor(other.author());
+    setYear(other.year());
+    setLicense(other.license());
+}
+
+GPXCopyright& GPXCopyright::operator=(const GPXCopyright& other) {
+    setAuthor(other.author());
+    setYear(other.year());
+    setLicense(other.license());
+    return *this;
+}
+
 QString GPXCopyright::author() const
 {
     return m_author;

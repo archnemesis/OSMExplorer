@@ -10,12 +10,14 @@ class GPXTrackSegment : public QObject
     Q_OBJECT
 public:
     explicit GPXTrackSegment(QObject *parent = nullptr);
+    GPXTrackSegment(const GPXTrackSegment& other);
+    GPXTrackSegment& operator=(const GPXTrackSegment& other);
     ~GPXTrackSegment();
-    void addPoint(GPXWaypoint *point);
+    void addPoint(const GPXWaypoint& point);
     void clearPoints();
-    QList<GPXWaypoint*> points();
+    const QList<GPXWaypoint>& points() const;
 private:
-    QList<GPXWaypoint*> m_points;
+    QList<GPXWaypoint> m_points;
 };
 
 #endif // GPXTRACKSEGMENT_H

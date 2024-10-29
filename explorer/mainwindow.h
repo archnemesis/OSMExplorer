@@ -7,14 +7,10 @@
 #include <QVariant>
 #include <QTimer>
 #include <QPalette>
-#include "slippymapwidget.h"
-#include "slippymapwidgetmarker.h"
-#include "slippymapwidgetlayer.h"
-#include "slippymapwidgetmarkermodel.h"
-#include "slippymaplayerobject.h"
-#include "slippymaplayermarker.h"
-#include "slippymaplayer.h"
-#include "slippymaplayermanager.h"
+
+#include <SlippyMap/SlippyMapWidget.h>
+
+#include "slippymapwidgetmarkergroup.h"
 
 namespace Ui {
 class MainWindow;
@@ -35,6 +31,14 @@ class TextLogViewerForm;
 class ExplorerPluginInterface;
 class SlippyMapLayerObjectPropertyPage;
 class MapDataImportDialog;
+
+namespace SlippyMap
+{
+    class SlippyMapWidgetMarker;
+    class SlippyMapLayer;
+};
+
+using namespace SlippyMap;
 
 class MainWindow : public QMainWindow
 {
@@ -61,7 +65,7 @@ private:
     QAction *m_markerDeleteAction = nullptr;
     QAction *m_markerPropertiesAction = nullptr;
     QColor m_directionLineColor;
-    QHash<QString,SlippyMapLayerMarker*> m_gpsMarkers;
+    QHash<QString,SlippyMapWidgetMarker*> m_gpsMarkers;
     QLabel *m_statusBarGpsStatusLabel;
     QLabel *m_statusBarPositionLabel;
     QLabel *m_statusBarStatusLabel;
@@ -104,6 +108,7 @@ private:
     QAction *m_deleteShapeAction = nullptr;
 
     SlippyMapLayerObject *m_selectedObject = nullptr;
+    SlippyMapLayerObjectPropertyPage *m_selectedObjectPropertyPage = nullptr;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -124,6 +129,7 @@ protected slots:
     void onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode);
     void onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object);
     void onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object);
+    void onSlippyMapLayerObjectDoubleClicked(SlippyMapLayerObject *object);
 
     void saveMarkers();
     void onDirectionsToHereTriggered();

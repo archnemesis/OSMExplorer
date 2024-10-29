@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.5)
 
 project(osmexplorer VERSION 1.0.0 LANGUAGES CXX)
 
-set(CMAKE_PREFIX_PATH "C:\\Qt-Binary\\5.15.2\\mingw81_64")
-
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -11,8 +9,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Network Multimedia SerialPort)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedia SerialPort)
+find_package(QT NAMES Qt5 REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort)
 
 add_subdirectory(SlippyMap)
 add_subdirectory(LocationServices)
@@ -29,22 +27,22 @@ set(PROJECT_SOURCES
         explorer/gpssourcedialog.cpp
         explorer/gpssourcedialog.h
         explorer/gpssourcedialog.ui
-        explorer/gpxcopyright.cpp
-        explorer/gpxcopyright.h
-        explorer/gpxmetadata.cpp
-        explorer/gpxmetadata.h
-        explorer/gpxparser.cpp
-        explorer/gpxparser.h
-        explorer/gpxperson.cpp
-        explorer/gpxperson.h
-        explorer/gpxtrack.cpp
-        explorer/gpxtrack.h
-        explorer/gpxtracklink.cpp
-        explorer/gpxtracklink.h
-        explorer/gpxtracksegment.cpp
-        explorer/gpxtracksegment.h
-        explorer/gpxwaypoint.cpp
-        explorer/gpxwaypoint.h
+        explorer/gpx/gpxcopyright.cpp
+        explorer/gpx/gpxcopyright.h
+        explorer/gpx/gpxmetadata.cpp
+        explorer/gpx/gpxmetadata.h
+        explorer/gpx/gpxparser.cpp
+        explorer/gpx/gpxparser.h
+        explorer/gpx/gpxperson.cpp
+        explorer/gpx/gpxperson.h
+        explorer/gpx/gpxtrack.cpp
+        explorer/gpx/gpxtrack.h
+        explorer/gpx/gpxtracklink.cpp
+        explorer/gpx/gpxtracklink.h
+        explorer/gpx/gpxtracksegment.cpp
+        explorer/gpx/gpxtracksegment.h
+        explorer/gpx/gpxwaypoint.cpp
+        explorer/gpx/gpxwaypoint.h
         explorer/layerpropertiesdialog.cpp
         explorer/layerpropertiesdialog.h
         explorer/layerpropertiesdialog.ui
@@ -59,25 +57,22 @@ set(PROJECT_SOURCES
         explorer/markerlistitemwidget.ui
         explorer/nmeaseriallocationdataprovider.cpp
         explorer/nmeaseriallocationdataprovider.h
-        explorer/polygonpropertypageform.cpp
-        explorer/polygonpropertypageform.h
-        explorer/polygonpropertypageform.ui
-        explorer/polygonpropertypagewidget.cpp
-        explorer/polygonpropertypagewidget.h
-        explorer/polygonshapepropertiesform.cpp
-        explorer/polygonshapepropertiesform.h
-        explorer/polygonshapepropertiesform.ui
         explorer/resources.qrc
         explorer/settingsdialog.cpp
         explorer/settingsdialog.h
         explorer/settingsdialog.ui
-        explorer/shapepropertypagewidget.cpp
-        explorer/shapepropertypagewidget.h
-        explorer/slippymaplayertrack.cpp
-        explorer/slippymaplayertrack.h
-        explorer/slippymaplayertrackpropertypageform.cpp
-        explorer/slippymaplayertrackpropertypageform.h
-        explorer/slippymaplayertrackpropertypageform.ui
+        explorer/SlippyMapLayerTrack.cpp
+        explorer/SlippyMapLayerTrack.h
+        explorer/PropertyPage/SlippyMapLayerObjectPropertyPage.cpp
+        explorer/PropertyPage/SlippyMapLayerObjectPropertyPage.h
+        explorer/slippymaplayerobjectprovider.cpp
+        explorer/slippymaplayerobjectprovider.h
+        explorer/slippymapwidgetmarkergroup.cpp
+        explorer/slippymapwidgetmarkergroup.h
+        explorer/PropertyPage/SlippyMapLayerPolygonPropertyPage.cpp
+        explorer/PropertyPage/SlippyMapLayerPolygonPropertyPage.h
+        explorer/PropertyPage/SlippyMapLayerTrackPropertyPage.cpp
+        explorer/PropertyPage/SlippyMapLayerTrackPropertyPage.h
         explorer/textlogviewerform.cpp
         explorer/textlogviewerform.h
         explorer/textlogviewerform.ui
@@ -114,7 +109,7 @@ target_link_libraries(osmexplorer PRIVATE SlippyMap)
 target_link_libraries(osmexplorer PRIVATE LocationServices)
 
 target_include_directories(osmexplorer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/explorer)
-target_include_directories(osmexplorer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/SlippyMap)
+target_include_directories(osmexplorer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/SlippyMap/include)
 target_include_directories(osmexplorer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/LocationServices)
 
 set_target_properties(osmexplorer PROPERTIES

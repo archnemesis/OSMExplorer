@@ -1,0 +1,3 @@
+[submodule "SlippyMap"]
+	path = SlippyMap
+	url = git@github.com:archnemesis/SlippyMap.git

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>939</width>
-    <height>682</height>
+    <height>712</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -72,7 +72,7 @@
      <x>0</x>
      <y>0</y>
      <width>939</width>
-     <height>21</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -388,7 +388,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEdit"/>
+          <widget class="QLineEdit" name="selectedObjectName"/>
          </item>
          <item>
           <widget class="QLabel" name="label_4">
@@ -398,7 +398,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPlainTextEdit" name="plainTextEdit"/>
+          <widget class="QPlainTextEdit" name="selectedObjectDescription"/>
          </item>
          <item>
           <widget class="QLabel" name="label_5">
@@ -408,7 +408,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QTreeView" name="treeView"/>
+          <widget class="QTreeView" name="selectedObjectAttributes"/>
          </item>
         </layout>
        </widget>
@@ -640,7 +640,7 @@
   <customwidget>
    <class>SlippyMapWidget</class>
    <extends>QWidget</extends>
-   <header location="global">slippymapwidget.h</header>
+   <header location="global">SlippyMap/SlippyMapWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -5,15 +5,17 @@
 #include <QDateTime>
 #include <QRectF>
 
-class GPXTrackLink;
-class GPXPerson;
-class GPXCopyright;
+#include "gpxtracklink.h"
+#include "gpxperson.h"
+#include "gpxcopyright.h"
 
 class GPXMetadata : public QObject
 {
     Q_OBJECT
 public:
     explicit GPXMetadata(QObject *parent = nullptr);
+    GPXMetadata(const GPXMetadata& other);
+    GPXMetadata& operator=(const GPXMetadata& other);
     ~GPXMetadata();
 
     QString name() const;
@@ -22,11 +24,11 @@ public:
     QString description() const;
     void setDescription(const QString &description);
 
-    GPXPerson *author();
-    void setAuthor(GPXPerson *author);
+    const GPXPerson& author() const;
+    void setAuthor(const GPXPerson& author);
 
-    GPXCopyright *copyright() const;
-    void setCopyright(GPXCopyright *copyright);
+    const GPXCopyright& copyright() const;
+    void setCopyright(const GPXCopyright& copyright);
 
     QDateTime time() const;
     void setTime(const QDateTime &time);
@@ -37,15 +39,15 @@ public:
     QRectF bounds() const;
     void setBounds(const QRectF &bounds);
 
-    QList<GPXTrackLink *> links() const;
-    void addLink(GPXTrackLink *link);
+    const QList<GPXTrackLink>& links() const;
+    void addLink(const GPXTrackLink& link);
 
 private:
     QString m_name;
     QString m_description;
-    GPXPerson *m_author = nullptr;
-    GPXCopyright *m_copyright = nullptr;
-    QList<GPXTrackLink*> m_links;
+    GPXPerson m_author;
+    GPXCopyright m_copyright;
+    QList<GPXTrackLink> m_links;
     QDateTime m_time;
     QString m_keywords;
     QRectF m_bounds;

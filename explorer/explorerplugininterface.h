@@ -3,10 +3,12 @@
 
 #include <QList>
 #include <QString>
+#include <SlippyMap/SlippyMapLayer.h>
 
 #include "slippymaplayerobjectprovider.h"
-#include "slippymaplayer.h"
 #include "locationdataprovider.h"
+
+using namespace SlippyMap;
 
 class QMenu;
 class QAction;

@@ -12,15 +12,17 @@ class GPXTrack : public QObject
 
 public:
     explicit GPXTrack(QObject *parent = nullptr);
+    GPXTrack(const GPXTrack& other);
+    GPXTrack& operator=(const GPXTrack& other);
     ~GPXTrack();
-    QString name() const;
-    QString comment() const;
-    QString description() const;
-    QString source() const;
+    const QString& name() const;
+    const QString& comment() const;
+    const QString& description() const;
+    const QString& source() const;
     int number() const;
-    QString type() const;
-    QList<GPXTrackLink*> links() const;
-    QList<GPXTrackSegment*> segments() const;
+    const QString& type() const;
+    const QList<GPXTrackLink>& links() const;
+    const QList<GPXTrackSegment>& segments() const;
 
     void setName(const QString &name);
     void setComment(const QString &comment);
@@ -28,8 +30,8 @@ public:
     void setSource(const QString &source);
     void setNumber(int number);
     void setType(const QString &type);
-    void addLink(GPXTrackLink *link);
-    void addSegment(GPXTrackSegment *segment);
+    void addLink(const GPXTrackLink& link);
+    void addSegment(const GPXTrackSegment& segment);
 
 protected:
     QString m_name;
@@ -38,8 +40,8 @@ protected:
     QString m_source;
     int m_number;
     QString m_type;
-    QList<GPXTrackLink*> m_links;
-    QList<GPXTrackSegment*> m_segments;
+    QList<GPXTrackLink> m_links;
+    QList<GPXTrackSegment> m_segments;
 };
 
 #endif // GPXTRACK_H

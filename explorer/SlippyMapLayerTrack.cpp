@@ -1,20 +1,34 @@
-#include "slippymaplayertrack.h"
-#include "slippymaplayertrackpropertypageform.h"
+#include "SlippyMapLayerTrack.h"
 
 #include <cmath>
+
+#include <QDebug>
 
 #include <QPainter>
 #include <QPointF>
 #include <QBrush>
 #include <QPen>
 #include <QColor>
-#include <QFont>
 #include <QPolygonF>
 
-SlippyMapLayerTrack::SlippyMapLayerTrack(const QVector<QPointF> &points)
+#include "gpx/gpxwaypoint.h"
+#include "gpx/gpxtracksegment.h"
+
+SlippyMapLayerTrack::SlippyMapLayerTrack(const GPXTrack& track) :
+    m_trackLineWidth(1),
+    m_trackLineStrokeWidth(1)
 {
-    m_points = points;
+    m_track = track;
     initStyle();
+
+    for (const GPXTrackSegment& segment : track.segments()) {
+        for (const GPXWaypoint& waypoint : segment.points()) {
+            m_points.append(QPointF(waypoint.longitude(), waypoint.latitude()));
+        }
+    }
+}
+
+SlippyMapLayerTrack::~SlippyMapLayerTrack() {
 }
 
 void SlippyMapLayerTrack::draw(QPainter *painter, const QTransform &transform, SlippyMapLayerObject::ObjectState state)
@@ -35,7 +49,7 @@ void SlippyMapLayerTrack::draw(QPainter *painter, const QTransform &transform, S
     }
 }
 
-bool SlippyMapLayerTrack::isIntersectedBy(QRectF rect)
+bool SlippyMapLayerTrack::isIntersectedBy(const QRectF& rect) const
 {
     for (QPointF point : m_points) {
         if (rect.contains(point)) {
@@ -46,7 +60,7 @@ bool SlippyMapLayerTrack::isIntersectedBy(QRectF rect)
     return false;
 }
 
-bool SlippyMapLayerTrack::contains(QPointF point, int zoom)
+bool SlippyMapLayerTrack::contains(const QPointF& point, int zoom) const
 {
     double deg_per_pixel = (360.0 / pow(2.0, zoom)) / 256.0;
     double deg_radius = deg_per_pixel * 10;
@@ -85,24 +99,20 @@ bool SlippyMapLayerTrack::isMovable()
     return false;
 }
 
-QPointF SlippyMapLayerTrack::position()
+const QPointF SlippyMapLayerTrack::position() const
 {
     return m_points.at(0);
 }
 
-QSizeF SlippyMapLayerTrack::size()
+const QSizeF SlippyMapLayerTrack::size() const
 {
     QPolygonF poly(m_points);
     QRectF boundingRect = poly.boundingRect();
     return boundingRect.size();
 }
 
-SlippyMapLayerObjectPropertyPage *SlippyMapLayerTrack::propertyPage(QWidget *parent)
-{
-    if (m_propertyPage == nullptr) {
-        m_propertyPage = new SlippyMapLayerTrackPropertyPageForm(this, parent);
-    }
-    return m_propertyPage;
+const GPXTrack& SlippyMapLayerTrack::track() {
+    return m_track;
 }
 
 void SlippyMapLayerTrack::initStyle()

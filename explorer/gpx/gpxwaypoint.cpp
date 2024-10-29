@@ -6,13 +6,55 @@ GPXWaypoint::GPXWaypoint(QObject *parent) : QObject(parent)
 
 }
 
+GPXWaypoint::GPXWaypoint(const GPXWaypoint& other) {
+    setLatitude(other.latitude());
+    setLongitude(other.longitude());
+    setDescription(other.description());
+    setComment(other.comment());
+    setDgpsid(other.dgpsid());
+    setElevation(other.elevation());
+    setHdop(other.hdop());
+    setName(other.name());
+    setPdop(other.pdop());
+    setFixType(other.fixType());
+    setSource(other.source());
+    setTime(other.time());
+    setVdop(other.vdop());
+    setSymbol(other.symbol());
+    setGeoidHeight(other.geoidHeight());
+    setMagneticVariation(other.magneticVariation());
+    setNumSatellites(other.numSatellites());
+    setType(other.type());
+    setAgeOfGpsData(other.ageOfGpsData());
+}
+
+GPXWaypoint& GPXWaypoint::operator=(const GPXWaypoint& other) {
+    setLatitude(other.latitude());
+    setLongitude(other.longitude());
+    setDescription(other.description());
+    setComment(other.comment());
+    setDgpsid(other.dgpsid());
+    setElevation(other.elevation());
+    setHdop(other.hdop());
+    setName(other.name());
+    setPdop(other.pdop());
+    setFixType(other.fixType());
+    setSource(other.source());
+    setTime(other.time());
+    setVdop(other.vdop());
+    setSymbol(other.symbol());
+    setGeoidHeight(other.geoidHeight());
+    setMagneticVariation(other.magneticVariation());
+    setNumSatellites(other.numSatellites());
+    setType(other.type());
+    setAgeOfGpsData(other.ageOfGpsData());
+
+    return *this;
+}
+
 GPXWaypoint::~GPXWaypoint()
 {
-    for (GPXTrackLink *link : m_links) {
-        delete link;
-    }
     m_links.clear();
-
 }
 
 qreal GPXWaypoint::latitude() const
@@ -205,7 +247,7 @@ void GPXWaypoint::setDgpsid(const QString &dgpsid)
     m_dgpsid = dgpsid;
 }
 
-void GPXWaypoint::addLink(GPXTrackLink *link)
+void GPXWaypoint::addLink(const GPXTrackLink& link)
 {
     m_links.append(link);
 }

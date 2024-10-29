@@ -11,6 +11,8 @@ class GPXWaypoint : public QObject
     Q_OBJECT
 public:
     explicit GPXWaypoint(QObject *parent = nullptr);
+    GPXWaypoint(const GPXWaypoint& other);
+    GPXWaypoint& operator=(const GPXWaypoint& other);
     ~GPXWaypoint();
 
     qreal latitude() const;
@@ -70,7 +72,7 @@ public:
     QString dgpsid() const;
     void setDgpsid(const QString &dgpsid);
 
-    void addLink(GPXTrackLink *link);
+    void addLink(const GPXTrackLink& link);
 
 private:
     qreal m_latitude;
@@ -83,7 +85,7 @@ private:
     QString m_comment;
     QString m_description;
     QString m_source;
-    QList<GPXTrackLink*> m_links;
+    QList<GPXTrackLink> m_links;
     QString m_symbol;
     QString m_type;
     QString m_fixType;

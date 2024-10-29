@@ -1,21 +1,16 @@
 #include "gpxtracklink.h"
 
-GPXTrackLink::GPXTrackLink(QObject *parent) :
-    QObject(parent),
-    m_href(""),
-    m_text(""),
-    m_type("")
-{
-
+GPXTrackLink::GPXTrackLink(const GPXTrackLink& other) :
+    m_href(other.href()),
+    m_text(other.text()),
+    m_type(other.type()) {
 }
 
-GPXTrackLink::GPXTrackLink(QString href, QString text, QString type, QObject *parent) :
-    QObject(parent),
-    m_href(href),
-    m_text(text),
-    m_type(type)
-{
-
+GPXTrackLink& GPXTrackLink::operator=(const GPXTrackLink& other) {
+    setHref(other.href());
+    setText(other.text());
+    setType(other.type());
+    return *this;
 }
 
 QString GPXTrackLink::href() const

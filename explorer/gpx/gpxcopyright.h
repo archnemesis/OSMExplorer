@@ -8,6 +8,8 @@ class GPXCopyright : public QObject
     Q_OBJECT
 public:
     explicit GPXCopyright(QObject *parent = nullptr);
+    GPXCopyright(const GPXCopyright& other);
+    GPXCopyright& operator=(const GPXCopyright& other);
 
     QString author() const;
     void setAuthor(const QString &author);

@@ -2,12 +2,13 @@
 #define MARKERDIALOG_H
 
 #include <QDialog>
-#include "slippymapwidget.h"
-#include "slippymapwidgetmarker.h"
+#include <SlippyMap/SlippyMapWidgetMarker.h>
 
 namespace Ui {
 class MarkerDialog;
 }
+
+using namespace SlippyMap;
 
 class MarkerDialog : public QDialog
 {
