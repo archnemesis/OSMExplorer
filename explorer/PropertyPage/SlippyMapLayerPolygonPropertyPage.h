@@ -8,7 +8,7 @@ using namespace SlippyMap;
 
 class QLineEdit;
 
-class SLIPPYMAPSHARED_EXPORT SlippyMapLayerPolygonPropertyPage : public SlippyMapLayerObjectPropertyPage
+class SlippyMapLayerPolygonPropertyPage : public SlippyMapLayerObjectPropertyPage
 {
 public:
     explicit SlippyMapLayerPolygonPropertyPage(SlippyMapLayerObject *object);

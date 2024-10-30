@@ -9,6 +9,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+cmake_policy(SET CMP0074 NEW)
+
 find_package(QT NAMES Qt5 REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort)
 
@@ -68,8 +70,6 @@ set(PROJECT_SOURCES
         explorer/PropertyPage/SlippyMapLayerObjectPropertyPage.h
         explorer/slippymaplayerobjectprovider.cpp
         explorer/slippymaplayerobjectprovider.h
-        explorer/slippymapwidgetmarkergroup.cpp
-        explorer/slippymapwidgetmarkergroup.h
         explorer/PropertyPage/SlippyMapLayerPolygonPropertyPage.cpp
         explorer/PropertyPage/SlippyMapLayerPolygonPropertyPage.h
         explorer/PropertyPage/SlippyMapLayerTrackPropertyPage.cpp
@@ -97,17 +97,9 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
     # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
 else()
-    if(ANDROID)
-        add_library(osmexplorer SHARED
-                ${PROJECT_SOURCES}
-        )
-        # Define properties for Android with Qt 5 after find_package() calls as:
-        #    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
-    else()
-        add_executable(osmexplorer
-                ${PROJECT_SOURCES}
-        )
-    endif()
+    add_executable(osmexplorer
+            ${PROJECT_SOURCES}
+    )
 endif()
 
 target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
@@ -130,8 +122,7 @@ set_target_properties(osmexplorer PROPERTIES
 )
 
 install(TARGETS osmexplorer
-        BUNDLE DESTINATION .
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        BUNDLE DESTINATION .)
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(osmexplorer)

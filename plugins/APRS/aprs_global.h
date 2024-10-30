@@ -3,10 +3,6 @@
 
 #include <QtCore/qglobal.h>
 
-#if defined(APRS_LIBRARY)
-#  define APRSSHARED_EXPORT Q_DECL_EXPORT
-#else
-#  define APRSSHARED_EXPORT Q_DECL_IMPORT
-#endif
+#define APRSSHARED_EXPORT Q_DECL_IMPORT
 
 #endif // APRS_GLOBAL_H

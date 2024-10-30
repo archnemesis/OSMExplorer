@@ -60,7 +60,10 @@ using namespace SlippyMap;
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    m_forecastZonePolygon(nullptr)
+    m_forecastZonePolygon(nullptr),
+    m_directionsFromHereAction(nullptr),
+    m_directionsToHereAction(nullptr),
+    m_weatherStationMarker(nullptr)
 {
     ui->setupUi(this);
 
@@ -84,6 +87,13 @@ MainWindow::MainWindow(QWidget *parent) :
     m_defaultMarkerLayer->setName(tr("Markers"));
     m_layerManager->addLayer(m_defaultMarkerLayer);
     m_layerManager->setDefaultLayer(m_defaultMarkerLayer);
+
+    /*
+     * GPS Marker Layer
+     */
+    m_gpsMarkerLayer = new SlippyMapLayer();
+    m_gpsMarkerLayer->setName(tr("GPS"));
+    m_layerManager->addLayer(m_gpsMarkerLayer);
 
     /*
      * DeleteMe: Directions Stuff
@@ -130,6 +140,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->slippyMap, &SlippyMapWidget::objectDoubleClicked, this, &MainWindow::onSlippyMapLayerObjectDoubleClicked);
     connect(ui->slippyMap, &SlippyMapWidget::dragFinished, this, &MainWindow::onSlippyMapDragFinished);
 
+    /*
+     * Text inputs for label and description that let you edit the marker label.
+     */
     connect(ui->selectedObjectName,
         &QLineEdit::textEdited,
         [this](const QString& text) {
@@ -144,6 +157,9 @@ MainWindow::MainWindow(QWidget *parent) :
         }
     });
 
+    /*
+     * Enable showing forecast data as the map moves
+     */
     connect(ui->actionWeather_ShowWFOGrid,
         &QAction::toggled,
         [this](bool state){
@@ -478,6 +494,8 @@ void MainWindow::setupToolbar()
     ui->toolBar->addAction(ui->actionDrawRectangle);
     ui->toolBar->addAction(ui->actionDrawEllipse);
     ui->toolBar->addAction(ui->actionDrawPolygon);
+    ui->toolBar->addSeparator();
+    ui->toolBar->addWidget(new QLineEdit("Test line edit..."));
 }
 
 void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
@@ -949,8 +967,24 @@ void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF po
         marker->setEditable(false);
         marker->setMovable(false);
         m_gpsMarkers[identifier] = marker;
-        m_gpsMarkerLayer->addObject(marker);
+        m_layerManager->addLayerObject(m_gpsMarkerLayer, marker);
     }
+
+
+    QString cardinal_lat;
+    QString cardinal_lon;
+
+    if (position.y() >= 0) cardinal_lat = "N";
+    else cardinal_lat = "S";
+
+    if (position.x() >= 0) cardinal_lon = "E";
+    else cardinal_lon = "W";
+
+    m_statusBarGpsStatusLabel->setText(tr("GPS Postion: %1 %2 %3 %4")
+        .arg(position.y(), 0, 'f', 7)
+        .arg(cardinal_lat)
+        .arg(position.x(), 0, 'f', 7)
+        .arg(cardinal_lon));
 }
 
 void MainWindow::onTvwMarkersContextMenuRequested(const QPoint &point)

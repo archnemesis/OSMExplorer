@@ -8,7 +8,6 @@
 #include <SlippyMap/SlippyMapWidget.h>
 
 #include "Weather/NationalWeatherServiceInterface.h"
-#include "slippymapwidgetmarkergroup.h"
 
 class WeatherStationMarker;
 
@@ -79,7 +78,6 @@ private:
     QList<SlippyMapWidgetMarker*> m_loadedMarkers;
     QList<SlippyMapWidgetMarker*> m_weatherStationMarkers;
     QListWidgetItem *m_currentRouteListItem = nullptr;
-    QMap<ExplorerPluginInterface*,SlippyMapWidgetMarkerGroup> m_pluginMarkerGroupMap;
     QMap<SlippyMapWidgetMarker*,QListWidgetItem*> m_markerListItemMap;
     QMenu *m_markerMenu = nullptr;
     QMessageBox *m_loadingDialog = nullptr;

@@ -3,10 +3,6 @@
 
 #include <QtCore/qglobal.h>
 
-#if defined(APRS_LIBRARY)
-#  define RAINVIEWERSHARED_EXPORT Q_DECL_EXPORT
-#else
-#  define RAINVIEWERSHARED_EXPORT Q_DECL_IMPORT
-#endif
+#define RAINVIEWERSHARED_EXPORT Q_DECL_EXPORT
 
 #endif // RAINVIEWER_GLOBAL_H

@@ -9,6 +9,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+cmake_policy(SET CMP0074 NEW)
+
 find_package(QT NAMES Qt5 REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort)
 
@@ -24,7 +26,6 @@ add_library(rainviewerplugin MODULE ${PROJECT_SOURCES})
 
 target_include_directories(rainviewerplugin PRIVATE ${CMAKE_SOURCE_DIR}/explorer)
 target_include_directories(rainviewerplugin PRIVATE ${CMAKE_SOURCE_DIR}/SlippyMap/include)
-target_include_directories(rainviewerplugin PRIVATE ${CMAKE_SOURCE_DIR}/LocationServices)
 target_link_libraries(rainviewerplugin Qt5::Widgets)
 target_link_libraries(rainviewerplugin Qt5::Network)
 target_link_libraries(rainviewerplugin SlippyMap)

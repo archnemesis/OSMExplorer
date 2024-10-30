@@ -1,8 +1,6 @@
 #ifndef EXPLORERPLUGININTERFACE_H
 #define EXPLORERPLUGININTERFACE_H
 
-#include <locationdataprovider.h>
-
 #include <QList>
 #include <QString>
 
