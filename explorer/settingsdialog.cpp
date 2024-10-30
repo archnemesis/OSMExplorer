@@ -3,6 +3,8 @@
 #include "defaults.h"
 #include "layerpropertiesdialog.h"
 #include "explorerplugininterface.h"
+#include "Application/ExplorerApplication.h"
+#include "Application/PluginManager.h"
 
 #include <QDebug>
 #include <QSettings>
@@ -19,7 +21,7 @@ SettingsDialog::SettingsDialog(QList<ExplorerPluginInterface *> plugins, QWidget
     connect(ui->spnCacheSize, QOverload<int>::of(&QSpinBox::valueChanged), ui->hslCacheSize, &QSlider::setValue);
     loadSettings();
 
-    for (ExplorerPluginInterface *plugin : m_plugins) {
+    for (ExplorerPluginInterface *plugin : ExplorerApplication::pluginManager()->getPlugins()) {
         ui->lstIntegrationList->addItem(plugin->name());
     }
 }
@@ -175,11 +177,11 @@ void SettingsDialog::on_btnIntegrationConfigure_clicked()
 {
     qDebug() << "Showing config for plugin...";
     int currentRow = ui->lstIntegrationList->currentRow();
-    QDialog *dlg = m_plugins.at(currentRow)->configurationDialog(this);
+    QDialog *dlg = ExplorerApplication::pluginManager()->getPlugins().at(currentRow)->configurationDialog(this);
     dlg->setParent(this);
     dlg->setModal(true);
     int result = dlg->exec();
-    //delete dlg;
+    dlg->deleteLater();
 }
 
 void SettingsDialog::on_btnLayerAdd_clicked()

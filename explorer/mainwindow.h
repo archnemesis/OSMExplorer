@@ -2,39 +2,44 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QMap>
 #include <QHash>
-#include <QVariant>
-#include <QTimer>
 #include <QPalette>
-#include "slippymapwidget.h"
-#include "slippymapwidgetmarker.h"
-#include "slippymapwidgetlayer.h"
-#include "slippymapwidgetmarkermodel.h"
-#include "slippymaplayerobject.h"
-#include "slippymaplayermarker.h"
-#include "slippymaplayer.h"
-#include "slippymaplayermanager.h"
+
+#include <SlippyMap/SlippyMapWidget.h>
+
+#include "Weather/NationalWeatherServiceInterface.h"
+
+class WeatherStationMarker;
 
 namespace Ui {
 class MainWindow;
 }
 
+class DirectionListItemWidget;
+class ExplorerPluginInterface;
+class LocationDataProvider;
+class MapDataImportDialog;
+class QAction;
 class QComboBox;
 class QLabel;
 class QListWidgetItem;
-class DirectionListItemWidget;
-class SettingsDialog;
+class QMenu;
+class QMessageBox;
 class QNetworkAccessManager;
 class QNetworkReply;
-class QMessageBox;
-class QMenu;
-class QAction;
-class LocationDataProvider;
-class TextLogViewerForm;
-class ExplorerPluginInterface;
+class SettingsDialog;
 class SlippyMapLayerObjectPropertyPage;
-class MapDataImportDialog;
+class TextLogViewerForm;
+class WeatherForecastWindow;
+
+namespace SlippyMap
+{
+    class SlippyMapWidgetMarker;
+    class SlippyMapLayer;
+    class SlippyMapLayerPolygon;
+};
+
+using namespace SlippyMap;
 
 class MainWindow : public QMainWindow
 {
@@ -46,7 +51,7 @@ public:
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
-    void loadPlugins();
+    void loadPluginLayers();
     void loadMarkers();
     void setupContextMenus();
     void loadStartupSettings();
@@ -56,35 +61,48 @@ protected:
 private:
     Ui::MainWindow *ui;
     DirectionListItemWidget *m_currentRouteListItemWidget = nullptr;
+    MapDataImportDialog *m_importDialog = nullptr;
+    NationalWeatherServiceInterface *m_weatherService = nullptr;
     QAction *m_directionsFromHereAction;
     QAction *m_directionsToHereAction;
     QAction *m_markerDeleteAction = nullptr;
     QAction *m_markerPropertiesAction = nullptr;
+    QAction *m_markerVisibilityAction;
     QColor m_directionLineColor;
-    QHash<QString,SlippyMapLayerMarker*> m_gpsMarkers;
+    QHash<QString,SlippyMapWidgetMarker*> m_gpsMarkers;
     QLabel *m_statusBarGpsStatusLabel;
     QLabel *m_statusBarPositionLabel;
     QLabel *m_statusBarStatusLabel;
+    QLineEdit *m_toolBarLatitudeInput;
+    QLineEdit *m_toolBarLongitudeInput;
     QList<ExplorerPluginInterface*> m_plugins;
     QList<LocationDataProvider*> m_gpsProviders;
     QList<SlippyMapWidgetLayer*> m_layers;
     QList<SlippyMapWidgetMarker*> m_loadedMarkers;
+    QList<SlippyMapWidgetMarker*> m_weatherStationMarkers;
     QListWidgetItem *m_currentRouteListItem = nullptr;
-    QMap<ExplorerPluginInterface*,SlippyMapWidgetMarkerGroup> m_pluginMarkerGroupMap;
     QMap<SlippyMapWidgetMarker*,QListWidgetItem*> m_markerListItemMap;
     QMenu *m_markerMenu = nullptr;
     QMessageBox *m_loadingDialog = nullptr;
     QNetworkAccessManager *m_net;
+    QNetworkAccessManager *m_weatherNetworkAccessManager;
     QPalette m_defaultPalette;
+    QPointF m_contextMenuPoint;
     QPointF m_slippyContextMenuLocation;
+    QPushButton *m_toolBarLatLonButton;
     QTimer *m_saveSplitterPosTimer = nullptr;
     QTimer *m_saveWindowSizeTimer = nullptr;
     SettingsDialog *m_settingsDialog = nullptr;
-    MapDataImportDialog *m_importDialog = nullptr;
-    SlippyMapLayer *m_gpsMarkerLayer = nullptr;
     SlippyMapLayer *m_defaultMarkerLayer = nullptr;
+    SlippyMapLayer *m_gpsMarkerLayer = nullptr;
+    SlippyMapLayer* m_weatherLayer;
     SlippyMapLayerManager *m_layerManager = nullptr;
+    SlippyMapLayerObject *m_selectedObject = nullptr;
+    SlippyMapLayerObjectPropertyPage *m_selectedObjectPropertyPage = nullptr;
+    SlippyMapLayerPolygon *m_forecastZonePolygon;
     SlippyMapWidget::LineSet *m_currentRouteLineSet = nullptr;
+    WeatherForecastWindow *m_weatherForecastWindow = nullptr;
+    WeatherStationMarker *m_weatherStationMarker;
     TextLogViewerForm *m_nmeaLog = nullptr;
     int m_requestCount = 0;
 
@@ -102,8 +120,7 @@ private:
     QAction *m_copyLongitudeAction = nullptr;
     QAction *m_editShapeAction = nullptr;
     QAction *m_deleteShapeAction = nullptr;
-
-    SlippyMapLayerObject *m_selectedObject = nullptr;
+    QAction *m_getForecastHereAction = nullptr;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -113,10 +130,6 @@ protected slots:
     void onSlippyMapCursorPositionChanged(double latitude, double longitude);
     void onSlippyMapCursorEntered();
     void onSlippyMapCursorLeft();
-    //void onSlippyMapMarkerAdded(SlippyMapWidgetMarker *marker);
-    //void onSlippyMapMarkerDeleted(SlippyMapWidgetMarker *marker);
-    //void onSlippyMapMarkerUpdated(SlippyMapWidgetMarker *marker);
-    //void onSlippyMapMarkerEditRequested(SlippyMapWidgetMarker *marker);
     void onSlippyMapContextMenuActivated(double latitude, double longitude);
     void onSlippyMapSearchTextChanged(const QString &text);
     void onSlippyMapContextMenuRequested(const QPoint& point);
@@ -124,11 +137,18 @@ protected slots:
     void onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode);
     void onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object);
     void onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object);
+    void onSlippyMapLayerObjectDoubleClicked(SlippyMapLayerObject *object);
+    void onSlippyMapDragFinished();
+    void onWeatherService_stationListReady(
+            const QList<NationalWeatherServiceInterface::WeatherStation>& stations);
+    void onWeatherService_forecastReady(
+            const NationalWeatherServiceInterface::Forecast12Hr& forecast);
 
     void saveMarkers();
     void onDirectionsToHereTriggered();
     void onDirectionsFromHereTriggered();
     void onNetworkRequestFinished(QNetworkReply *reply);
+    void weatherNetworkAccessManager_onRequestFinished(QNetworkReply *reply);
     void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
     void onTvwMarkersContextMenuRequested(const QPoint& point);
     void onMarkerMenuPropertiesActionTriggered();

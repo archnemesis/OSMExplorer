@@ -1,0 +1,8 @@
+#ifndef RAINVIEWER_GLOBAL_H
+#define RAINVIEWER_GLOBAL_H
+
+#include <QtCore/qglobal.h>
+
+#define RAINVIEWERSHARED_EXPORT Q_DECL_EXPORT
+
+#endif // RAINVIEWER_GLOBAL_H

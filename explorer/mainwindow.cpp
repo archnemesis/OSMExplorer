@@ -1,77 +1,133 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "slippymapwidget.h"
-#include "slippymapwidgetlayer.h"
-#include "slippymaplayerpolygon.h"
-#include "slippymaplayermarker.h"
-#include "slippymaplayertrack.h"
-#include "slippymaplayerobjectpropertypage.h"
-#include "slippymaplayerobjectprovider.h"
-#include "markerdialog.h"
-#include "markerlistitemwidget.h"
-#include "directionlistitemwidget.h"
-#include "settingsdialog.h"
-#include "defaults.h"
-#include "nmeaseriallocationdataprovider.h"
-#include "gpssourcedialog.h"
-#include "textlogviewerform.h"
-#include "explorerplugininterface.h"
-#include "polygonshapepropertiesform.h"
-#include "gpxparser.h"
-#include "gpxtrack.h"
-#include "gpxtracksegment.h"
-#include "gpxmetadata.h"
-#include "gpxwaypoint.h"
-#include "mapdataimportdialog.h"
 
-#include <math.h>
+#include <QAction>
+#include <QFile>
+#include <QFileDialog>
 #include <QGuiApplication>
-#include <QPalette>
-#include <QDebug>
-#include <QComboBox>
-#include <QMessageBox>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QLabel>
 #include <QListWidgetItem>
-#include <QFileDialog>
-#include <QFile>
-#include <QDir>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QAction>
-#include <QSettings>
-#include <QTimer>
+#include <QMenu>
+#include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
-#include <QSslConfiguration>
-#include <QUrl>
-#include <QStyleFactory>
-#include <QStandardPaths>
+#include <QPalette>
 #include <QPluginLoader>
-#include <QMenu>
-#include <QAction>
+#include <QSettings>
+#include <QStandardPaths>
+#include <QTimer>
+#include <QUrl>
 #include <QVector>
+
+#include <SlippyMap/SlippyMapWidget.h>
+#include <SlippyMap/SlippyMapLayer.h>
+#include <SlippyMap/SlippyMapWidgetLayer.h>
+#include <SlippyMap/SlippyMapLayerPolygon.h>
+#include <SlippyMap/SlippyMapWidgetMarker.h>
+#include <SlippyMap/SlippyMapLayerManager.h>
+
+#include "SlippyMapLayerTrack.h"
+#include "PropertyPage/SlippyMapLayerObjectPropertyPage.h"
+#include "PropertyPage/SlippyMapLayerMarkerPropertyPage.h"
+#include "PropertyPage/SlippyMapLayerPolygonPropertyPage.h"
+#include "PropertyPage/SlippyMapLayerTrackPropertyPage.h"
+#include "Weather/WeatherForecastWindow.h"
+#include "Application/ExplorerApplication.h"
+
+#include "defaults.h"
+#include "directionlistitemwidget.h"
+#include "explorerplugininterface.h"
+#include "gpssourcedialog.h"
+#include "gpx/gpxmetadata.h"
+#include "gpx/gpxparser.h"
+#include "gpx/gpxtrack.h"
+#include "gpx/gpxtracksegment.h"
+#include "mapdataimportdialog.h"
+#include "nmeaseriallocationdataprovider.h"
+#include "settingsdialog.h"
+#include "textlogviewerform.h"
+
+#include <math.h>
+
+#include "Application/PluginManager.h"
+#include "Weather/WeatherStationMarker.h"
+#include "Weather/WeatherStationPropertyPage.h"
+
+#ifdef QT_DEBUG
+#include <QDebug>
+#endif
+
+using namespace SlippyMap;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    ui(new Ui::MainWindow),
+    m_forecastZonePolygon(nullptr),
+    m_directionsFromHereAction(nullptr),
+    m_directionsToHereAction(nullptr),
+    m_weatherStationMarker(nullptr)
 {
     ui->setupUi(this);
 
-    m_layerManager = new SlippyMapLayerManager();
-    ui->slippyMap->setLayerManager(m_layerManager);
-
-    loadPlugins();
-
-    ui->tvwMarkers->setModel(m_layerManager);
-    ui->tvwMarkers->setContextMenuPolicy(Qt::CustomContextMenu);
+    loadPluginLayers();
 
     ui->tabShapeEditor->setVisible(false);
     m_defaultPalette = qApp->palette();
 
+    /*
+     * Layer manager and tree view model
+    */
+    m_layerManager = new SlippyMapLayerManager();
+    ui->slippyMap->setLayerManager(m_layerManager);
+    ui->tvwMarkers->setModel(m_layerManager);
+    ui->tvwMarkers->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    /*
+     * Default layer setup
+     */
+    m_defaultMarkerLayer = new SlippyMapLayer();
+    m_defaultMarkerLayer->setName(tr("Markers"));
+    m_layerManager->addLayer(m_defaultMarkerLayer);
+    m_layerManager->setDefaultLayer(m_defaultMarkerLayer);
+
+    /*
+     * GPS Marker Layer
+     */
+    m_gpsMarkerLayer = new SlippyMapLayer();
+    m_gpsMarkerLayer->setName(tr("GPS"));
+    m_layerManager->addLayer(m_gpsMarkerLayer);
+
+    /*
+     * DeleteMe: Directions Stuff
+     */
     m_net = new QNetworkAccessManager();
     connect(m_net, &QNetworkAccessManager::finished, this, &MainWindow::onNetworkRequestFinished);
 
+    /*
+     * Weather Service Integration
+     */
+    m_weatherNetworkAccessManager = new QNetworkAccessManager();
+    connect(m_weatherNetworkAccessManager,
+        &QNetworkAccessManager::finished,
+        this,
+        &MainWindow::weatherNetworkAccessManager_onRequestFinished);
+
+    m_weatherService = new NationalWeatherServiceInterface(this);
+    connect(m_weatherService,
+        &NationalWeatherServiceInterface::stationListReady,
+        this,
+            &MainWindow::onWeatherService_stationListReady);
+
+    m_weatherLayer = new SlippyMapLayer();
+    m_weatherLayer->setName(tr("Weather"));
+    m_weatherLayer->setVisible(true);
+    m_layerManager->addLayer(m_weatherLayer);
+
+    /*
+     * SlippyMap Signals and Slots
+     */
     connect(ui->slippyMap, &SlippyMapWidget::centerChanged, this, &MainWindow::onSlippyMapCenterChanged);
     connect(ui->slippyMap, &SlippyMapWidget::zoomLevelChanged, this, &MainWindow::onSlippyMapZoomLevelChanged);
     connect(ui->slippyMap, &SlippyMapWidget::tileRequestInitiated, this, &MainWindow::onSlippyMapTileRequestStarted);
@@ -83,11 +139,55 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->slippyMap, &SlippyMapWidget::contextMenuRequested, this, &MainWindow::onSlippyMapContextMenuRequested);
     connect(ui->slippyMap, &SlippyMapWidget::drawModeChanged, this, &MainWindow::onSlippyMapDrawModeChanged);
     connect(ui->slippyMap, &SlippyMapWidget::rectSelected, this, &MainWindow::onSlippyMapRectSelected);
+    connect(ui->slippyMap, &SlippyMapWidget::objectActivated, this, &MainWindow::onSlippyMapLayerObjectActivated);
+    connect(ui->slippyMap, &SlippyMapWidget::objectDeactivated, this, &MainWindow::onSlippyMapLayerObjectDeactivated);
+    connect(ui->slippyMap, &SlippyMapWidget::objectDoubleClicked, this, &MainWindow::onSlippyMapLayerObjectDoubleClicked);
+    connect(ui->slippyMap, &SlippyMapWidget::dragFinished, this, &MainWindow::onSlippyMapDragFinished);
 
-    m_defaultMarkerLayer = new SlippyMapLayer();
-    m_defaultMarkerLayer->setName(tr("Markers"));
-    m_layerManager->addLayer(m_defaultMarkerLayer);
-    m_layerManager->setDefaultLayer(m_defaultMarkerLayer);
+    /*
+     * Lat/Lon inputs in the toolbar
+     */
+    m_toolBarLatitudeInput = new QLineEdit();
+    m_toolBarLatitudeInput->setPlaceholderText(tr("Latitude"));
+    m_toolBarLatitudeInput->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+    m_toolBarLongitudeInput = new QLineEdit();
+    m_toolBarLongitudeInput->setPlaceholderText(tr("Longitude"));
+    m_toolBarLongitudeInput->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+    m_toolBarLatLonButton = new QPushButton();
+    m_toolBarLatLonButton->setText(tr("Go"));
+
+    /*
+     * Text inputs for label and description that let you edit the marker label.
+     */
+    connect(ui->selectedObjectName,
+        &QLineEdit::textEdited,
+        [this](const QString& text) {
+        if (m_selectedObject) {
+            m_selectedObject->setLabel(text);
+        }
+    });
+
+    connect(ui->selectedObjectDescription, &QPlainTextEdit::textChanged, [this]() {
+        if (m_selectedObject) {
+            m_selectedObject->setDescription(ui->selectedObjectDescription->toPlainText());
+        }
+    });
+
+    /*
+     * Enable showing forecast data as the map moves
+     */
+    connect(ui->actionWeather_ShowWFOGrid,
+        &QAction::toggled,
+        [this](bool state){
+            if (state) {
+                m_weatherService->getWeatherStationList(QPointF(
+                        ui->slippyMap->longitude(),
+                        ui->slippyMap->latitude()));
+            }
+            else {
+                // TODO: remove the weather markers
+            }
+        });
 
     loadStartupSettings();
     setupContextMenus();
@@ -124,14 +224,34 @@ MainWindow::MainWindow(QWidget *parent) :
     m_markerMenu = new QMenu();
     m_markerMenu->setTitle(tr("Marker"));
 
+    m_markerVisibilityAction = new QAction();
+    m_markerVisibilityAction->setText(tr("Visible"));
+    m_markerVisibilityAction->setCheckable(true);
+    connect(ui->tvwMarkers, &QTreeView::activated, [this](const QModelIndex& index) {
+        if (index.parent().isValid()) return;
+        Q_ASSERT(index.row() < m_layerManager->layers().count());
+
+        SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
+        m_markerVisibilityAction->setChecked(layer->isVisible());
+    });
+    connect(m_markerVisibilityAction, &QAction::toggled, [this](bool checked) {
+        QModelIndex index = ui->tvwMarkers->currentIndex();
+        Q_ASSERT(index.row() < m_layerManager->layers().count());
+
+        SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
+        layer->setVisible(checked);
+    });
+
     m_markerPropertiesAction = new QAction();
     m_markerPropertiesAction->setText(tr("Properties..."));
     m_markerMenu->addAction(m_markerPropertiesAction);
+    m_markerMenu->addSeparator();
+    m_markerMenu->addAction(m_markerVisibilityAction);
     connect(m_markerPropertiesAction, &QAction::triggered, this, &MainWindow::onMarkerMenuPropertiesActionTriggered);
 
     qDebug() << "Loading plugin marker groups...";
 
-    for (ExplorerPluginInterface *plugin : m_plugins) {
+    for (ExplorerPluginInterface *plugin : ExplorerApplication::pluginManager()->getPlugins()) {
         QList<QDockWidget *> dockWidgets = plugin->dockWidgetList();
         for (QDockWidget *dockWidget : dockWidgets) {
             dockWidget->setParent(this);
@@ -156,66 +276,32 @@ void MainWindow::resizeEvent(QResizeEvent *event)
     }
 }
 
-void MainWindow::loadPlugins()
+void MainWindow::loadPluginLayers()
 {
-    QDir pluginsDir(qApp->applicationDirPath());
+    auto *pluginManager = ExplorerApplication::pluginManager();
 
-#if defined(Q_OS_WIN)
-    if (pluginsDir.dirName().toLower() == "debug" ||  pluginsDir.dirName().toLower() == "release") {
-        pluginsDir.cdUp();
-        pluginsDir.cdUp();
+    for (auto *tileLayer : pluginManager->getTileLayers()) {
+        ui->slippyMap->addLayer(tileLayer);
+        auto *action = new QAction();
+        action->setText(tileLayer->name());
+        action->setCheckable(true);
+        action->setChecked(true);
+        connect(action,
+            &QAction::triggered,
+            [this, tileLayer](bool checked) {
+            tileLayer->setVisible(checked);
+        });
+        ui->menuLayer_TileLayers->addAction(action);
     }
-#elif defined(Q_OS_MAC)
-    if (pluginsDir.dirName() == "MacOS") {
-        pluginsDir.cdUp();
-        pluginsDir.cdUp();
-        pluginsDir.cdUp();
-    }
-#endif
-    pluginsDir.cd("plugins");
 
-    foreach (QString fileName, pluginsDir.entryList(QDir::Files)) {
-        QPluginLoader pluginLoader(pluginsDir.absoluteFilePath(fileName));
-        QObject *plugin = pluginLoader.instance();
-        if (plugin) {
-            ExplorerPluginInterface *interface =
-                    qobject_cast<ExplorerPluginInterface*>(plugin);
-            interface->loadConfiguration();
-            m_plugins.append(interface);
-
-            QList<SlippyMapLayer*> pluginLayers = interface->layers();
-            for (SlippyMapLayer *layer : pluginLayers) {
-                m_layerManager->addLayer(layer);
-            }
-        }
+    for (auto *layer : pluginManager->getLayers()) {
+        m_layerManager->addLayer(layer);
     }
 }
 
 void MainWindow::loadMarkers()
 {
-//    QSettings settings;
 
-//    for (SlippyMapWidgetMarker *marker : m_loadedMarkers) {
-//        ui->slippyMap->deleteMarker(marker);
-//        delete marker;
-//    }
-//    m_loadedMarkers.clear();
-
-//    int count = settings.beginReadArray("places/my-places");
-//    for (int i = 0; i < count; i++) {
-//        settings.setArrayIndex(i);
-//        double lat = settings.value("latitude").toDouble();
-//        double lon = settings.value("longitude").toDouble();
-//        QPointF pos(lon, lat);
-//        QString label = settings.value("name").toString();
-//        SlippyMapWidgetMarker *marker =
-//                new SlippyMapWidgetMarker(pos, label);
-//        marker->setInformation(settings.value("information").toString());
-//        ui->slippyMap->addMarker(marker);
-//        m_loadedMarkers.append(marker);
-//        connect(marker, &SlippyMapWidgetMarker::changed, this, &MainWindow::saveMarkers);
-//    }
-//    settings.endArray();
 }
 
 void MainWindow::setupContextMenus()
@@ -262,6 +348,20 @@ void MainWindow::setupContextMenus()
     m_deleteShapeAction->setText(tr("Delete"));
     m_deleteShapeAction->setVisible(false);
 
+    m_getForecastHereAction = new QAction();
+    m_getForecastHereAction->setText(tr("Get Forecast Here"));
+    connect(m_getForecastHereAction,
+            &QAction::triggered,
+            [this]() {
+        if (m_weatherForecastWindow != nullptr) {
+            m_weatherForecastWindow->close();
+            m_weatherForecastWindow->deleteLater();
+        }
+
+        m_weatherForecastWindow = new WeatherForecastWindow(m_contextMenuPoint);
+        m_weatherForecastWindow->show();
+    });
+
     connect(m_directionsFromHereAction, &QAction::triggered, this, &MainWindow::onDirectionsFromHereTriggered);
     connect(m_directionsToHereAction, &QAction::triggered, this, &MainWindow::onDirectionsToHereTriggered);
 
@@ -273,6 +373,8 @@ void MainWindow::setupContextMenus()
     m_contextMenu->addAction(m_setMarkerLabelAction);
     m_contextMenu->addAction(m_editShapeAction);
     m_contextMenu->addAction(m_deleteShapeAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_getForecastHereAction);
     m_contextMenu->addSeparator();
     m_contextMenu->addAction(m_centerMapAction);
     m_contextMenu->addAction(m_zoomInHereMapAction);
@@ -302,6 +404,9 @@ void MainWindow::loadStartupSettings()
         QString name = settings.value("name").toString();
         QString description = settings.value("description").toString();
         QString tileUrl = settings.value("tileServer").toString();
+
+        qDebug() << "Loading layer" << name << ":" << tileUrl;
+
         int zOrder = settings.value("zOrder").toInt();
         bool visible = settings.value("visible", true).toBool();
         SlippyMapWidgetLayer *layer = new SlippyMapWidgetLayer(tileUrl);
@@ -309,6 +414,7 @@ void MainWindow::loadStartupSettings()
         layer->setDescription(description);
         layer->setZOrder(zOrder);
         layer->setVisible(visible);
+        layer->setBaseLayer(true);
         ui->slippyMap->addLayer(layer);
         m_layers.append(layer);
 
@@ -321,7 +427,7 @@ void MainWindow::loadStartupSettings()
             ui->slippyMap->update();
             saveLayers();
         });
-        ui->menuFileLayers->addAction(layerShowHide);
+        ui->menuLayer_TileLayers->addAction(layerShowHide);
     }
     settings.endArray();
 
@@ -362,12 +468,29 @@ void MainWindow::setupToolbar()
     ui->toolBar->addAction(ui->actionDrawRectangle);
     ui->toolBar->addAction(ui->actionDrawEllipse);
     ui->toolBar->addAction(ui->actionDrawPolygon);
+    ui->toolBar->addSeparator();
+    ui->toolBar->addWidget(m_toolBarLatitudeInput);
+    ui->toolBar->addWidget(m_toolBarLongitudeInput);
+    ui->toolBar->addWidget(m_toolBarLatLonButton);
 }
 
 void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
 {
-    (void)latitude;
-    (void)longitude;
+    QString cardinal_lat;
+    QString cardinal_lon;
+
+    if (latitude >= 0) cardinal_lat = "N";
+    else cardinal_lat = "S";
+
+    if (longitude >= 0) cardinal_lon = "E";
+    else cardinal_lon = "W";
+
+    m_toolBarLatitudeInput->setText(QString("%1 %2")
+        .arg(latitude, 0, 'f', 6)
+        .arg(cardinal_lat));
+    m_toolBarLongitudeInput->setText(QString("%1 %2")
+        .arg(longitude, 0, 'f', 6)
+        .arg(cardinal_lon));
 }
 
 void MainWindow::onSlippyMapZoomLevelChanged(int zoom)
@@ -509,6 +632,7 @@ void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
     geoPoint.setX(ui->slippyMap->widgetX2long(point.x()));
     geoPoint.setY(ui->slippyMap->widgetY2lat(point.y()));
 
+    m_contextMenuPoint = geoPoint;
     m_contextMenu->exec(ui->slippyMap->mapToGlobal(point));
 }
 
@@ -531,7 +655,7 @@ void MainWindow::onSlippyMapRectSelected(QRect rect)
     points[2] = QPointF(bottomRight);
     points[3] = QPointF(topleft.x(), bottomRight.y());
     SlippyMapLayerPolygon *poly = new SlippyMapLayerPolygon(points);
-    poly->setName(tr("New Rect"));
+    poly->setLabel(tr("New Rect"));
     poly->setDescription(tr("New rectangle"));
 //    poly->setBrush(br);
 //    poly->setPen(pn);
@@ -546,23 +670,47 @@ void MainWindow::onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode)
         ui->actionDrawRectangle->setChecked(false);
         ui->actionDrawPolygon->setChecked(false);
         ui->actionDrawEllipse->setChecked(false);
+        ui->slippyMap->setCursor(Qt::ArrowCursor);
         break;
     default:
+        ui->slippyMap->setCursor(Qt::CrossCursor);
         break;
     }
 }
 
 void MainWindow::onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object)
 {
+    qDebug() << "Selected object" << object->label();
+
     if (m_selectedObject != nullptr && m_selectedObject == object) {
         return;
     }
 
-    SlippyMapLayerObjectPropertyPage *ppage = object->propertyPage(this);
-    ui->tabShapeEditor->insertTab(1, ppage, ppage->tabTitle());
+    SlippyMapLayerObjectPropertyPage *propertyPage = nullptr;
+
+    if (auto *polygon = qobject_cast<SlippyMapLayerPolygon *>(object)) {
+        propertyPage = new SlippyMapLayerPolygonPropertyPage(polygon);
+        ui->tabShapeEditor->insertTab(1, propertyPage, propertyPage->tabTitle());
+    }
+    else if (auto *track = qobject_cast<SlippyMapLayerTrack *>(object)) {
+        propertyPage = new SlippyMapLayerTrackPropertyPage(track);
+        ui->tabShapeEditor->insertTab(1, propertyPage, propertyPage->tabTitle());
+    }
+
+    ui->selectedObjectName->setText(object->label());
+    ui->selectedObjectDescription->setPlainText(object->description());
     ui->tabShapeEditor->setVisible(true);
     ui->lblNoShapeSelected->setVisible(false);
+
     m_selectedObject = object;
+
+    //
+    // get rid of existing property page
+    //
+    if (m_selectedObjectPropertyPage != nullptr)
+        m_selectedObjectPropertyPage->deleteLater();
+
+    m_selectedObjectPropertyPage = propertyPage;
 }
 
 void MainWindow::onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object)
@@ -575,6 +723,67 @@ void MainWindow::onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object)
         ui->lblNoShapeSelected->setVisible(true);
         m_selectedObject = nullptr;
     }
+}
+
+void MainWindow::onSlippyMapLayerObjectDoubleClicked(SlippyMapLayerObject* object) {
+    if (m_selectedObject == nullptr) return;
+
+    SlippyMapLayerObjectPropertyPage *propertyPage = nullptr;
+
+    if (auto *polygon = qobject_cast<SlippyMapLayerPolygon *>(object)) {
+        propertyPage = new SlippyMapLayerPolygonPropertyPage(object);
+    }
+    else if (auto *track = qobject_cast<SlippyMapLayerTrack *>(object)) {
+        propertyPage = new SlippyMapLayerTrackPropertyPage(track);
+    }
+    else if (auto *weatherMarker = qobject_cast<WeatherStationMarker*>(object)) {
+        propertyPage = new WeatherStationPropertyPage(weatherMarker);
+    }
+    else if (auto *marker = qobject_cast<SlippyMapWidgetMarker*>(object)) {
+        propertyPage = new SlippyMapLayerMarkerPropertyPage(marker);
+    }
+
+    propertyPage->setWindowTitle(object->label());
+    propertyPage->setWindowFlags(
+        propertyPage->windowFlags() & ~Qt::WindowMaximizeButtonHint);
+    propertyPage->show();
+}
+
+void MainWindow::onSlippyMapDragFinished()
+{
+    if (ui->actionWeather_ShowWFOGrid->isChecked()) {
+        m_weatherService->getWeatherStationList(
+                QPointF(
+                        ui->slippyMap->longitude(),
+                        ui->slippyMap->latitude()));
+    }
+}
+
+void MainWindow::onWeatherService_stationListReady(
+        const QList<NationalWeatherServiceInterface::WeatherStation>& stations
+        )
+{
+    for (auto *marker : m_weatherStationMarkers) {
+        m_layerManager->removeLayerObject(m_weatherLayer, marker);
+        delete marker;
+    }
+
+    m_weatherStationMarkers.clear();
+
+    for (const auto& station : m_weatherService->stations()) {
+        auto *marker = new WeatherStationMarker(station.stationId);
+        marker->setLabel(station.stationId);
+        marker->setPosition(QPointF(station.longitude, station.latitude));
+        m_layerManager->addLayerObject(m_weatherLayer, marker);
+        m_weatherStationMarkers.append(marker);
+    }
+}
+
+void MainWindow::onWeatherService_forecastReady(
+        const NationalWeatherServiceInterface::Forecast12Hr& forecast
+        )
+{
+
 }
 
 void MainWindow::saveMarkers()
@@ -635,7 +844,7 @@ void MainWindow::onNetworkRequestFinished(QNetworkReply *reply)
                     points->append(QPointF(tuple[0].toDouble(), tuple[1].toDouble()));
                 }
 
-                SlippyMapWidget::LineSet *lineSet = new SlippyMapWidget::LineSet(points, 3, m_directionLineColor);
+                auto *lineSet = new SlippyMapWidget::LineSet(points, 3, m_directionLineColor);
                 //ui->slippyMap->addLineSet(lineSet);
                 m_currentRouteLineSet = lineSet;
             }
@@ -659,12 +868,12 @@ void MainWindow::onNetworkRequestFinished(QNetworkReply *reply)
                     double duration = step["duration"].toDouble();
                     QString instruction = step["instruction"].toString();
 
-                    DirectionListItemWidget *itemWidget = new DirectionListItemWidget();
+                    auto *itemWidget = new DirectionListItemWidget();
                     itemWidget->setInstruction(instruction);
                     itemWidget->setDistance(distance);
                     itemWidget->setDuration(duration);
 
-                    QListWidgetItem *item = new QListWidgetItem();
+                    auto *item = new QListWidgetItem();
                     item->setSizeHint(itemWidget->sizeHint());
                     ui->lstDirections->addItem(item);
                     ui->lstDirections->setItemWidget(item, itemWidget);
@@ -686,9 +895,44 @@ void MainWindow::onNetworkRequestFinished(QNetworkReply *reply)
     }
 }
 
+void MainWindow::weatherNetworkAccessManager_onRequestFinished(QNetworkReply* reply) {
+    if (reply->error() != QNetworkReply::NoError) {
+        qWarning() << "Weather request failed:" << reply->errorString();
+        reply->deleteLater();
+        return;
+    }
+
+    QByteArray replyData = reply->readAll();
+    QJsonDocument document = QJsonDocument::fromJson(replyData);
+
+    QJsonObject root = document.object();
+    QJsonObject properties = document["properties"].toObject();
+    QJsonObject relativeLocation = properties["relativeLocation"].toObject();
+    QJsonObject relativeLocationGeometry = relativeLocation["geometry"].toObject();
+    QJsonObject relativeLocationProperties = relativeLocation["relativeLocation"].toObject();
+    QString gridId = properties["gridId"].toString();
+    QString city = relativeLocationProperties["city"].toString();
+    QString state = relativeLocationProperties["state"].toString();
+
+    QJsonArray relativeLocationGeometryCoords = relativeLocationGeometry["coordinates"].toArray();
+    double latitude = relativeLocationGeometryCoords[1].toDouble();
+    double longitude = relativeLocationGeometryCoords[0].toDouble();
+
+    SlippyMapWidgetMarker *marker = new SlippyMapWidgetMarker();
+    marker->setLabel(gridId);
+    marker->setPosition(QPointF(longitude, latitude));
+    m_layerManager->addLayerObject(m_weatherLayer, marker);
+    m_weatherLayer->setVisible(true);
+    qDebug() << "Got weather station" << gridId;
+    qDebug() << "Got location" << city << "," << state;
+    qDebug() << "Got coordinates" << latitude << "," << longitude;
+
+    QString forecastZoneUrl = properties["forecastZone"].toString();
+}
+
 void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
 {
-    SlippyMapLayerMarker *marker;
+    SlippyMapWidgetMarker *marker;
 
     if (m_gpsMarkers.contains(identifier)) {
         marker = m_gpsMarkers[identifier];
@@ -696,34 +940,50 @@ void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF po
         marker->setPosition(position);
     }
     else {
-        marker = new SlippyMapLayerMarker(position);
+        marker = new SlippyMapWidgetMarker(position);
         marker->setLabel(metadata["gps_label"].toString());
         marker->setColor(Qt::green);
         marker->setEditable(false);
         marker->setMovable(false);
         m_gpsMarkers[identifier] = marker;
-        m_gpsMarkerLayer->addObject(marker);
+        m_layerManager->addLayerObject(m_gpsMarkerLayer, marker);
     }
+
+    QString cardinal_lat;
+    QString cardinal_lon;
+
+    if (position.y() >= 0) cardinal_lat = "N";
+    else cardinal_lat = "S";
+
+    if (position.x() >= 0) cardinal_lon = "E";
+    else cardinal_lon = "W";
+
+    m_statusBarGpsStatusLabel->setText(tr("GPS Postion: %1 %2 %3 %4")
+        .arg(position.y(), 0, 'f', 7)
+        .arg(cardinal_lat)
+        .arg(position.x(), 0, 'f', 7)
+        .arg(cardinal_lon));
 }
 
 void MainWindow::onTvwMarkersContextMenuRequested(const QPoint &point)
 {
     QModelIndex index = ui->tvwMarkers->indexAt(point);
     if (index.isValid()) {
-        m_markerMenu->exec(ui->tvwMarkers->viewport()->mapToGlobal(point));
+        if (!index.parent().isValid())
+            m_markerMenu->exec(ui->tvwMarkers->viewport()->mapToGlobal(point));
     }
 }
 
 void MainWindow::onMarkerMenuPropertiesActionTriggered()
 {
-    QModelIndex index = ui->tvwMarkers->currentIndex();
-    SlippyMapLayerObject *obj = static_cast<SlippyMapLayerObject*>(index.internalPointer());
-    if (m_layerManager->contains(obj)) {
-        SlippyMapLayerObjectPropertyPage *page = obj->propertyPage();
-        if (page != nullptr) {
-            page->show();
-        }
-    }
+    // QModelIndex index = ui->tvwMarkers->currentIndex();
+    // SlippyMapLayerObject *obj = static_cast<SlippyMapLayerObject*>(index.internalPointer());
+    // if (m_layerManager->contains(obj)) {
+    //     SlippyMapLayerObjectPropertyPage *page = obj->propertyPage();
+    //     if (page != nullptr) {
+    //         page->show();
+    //     }
+    // }
 }
 
 void MainWindow::onPluginLayerObjectProviderMarkerAdded(SlippyMapLayerObject *object)
@@ -737,10 +997,13 @@ void MainWindow::onAddMarkerActionTriggered()
     double lon = ui->slippyMap->widgetX2long(m_contextMenuLocation.x());
     double lat = ui->slippyMap->widgetY2lat(m_contextMenuLocation.y());
     QPointF markerPoint(lon, lat);
-    SlippyMapLayerMarker *marker = new SlippyMapLayerMarker(markerPoint);
+    SlippyMapWidgetMarker *marker = new SlippyMapWidgetMarker(markerPoint);
     marker->setLabel(SlippyMapWidget::latLonToString(lat, lon));
     marker->setDescription(tr("Test Label"));
-    m_layerManager->defaultLayer()->addObject(marker);
+    //m_layerManager->defaultLayer()->addObject(marker);
+    m_layerManager->addLayerObject(
+        m_layerManager->defaultLayer(),
+        marker);
 }
 
 void MainWindow::onDeleteMarkerActionTriggered()
@@ -924,10 +1187,10 @@ void MainWindow::on_btnDirectionsGo_clicked()
                     .arg(ui->lneDirectionsFinish->text());
             qDebug() << "Requesting from" << req;
 
-            QSslConfiguration config = QSslConfiguration::defaultConfiguration();
-            config.setProtocol(QSsl::TlsV1_2);
+            //QSslConfiguration config = QSslConfiguration::defaultConfiguration();
+            //config.setProtocol(QSsl::TlsV1_2);
             QNetworkRequest request(req);
-            request.setSslConfiguration(config);
+            //request.setSslConfiguration(config);
             m_net->get(request);
 
             if (m_loadingDialog == nullptr) {
@@ -1050,24 +1313,20 @@ void MainWindow::on_actionImport_triggered()
         parser.read(&file);
 
         qDebug() << "Found" << parser.tracks().count() << "tracks";
-        qDebug() << "Found" << parser.waypoints().count() << "waypoints";
 
-        for (GPXTrack *track : parser.tracks()) {
-            for (GPXTrackSegment *segment : track->segments()) {
-                QList<QPointF> points;
-                for (GPXWaypoint *waypoint : segment->points()) {
-                    points.append(QPointF(waypoint->longitude(), waypoint->latitude()));
-                    qDebug() << "Added point" << points.last();
-                }
-                SlippyMapLayerTrack *track = new SlippyMapLayerTrack(QVector<QPointF>::fromList(points));
-                QString trackName = parser.metadata()->name();
+        for (const GPXTrack& track : parser.tracks()) {
+            qDebug() << "Found" << track.segments().count() << "segments";
+            for (const GPXTrackSegment& segment : track.segments()) {
+                qDebug() << "Found" << segment.points().count() << "points";
+                auto *layerTrack = new SlippyMapLayerTrack(track);
+                QString trackName = parser.metadata().name();
                 if (trackName.isEmpty()) {
                     QFileInfo trackFileInfo(fileName);
                     trackName = trackFileInfo.baseName();
                 }
-                track->setName(trackName);
-                track->setDescription(parser.metadata()->description());
-                m_layerManager->addLayerObject(m_defaultMarkerLayer, track);
+                layerTrack->setLabel(trackName);
+                layerTrack->setDescription(parser.metadata().description());
+                m_layerManager->addLayerObject(m_defaultMarkerLayer, layerTrack);
             }
         }
     }

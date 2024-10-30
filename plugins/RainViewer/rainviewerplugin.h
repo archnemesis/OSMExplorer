@@ -1,29 +1,27 @@
-#ifndef APRSEXPLORERPLUGIN_H
-#define APRSEXPLORERPLUGIN_H
+#ifndef RAINVIEWERPLUGIN_H
+#define RAINVIEWERPLUGIN_H
 
 #include <QObject>
 #include "explorerplugininterface.h"
 
-class QAction;
-class QMenu;
-class QDockWidget;
-class QDialog;
-
 namespace SlippyMap
 {
-    class SlippyMapLayer;
     class SlippyMapWidgetLayer;
+    class SlippyMapLayer;
 }
-
 using namespace SlippyMap;
 
-class APRSExplorerPlugin : public QObject, public ExplorerPluginInterface
+class QDialog;
+class QTimer;
+class RainViewerSlippyMapTileLayer;
+
+class RainViewerExplorerPlugin : public QObject, public ExplorerPluginInterface
 {
     Q_OBJECT
-    Q_PLUGIN_METADATA(IID "org.robingingras.osmexplorer.ExplorerPluginInterface")
+    Q_PLUGIN_METADATA(IID "org.robingingras.osmexplorer.RainViewerExplorerPlugin")
     Q_INTERFACES(ExplorerPluginInterface)
 public:
-    APRSExplorerPlugin();
+    RainViewerExplorerPlugin();
 
     QString name() const;
     QString description() const;
@@ -36,6 +34,10 @@ public:
     QList<SlippyMapLayer*> layers();
     QList<SlippyMapWidgetLayer*> tileLayers();
     void loadConfiguration();
+
+private:
+    RainViewerSlippyMapTileLayer *m_radarLayer;
+    QTimer *m_radarFrameTimer;
 };
 
-#endif // APRSEXPLORERPLUGIN_H
+#endif // RAINVIEWERPLUGIN_H

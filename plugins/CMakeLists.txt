@@ -1,0 +1,2 @@
+add_subdirectory(APRS)
+add_subdirectory(RainViewer)

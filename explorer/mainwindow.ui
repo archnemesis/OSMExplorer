@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>939</width>
-    <height>682</height>
+    <height>712</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -55,8 +55,8 @@
    </property>
    <property name="iconSize">
     <size>
-     <width>48</width>
-     <height>48</height>
+     <width>32</width>
+     <height>32</height>
     </size>
    </property>
    <attribute name="toolBarArea">
@@ -72,24 +72,13 @@
      <x>0</x>
      <y>0</y>
      <width>939</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>Map</string>
+     <string>File</string>
     </property>
-    <widget class="QMenu" name="menuFileLayers">
-     <property name="title">
-      <string>Layers</string>
-     </property>
-     <property name="icon">
-      <iconset resource="resources.qrc">
-       <normaloff>:/icons/layers.png</normaloff>:/icons/layers.png</iconset>
-     </property>
-     <addaction name="actionFileLayersConfigure"/>
-     <addaction name="separator"/>
-    </widget>
     <widget class="QMenu" name="menuFileGps">
      <property name="title">
       <string>GPS</string>
@@ -101,13 +90,22 @@
      <addaction name="actionMapGpsAddSource"/>
      <addaction name="separator"/>
     </widget>
-    <addaction name="actionFilePrint"/>
+    <widget class="QMenu" name="menuRecent">
+     <property name="title">
+      <string>Recent</string>
+     </property>
+     <addaction name="actionFile_Recent_ClearMenu"/>
+     <addaction name="separator"/>
+    </widget>
+    <addaction name="actionFile_NewWorkspace"/>
+    <addaction name="actionFile_OpenWorkspace"/>
+    <addaction name="menuRecent"/>
+    <addaction name="separator"/>
+    <addaction name="actionFile_Print"/>
     <addaction name="actionImport"/>
     <addaction name="actionFileExport"/>
     <addaction name="separator"/>
     <addaction name="menuFileGps"/>
-    <addaction name="menuFileLayers"/>
-    <addaction name="actionFileSettings"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -154,8 +152,39 @@
      <string>Tools</string>
     </property>
     <addaction name="actionToolsOSMImport"/>
+    <addaction name="separator"/>
+    <addaction name="actionFileSettings"/>
+   </widget>
+   <widget class="QMenu" name="menuLayer">
+    <property name="title">
+     <string>Layer</string>
+    </property>
+    <widget class="QMenu" name="menuLayer_TileLayers">
+     <property name="title">
+      <string>Tile Layers</string>
+     </property>
+     <addaction name="actionLayer_TileLayers_HideAll"/>
+     <addaction name="actionLayer_TileLayers_ShowAll"/>
+     <addaction name="separator"/>
+    </widget>
+    <addaction name="actionLayer_New"/>
+    <addaction name="actionLayer_Rename"/>
+    <addaction name="actionLayer_Delete"/>
+    <addaction name="separator"/>
+    <addaction name="actionLayer_SortAscending"/>
+    <addaction name="actionLayer_SortDescending"/>
+    <addaction name="separator"/>
+    <addaction name="menuLayer_TileLayers"/>
+   </widget>
+   <widget class="QMenu" name="menuWeather">
+    <property name="title">
+     <string>Weather</string>
+    </property>
+    <addaction name="actionWeather_ShowWFOGrid"/>
    </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuLayer"/>
+   <addaction name="menuWeather"/>
    <addaction name="menuDraw"/>
    <addaction name="menuMarker"/>
    <addaction name="menuView"/>
@@ -388,7 +417,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEdit"/>
+          <widget class="QLineEdit" name="selectedObjectName"/>
          </item>
          <item>
           <widget class="QLabel" name="label_4">
@@ -398,7 +427,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPlainTextEdit" name="plainTextEdit"/>
+          <widget class="QPlainTextEdit" name="selectedObjectDescription"/>
          </item>
          <item>
           <widget class="QLabel" name="label_5">
@@ -408,7 +437,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QTreeView" name="treeView"/>
+          <widget class="QTreeView" name="selectedObjectAttributes"/>
          </item>
         </layout>
        </widget>
@@ -604,7 +633,7 @@
     <string>Configure...</string>
    </property>
   </action>
-  <action name="actionFilePrint">
+  <action name="actionFile_Print">
    <property name="text">
     <string>Print...</string>
    </property>
@@ -634,13 +663,71 @@
     <string>OSM Import...</string>
    </property>
   </action>
+  <action name="actionLayer_New">
+   <property name="text">
+    <string>New...</string>
+   </property>
+  </action>
+  <action name="actionLayer_Delete">
+   <property name="text">
+    <string>Delete</string>
+   </property>
+  </action>
+  <action name="actionLayer_Rename">
+   <property name="text">
+    <string>Rename...</string>
+   </property>
+  </action>
+  <action name="actionLayer_SortAscending">
+   <property name="text">
+    <string>Sort Ascending</string>
+   </property>
+  </action>
+  <action name="actionLayer_SortDescending">
+   <property name="text">
+    <string>Sort Descending</string>
+   </property>
+  </action>
+  <action name="actionLayer_TileLayers_HideAll">
+   <property name="text">
+    <string>Hide All</string>
+   </property>
+  </action>
+  <action name="actionLayer_TileLayers_ShowAll">
+   <property name="text">
+    <string>Show All</string>
+   </property>
+  </action>
+  <action name="actionFile_NewWorkspace">
+   <property name="text">
+    <string>New Workspace...</string>
+   </property>
+  </action>
+  <action name="actionFile_OpenWorkspace">
+   <property name="text">
+    <string>Open Workspace...</string>
+   </property>
+  </action>
+  <action name="actionFile_Recent_ClearMenu">
+   <property name="text">
+    <string>Clear Menu</string>
+   </property>
+  </action>
+  <action name="actionWeather_ShowWFOGrid">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show WFO Grid</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
    <class>SlippyMapWidget</class>
    <extends>QWidget</extends>
-   <header location="global">slippymapwidget.h</header>
+   <header location="global">SlippyMap/SlippyMapWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

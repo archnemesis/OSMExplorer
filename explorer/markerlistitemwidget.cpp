@@ -1,6 +1,8 @@
 #include "markerlistitemwidget.h"
 #include "ui_markerlistitemwidget.h"
-#include "slippymapwidget.h"
+#include <SlippyMap/SlippyMapWidget.h>
+
+using namespace SlippyMap;
 
 MarkerListItemWidget::MarkerListItemWidget(QWidget *parent) :
     QWidget(parent),
