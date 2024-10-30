@@ -32,6 +32,7 @@
 #include "PropertyPage/SlippyMapLayerObjectPropertyPage.h"
 #include "PropertyPage/SlippyMapLayerPolygonPropertyPage.h"
 #include "PropertyPage/SlippyMapLayerTrackPropertyPage.h"
+#include "Weather/WeatherForecastWindow.h"
 
 #include "defaults.h"
 #include "directionlistitemwidget.h"
@@ -112,13 +113,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     m_weatherService = new NationalWeatherServiceInterface(this);
     connect(m_weatherService,
-        &NationalWeatherServiceInterface::forecastReady,
+        &NationalWeatherServiceInterface::stationListReady,
         this,
-        &MainWindow::onWeatherService_forecastReady);
+            &MainWindow::onWeatherService_stationListReady);
 
     m_weatherLayer = new SlippyMapLayer();
     m_weatherLayer->setName(tr("Weather"));
-    m_weatherLayer->setVisible(false);
+    m_weatherLayer->setVisible(true);
     m_layerManager->addLayer(m_weatherLayer);
 
     /*
@@ -139,6 +140,18 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->slippyMap, &SlippyMapWidget::objectDeactivated, this, &MainWindow::onSlippyMapLayerObjectDeactivated);
     connect(ui->slippyMap, &SlippyMapWidget::objectDoubleClicked, this, &MainWindow::onSlippyMapLayerObjectDoubleClicked);
     connect(ui->slippyMap, &SlippyMapWidget::dragFinished, this, &MainWindow::onSlippyMapDragFinished);
+
+    /*
+     * Lat/Lon inputs in the toolbar
+     */
+    m_toolBarLatitudeInput = new QLineEdit();
+    m_toolBarLatitudeInput->setPlaceholderText(tr("Latitude"));
+    m_toolBarLatitudeInput->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+    m_toolBarLongitudeInput = new QLineEdit();
+    m_toolBarLongitudeInput->setPlaceholderText(tr("Longitude"));
+    m_toolBarLongitudeInput->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+    m_toolBarLatLonButton = new QPushButton();
+    m_toolBarLatLonButton->setText(tr("Go"));
 
     /*
      * Text inputs for label and description that let you edit the marker label.
@@ -164,9 +177,9 @@ MainWindow::MainWindow(QWidget *parent) :
         &QAction::toggled,
         [this](bool state){
             if (state) {
-                m_weatherService->getForecast(QPointF(
-                    ui->slippyMap->longitude(),
-                    ui->slippyMap->latitude()));
+                m_weatherService->getWeatherStationList(QPointF(
+                        ui->slippyMap->longitude(),
+                        ui->slippyMap->latitude()));
             }
             else {
                 // TODO: remove the weather markers
@@ -394,6 +407,20 @@ void MainWindow::setupContextMenus()
     m_deleteShapeAction->setText(tr("Delete"));
     m_deleteShapeAction->setVisible(false);
 
+    m_getForecastHereAction = new QAction();
+    m_getForecastHereAction->setText(tr("Get Forecast Here"));
+    connect(m_getForecastHereAction,
+            &QAction::triggered,
+            [this]() {
+        if (m_weatherForecastWindow != nullptr) {
+            m_weatherForecastWindow->close();
+            m_weatherForecastWindow->deleteLater();
+        }
+
+        m_weatherForecastWindow = new WeatherForecastWindow(m_contextMenuPoint);
+        m_weatherForecastWindow->show();
+    });
+
     connect(m_directionsFromHereAction, &QAction::triggered, this, &MainWindow::onDirectionsFromHereTriggered);
     connect(m_directionsToHereAction, &QAction::triggered, this, &MainWindow::onDirectionsToHereTriggered);
 
@@ -405,6 +432,8 @@ void MainWindow::setupContextMenus()
     m_contextMenu->addAction(m_setMarkerLabelAction);
     m_contextMenu->addAction(m_editShapeAction);
     m_contextMenu->addAction(m_deleteShapeAction);
+    m_contextMenu->addSeparator();
+    m_contextMenu->addAction(m_getForecastHereAction);
     m_contextMenu->addSeparator();
     m_contextMenu->addAction(m_centerMapAction);
     m_contextMenu->addAction(m_zoomInHereMapAction);
@@ -499,13 +528,28 @@ void MainWindow::setupToolbar()
     ui->toolBar->addAction(ui->actionDrawEllipse);
     ui->toolBar->addAction(ui->actionDrawPolygon);
     ui->toolBar->addSeparator();
-    ui->toolBar->addWidget(new QLineEdit("Test line edit..."));
+    ui->toolBar->addWidget(m_toolBarLatitudeInput);
+    ui->toolBar->addWidget(m_toolBarLongitudeInput);
+    ui->toolBar->addWidget(m_toolBarLatLonButton);
 }
 
 void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
 {
-    (void)latitude;
-    (void)longitude;
+    QString cardinal_lat;
+    QString cardinal_lon;
+
+    if (latitude >= 0) cardinal_lat = "N";
+    else cardinal_lat = "S";
+
+    if (longitude >= 0) cardinal_lon = "E";
+    else cardinal_lon = "W";
+
+    m_toolBarLatitudeInput->setText(QString("%1 %2")
+        .arg(latitude, 0, 'f', 6)
+        .arg(cardinal_lat));
+    m_toolBarLongitudeInput->setText(QString("%1 %2")
+        .arg(longitude, 0, 'f', 6)
+        .arg(cardinal_lon));
 }
 
 void MainWindow::onSlippyMapZoomLevelChanged(int zoom)
@@ -647,6 +691,7 @@ void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
     geoPoint.setX(ui->slippyMap->widgetX2long(point.x()));
     geoPoint.setY(ui->slippyMap->widgetY2lat(point.y()));
 
+    m_contextMenuPoint = geoPoint;
     m_contextMenu->exec(ui->slippyMap->mapToGlobal(point));
 }
 
@@ -768,14 +813,16 @@ void MainWindow::onSlippyMapLayerObjectDoubleClicked(SlippyMapLayerObject* objec
 void MainWindow::onSlippyMapDragFinished()
 {
     if (ui->actionWeather_ShowWFOGrid->isChecked()) {
-        m_weatherService->getForecast(
-            QPointF(
-                ui->slippyMap->longitude(),
-                ui->slippyMap->latitude()));
+        m_weatherService->getWeatherStationList(
+                QPointF(
+                        ui->slippyMap->longitude(),
+                        ui->slippyMap->latitude()));
     }
 }
 
-void MainWindow::onWeatherService_forecastReady()
+void MainWindow::onWeatherService_stationListReady(
+        const QList<NationalWeatherServiceInterface::WeatherStation>& stations
+        )
 {
     for (auto *marker : m_weatherStationMarkers) {
         m_layerManager->removeLayerObject(m_weatherLayer, marker);
@@ -791,6 +838,13 @@ void MainWindow::onWeatherService_forecastReady()
         m_layerManager->addLayerObject(m_weatherLayer, marker);
         m_weatherStationMarkers.append(marker);
     }
+}
+
+void MainWindow::onWeatherService_forecastReady(
+        const NationalWeatherServiceInterface::Forecast12Hr& forecast
+        )
+{
+
 }
 
 void MainWindow::saveMarkers()
@@ -955,7 +1009,6 @@ void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF po
         m_gpsMarkers[identifier] = marker;
         m_layerManager->addLayerObject(m_gpsMarkerLayer, marker);
     }
-
 
     QString cardinal_lat;
     QString cardinal_lon;

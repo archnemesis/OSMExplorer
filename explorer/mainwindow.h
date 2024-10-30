@@ -30,6 +30,7 @@ class QNetworkReply;
 class SettingsDialog;
 class SlippyMapLayerObjectPropertyPage;
 class TextLogViewerForm;
+class WeatherForecastWindow;
 
 namespace SlippyMap
 {
@@ -72,6 +73,8 @@ private:
     QLabel *m_statusBarGpsStatusLabel;
     QLabel *m_statusBarPositionLabel;
     QLabel *m_statusBarStatusLabel;
+    QLineEdit *m_toolBarLatitudeInput;
+    QLineEdit *m_toolBarLongitudeInput;
     QList<ExplorerPluginInterface*> m_plugins;
     QList<LocationDataProvider*> m_gpsProviders;
     QList<SlippyMapWidgetLayer*> m_layers;
@@ -84,7 +87,9 @@ private:
     QNetworkAccessManager *m_net;
     QNetworkAccessManager *m_weatherNetworkAccessManager;
     QPalette m_defaultPalette;
+    QPointF m_contextMenuPoint;
     QPointF m_slippyContextMenuLocation;
+    QPushButton *m_toolBarLatLonButton;
     QTimer *m_saveSplitterPosTimer = nullptr;
     QTimer *m_saveWindowSizeTimer = nullptr;
     SettingsDialog *m_settingsDialog = nullptr;
@@ -96,6 +101,7 @@ private:
     SlippyMapLayerObjectPropertyPage *m_selectedObjectPropertyPage = nullptr;
     SlippyMapLayerPolygon *m_forecastZonePolygon;
     SlippyMapWidget::LineSet *m_currentRouteLineSet = nullptr;
+    WeatherForecastWindow *m_weatherForecastWindow = nullptr;
     WeatherStationMarker *m_weatherStationMarker;
     TextLogViewerForm *m_nmeaLog = nullptr;
     int m_requestCount = 0;
@@ -114,6 +120,7 @@ private:
     QAction *m_copyLongitudeAction = nullptr;
     QAction *m_editShapeAction = nullptr;
     QAction *m_deleteShapeAction = nullptr;
+    QAction *m_getForecastHereAction = nullptr;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -132,7 +139,10 @@ protected slots:
     void onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object);
     void onSlippyMapLayerObjectDoubleClicked(SlippyMapLayerObject *object);
     void onSlippyMapDragFinished();
-    void onWeatherService_forecastReady();
+    void onWeatherService_stationListReady(
+            const QList<NationalWeatherServiceInterface::WeatherStation>& stations);
+    void onWeatherService_forecastReady(
+            const NationalWeatherServiceInterface::Forecast12Hr& forecast);
 
     void saveMarkers();
     void onDirectionsToHereTriggered();

@@ -6,6 +6,9 @@
 
 #include <QLabel>
 #include <QFormLayout>
+#include <QTableWidget>
+#include <QTableWidgetItem>
+#include <QTabWidget>
 
 WeatherStationPropertyPage::WeatherStationPropertyPage(WeatherStationMarker *object) :
     SlippyMapLayerObjectPropertyPage(object) {
@@ -36,6 +39,9 @@ void WeatherStationPropertyPage::nationalWeatherServiceInterface_onLatestObserva
 }
 
 void WeatherStationPropertyPage::setupUi() {
+    /*
+     * Observation Tab
+     */
     m_temperatureLabel = new QLabel(this);
     m_temperatureLabel->setText("0.0");
 
@@ -62,5 +68,13 @@ void WeatherStationPropertyPage::setupUi() {
     layout->addRow(tr("Dew Point:"), m_dewPointLabel);
     layout->addRow(tr("Timestamp"), m_timestampLabel);
 
-    setLayout(layout);
+    auto *observationWidget = new QWidget();
+    observationWidget->setLayout(layout);
+
+    m_tabWidget = new QTabWidget();
+    m_tabWidget->addTab(observationWidget, tr("Observation"));
+
+    auto *vLayout = new QVBoxLayout();
+    vLayout->addWidget(m_tabWidget);
+    setLayout(vLayout);
 }

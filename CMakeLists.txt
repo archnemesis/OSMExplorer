@@ -11,8 +11,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 cmake_policy(SET CMP0074 NEW)
 
-find_package(QT NAMES Qt5 REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort)
+find_package(QT NAMES Qt5 REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort Charts)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort Charts)
 
 add_subdirectory(SlippyMap)
 add_subdirectory(LocationServices)
@@ -77,14 +77,16 @@ set(PROJECT_SOURCES
         explorer/textlogviewerform.cpp
         explorer/textlogviewerform.h
         explorer/textlogviewerform.ui
-        explorer/SlippyMapWeatherMarker.cpp
-        explorer/SlippyMapWeatherMarker.h
         explorer/Weather/NationalWeatherServiceInterface.cpp
         explorer/Weather/NationalWeatherServiceInterface.h
         explorer/Weather/WeatherStationPropertyPage.cpp
         explorer/Weather/WeatherStationPropertyPage.h
         explorer/Weather/WeatherStationMarker.cpp
         explorer/Weather/WeatherStationMarker.h
+        explorer/Weather/WeatherForecastWindow.cpp
+        explorer/Weather/WeatherForecastWindow.h
+        explorer/Weather/ForecastPeriodWidget.cpp
+        explorer/Weather/ForecastPeriodWidget.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -106,6 +108,7 @@ target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::Network)
 target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::Multimedia)
 target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::SerialPort)
+target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::Charts)
 target_link_libraries(osmexplorer PRIVATE SlippyMap)
 target_link_libraries(osmexplorer PRIVATE LocationServices)
 

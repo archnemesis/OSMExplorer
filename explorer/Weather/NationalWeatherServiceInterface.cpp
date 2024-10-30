@@ -18,9 +18,9 @@ NationalWeatherServiceInterface::NationalWeatherServiceInterface(QObject* parent
         &NationalWeatherServiceInterface::networkManager_onRequestFinished);
 }
 
-void NationalWeatherServiceInterface::getForecast(const QPointF& location)
+void NationalWeatherServiceInterface::getWeatherStationList(const QPointF& location)
 {
-    m_requestState = Forecast;
+    m_requestState = StationList;
 
     QString url = QString("https://api.weather.gov/points/%1,%2")
                   .arg(location.y(), 0, 'f', 4)
@@ -33,6 +33,32 @@ void NationalWeatherServiceInterface::getForecast(const QPointF& location)
 void NationalWeatherServiceInterface::getLatestObservation(const QString& stationId) {
     m_requestState = ObservationLatest;
     QString url = QString("https://api.weather.gov/stations/%1/observations/latest").arg(stationId);
+    QNetworkRequest request = QNetworkRequest(url);
+    m_networkManager.get(request);
+}
+
+void NationalWeatherServiceInterface::getForecast(const QPointF& location)
+{
+    m_requestState = Forecast;
+
+    QString url = QString("https://api.weather.gov/points/%1,%2")
+            .arg(location.y(), 0, 'f', 4)
+            .arg(location.x(), 0, 'f', 4);
+    qDebug() << "Getting forecast data from" << url;
+
+    QNetworkRequest request = QNetworkRequest(url);
+    m_networkManager.get(request);
+}
+
+void NationalWeatherServiceInterface::getRelativeLocation(const QPointF &location)
+{
+    m_requestState = RelativeLocation;
+
+    QString url = QString("https://api.weather.gov/points/%1,%2")
+            .arg(location.y(), 0, 'f', 4)
+            .arg(location.x(), 0, 'f', 4);
+    qDebug() << "Getting forecast data from" << url;
+
     QNetworkRequest request = QNetworkRequest(url);
     m_networkManager.get(request);
 }
@@ -98,13 +124,86 @@ void NationalWeatherServiceInterface::networkManager_onRequestFinished(QNetworkR
         }
 
         QJsonObject properties = document["properties"].toObject();
+        QString forecastUrl = properties["forecast"].toString();
+        QString hourlyForecastUrl = properties["forecastHourly"].toString();
+
+        QJsonObject relativeLocation = properties["relativeLocation"].toObject();
+        QJsonObject relativeLocationProps = relativeLocation["properties"].toObject();
+        QString city = relativeLocationProps["city"].toString();
+        QString state = relativeLocationProps["state"].toString();
+
+        m_city = city;
+        m_state = state;
+
+        m_requestState = Forecast2;
+        m_hourlyForecastUrl = hourlyForecastUrl;
+        QNetworkRequest request = QNetworkRequest(QUrl(forecastUrl));
+        m_networkManager.get(request);
+
+        break;
+    }
+    case Forecast2:
+    case Forecast3: {
+        if (!root.contains("properties")) {
+            qCritical() << "Properties element missing in response";
+            break;
+        }
+
+        QJsonObject properties = root["properties"].toObject();
+        QJsonArray periods = properties["periods"].toArray();
+
+        Forecast12Hr forecast;
+        forecast.city = m_city;
+        forecast.state = m_state;
+
+        for (const auto& period : periods) {
+            QJsonObject periodObject = period.toObject();
+            ForecastPeriod fp;
+            fp.number = periodObject["number"].toInt();
+            fp.name = periodObject["name"].toString();
+            fp.startTime = QDateTime::fromString(periodObject["startTime"].toString());
+            fp.endTime = QDateTime::fromString(periodObject["endTime"].toString());
+            fp.isDaytime = periodObject["isDaytime"].toBool();
+            fp.temperature = periodObject["temperature"].toDouble();
+            fp.temperatureUnit = periodObject["temperatureUnit"].toString();
+            fp.temperatureTrend = periodObject["temperatureTrend"].toString();
+            fp.windSpeed = periodObject["windSpeed"].toString();
+            fp.windDirection = periodObject["windDirection"].toString();
+            fp.icon = periodObject["icon"].toString();
+            fp.shortForecast = periodObject["shortForecast"].toString();
+            fp.detailedForecast = periodObject["detailedForecast"].toString();
+
+            QJsonObject precip = periodObject["probabilityOfPrecipitation"].toObject();
+            fp.probabilityOfPrecipitation = precip["value"].toDouble();
+
+            forecast.periods.append(fp);
+        }
+
+        if (m_requestState == Forecast2) {
+            m_forecast = forecast;
+            emit forecastReady(m_forecast);
+            m_requestState = Forecast3;
+            QNetworkRequest request = QNetworkRequest(QUrl(m_hourlyForecastUrl));
+            m_networkManager.get(request);
+        }
+        else if (m_requestState == Forecast3) {
+            m_forecastHourly = forecast;
+            emit hourlyForecastReady(m_forecastHourly);
+        }
+
+        break;
+    }
+    case StationList: {
+        if (!root.contains("properties")) {
+            qCritical() << "Properties element missing in response";
+            break;
+        }
+
+        QJsonObject properties = document["properties"].toObject();
         QJsonObject relativeLocation = properties["relativeLocation"].toObject();
         QJsonObject relativeLocationGeometry = relativeLocation["geometry"].toObject();
         QJsonObject relativeLocationProperties = relativeLocation["relativeLocation"].toObject();
         QJsonArray relativeLocationGeometryCoords = relativeLocationGeometry["coordinates"].toArray();
-
-        // save for later
-        m_observationStationsUrl = properties["observationStations"].toString();
 
         m_gridId = properties["gridId"].toString();
         m_city = relativeLocationProperties["city"].toString();
@@ -118,37 +217,14 @@ void NationalWeatherServiceInterface::networkManager_onRequestFinished(QNetworkR
         m_latitude = relativeLocationGeometryCoords[1].toDouble();
         m_longitude = relativeLocationGeometryCoords[0].toDouble();
 
-        QString forecastZoneUrl = properties["forecastZone"].toString();
-        m_requestState = ForecastZone;
-        QNetworkRequest request = QNetworkRequest(QUrl(forecastZoneUrl));
+        m_requestState = StationList2;
+        QString url = properties["observationStations"].toString();
+        QNetworkRequest request = QNetworkRequest(QUrl(url));
         m_networkManager.get(request);
 
         break;
     }
-    case ForecastZone: {
-        QJsonObject geometry = document["geometry"].toObject();
-        QJsonArray coordinates = geometry["coordinates"].toArray();
-        QJsonArray polygon = coordinates[0].toArray();
-
-        m_forecastZone.clear();
-        m_forecastZone.reserve(polygon.size());
-
-        for (const auto& point : polygon) {
-            QJsonArray pointArray = point.toArray();
-            double latitude = pointArray[1].toDouble();
-            double longitude = pointArray[0].toDouble();
-            m_forecastZone.append(QPointF(longitude, latitude));
-        }
-
-        qDebug() << "Document" << document;
-
-        m_requestState = ObservationStations;
-        QNetworkRequest request = QNetworkRequest(QUrl(m_observationStationsUrl));
-        m_networkManager.get(request);
-
-        break;
-    }
-    case ObservationStations: {
+    case StationList2: {
         m_stations.clear();
 
         QJsonArray features = document["features"].toArray();
@@ -168,7 +244,28 @@ void NationalWeatherServiceInterface::networkManager_onRequestFinished(QNetworkR
             m_stations.append(station);
         }
 
-        emit forecastReady();
+        emit stationListReady(m_stations);
+        break;
+    }
+    case ForecastZone: {
+        QJsonObject geometry = document["geometry"].toObject();
+        QJsonArray coordinates = geometry["coordinates"].toArray();
+        QJsonArray polygon = coordinates[0].toArray();
+
+        m_forecastZone.clear();
+        m_forecastZone.reserve(polygon.size());
+
+        for (const auto& point : polygon) {
+            QJsonArray pointArray = point.toArray();
+            double latitude = pointArray[1].toDouble();
+            double longitude = pointArray[0].toDouble();
+            m_forecastZone.append(QPointF(longitude, latitude));
+        }
+
+        m_requestState = StationList2;
+        QNetworkRequest request = QNetworkRequest(QUrl(m_observationStationsUrl));
+        m_networkManager.get(request);
+
         break;
     }
     case ObservationLatest: {
@@ -194,9 +291,14 @@ void NationalWeatherServiceInterface::networkManager_onRequestFinished(QNetworkR
 
         m_latestObservation = obs;
 
-        emit latestObservationReady();
+        emit latestObservationReady(m_latestObservation);
         break;
     }
     }
 
+}
+
+const NationalWeatherServiceInterface::Forecast12Hr &NationalWeatherServiceInterface::forecast()
+{
+    return m_forecast;
 }
