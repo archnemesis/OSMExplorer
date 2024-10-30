@@ -92,7 +92,11 @@ void NationalWeatherServiceInterface::networkManager_onRequestFinished(QNetworkR
 
     switch (m_requestState) {
     case Forecast: {
-        qDebug() << "Decoding forecast data";
+        if (!root.contains("properties")) {
+            qCritical() << "Properties element missing in response";
+            break;
+        }
+
         QJsonObject properties = document["properties"].toObject();
         QJsonObject relativeLocation = properties["relativeLocation"].toObject();
         QJsonObject relativeLocationGeometry = relativeLocation["geometry"].toObject();
@@ -105,6 +109,12 @@ void NationalWeatherServiceInterface::networkManager_onRequestFinished(QNetworkR
         m_gridId = properties["gridId"].toString();
         m_city = relativeLocationProperties["city"].toString();
         m_state = relativeLocationProperties["state"].toString();
+
+        if (relativeLocationGeometryCoords.count() < 2) {
+            qCritical() << "Invalid coordinates";
+            break;
+        }
+
         m_latitude = relativeLocationGeometryCoords[1].toDouble();
         m_longitude = relativeLocationGeometryCoords[0].toDouble();
 

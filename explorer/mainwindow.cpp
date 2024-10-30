@@ -163,10 +163,14 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionWeather_ShowWFOGrid,
         &QAction::toggled,
         [this](bool state){
-            ui->statusBar->showMessage(tr("Getting forecast data..."), 3000);
-            m_weatherService->getForecast(QPointF(
-                ui->slippyMap->longitude(),
-                ui->slippyMap->latitude()));
+            if (state) {
+                m_weatherService->getForecast(QPointF(
+                    ui->slippyMap->longitude(),
+                    ui->slippyMap->latitude()));
+            }
+            else {
+                // TODO: remove the weather markers
+            }
         });
 
     loadStartupSettings();
@@ -763,34 +767,16 @@ void MainWindow::onSlippyMapLayerObjectDoubleClicked(SlippyMapLayerObject* objec
 
 void MainWindow::onSlippyMapDragFinished()
 {
-    m_weatherService->getForecast(
-        QPointF(
-            ui->slippyMap->longitude(),
-            ui->slippyMap->latitude()));
+    if (ui->actionWeather_ShowWFOGrid->isChecked()) {
+        m_weatherService->getForecast(
+            QPointF(
+                ui->slippyMap->longitude(),
+                ui->slippyMap->latitude()));
+    }
 }
 
 void MainWindow::onWeatherService_forecastReady()
 {
-    qDebug() << "Setting marker location for" << m_weatherService->gridId();
-    qDebug() << "Lat:" << m_weatherService->latitude() << "Lon:" << m_weatherService->longitude();
-
-    // QPointF markerLocation = QPointF(
-    //     m_weatherService->longitude(),
-    //     m_weatherService->latitude());
-    //
-    // m_weatherStationMarker->setPosition(markerLocation);
-    // m_weatherStationMarker->setVisible(true);
-
-    if (m_forecastZonePolygon != nullptr) {
-        m_layerManager->removeLayerObject(m_weatherLayer, m_forecastZonePolygon);
-        delete m_forecastZonePolygon;
-    }
-
-    m_forecastZonePolygon = new SlippyMapLayerPolygon(m_weatherService->zonePolygonPoints());
-    m_forecastZonePolygon->setLabel(m_weatherService->gridId());
-    m_forecastZonePolygon->setVisible(true);
-    m_layerManager->addLayerObject(m_weatherLayer, m_forecastZonePolygon);
-
     for (auto *marker : m_weatherStationMarkers) {
         m_layerManager->removeLayerObject(m_weatherLayer, marker);
         delete marker;
