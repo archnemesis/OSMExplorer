@@ -14,7 +14,7 @@ public:
     ~SlippyMapLayerObjectPropertyPage() override;
     virtual QString tabTitle();
 
-private:
+protected:
     SlippyMapLayerObject *m_object;
 };
 

@@ -87,6 +87,12 @@ set(PROJECT_SOURCES
         explorer/Weather/WeatherForecastWindow.h
         explorer/Weather/ForecastPeriodWidget.cpp
         explorer/Weather/ForecastPeriodWidget.h
+        explorer/Application/ExplorerApplication.cpp
+        explorer/Application/ExplorerApplication.h
+        explorer/Application/PluginManager.cpp
+        explorer/Application/PluginManager.h
+        explorer/PropertyPage/SlippyMapLayerMarkerPropertyPage.cpp
+        explorer/PropertyPage/SlippyMapLayerMarkerPropertyPage.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

@@ -30,9 +30,11 @@
 
 #include "SlippyMapLayerTrack.h"
 #include "PropertyPage/SlippyMapLayerObjectPropertyPage.h"
+#include "PropertyPage/SlippyMapLayerMarkerPropertyPage.h"
 #include "PropertyPage/SlippyMapLayerPolygonPropertyPage.h"
 #include "PropertyPage/SlippyMapLayerTrackPropertyPage.h"
 #include "Weather/WeatherForecastWindow.h"
+#include "Application/ExplorerApplication.h"
 
 #include "defaults.h"
 #include "directionlistitemwidget.h"
@@ -49,6 +51,7 @@
 
 #include <math.h>
 
+#include "Application/PluginManager.h"
 #include "Weather/WeatherStationMarker.h"
 #include "Weather/WeatherStationPropertyPage.h"
 
@@ -68,7 +71,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    loadPlugins();
+    loadPluginLayers();
 
     ui->tabShapeEditor->setVisible(false);
     m_defaultPalette = qApp->palette();
@@ -226,7 +229,7 @@ MainWindow::MainWindow(QWidget *parent) :
     m_markerVisibilityAction->setCheckable(true);
     connect(ui->tvwMarkers, &QTreeView::activated, [this](const QModelIndex& index) {
         if (index.parent().isValid()) return;
-        Q_ASSERT(index.row() >= m_layerManager->layers().count());
+        Q_ASSERT(index.row() < m_layerManager->layers().count());
 
         SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
         m_markerVisibilityAction->setChecked(layer->isVisible());
@@ -248,7 +251,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     qDebug() << "Loading plugin marker groups...";
 
-    for (ExplorerPluginInterface *plugin : m_plugins) {
+    for (ExplorerPluginInterface *plugin : ExplorerApplication::pluginManager()->getPlugins()) {
         QList<QDockWidget *> dockWidgets = plugin->dockWidgetList();
         for (QDockWidget *dockWidget : dockWidgets) {
             dockWidget->setParent(this);
@@ -273,94 +276,32 @@ void MainWindow::resizeEvent(QResizeEvent *event)
     }
 }
 
-void MainWindow::loadPlugins()
+void MainWindow::loadPluginLayers()
 {
-    QDir pluginsDir(qApp->applicationDirPath());
+    auto *pluginManager = ExplorerApplication::pluginManager();
 
-#if defined(Q_OS_WIN)
-    if (pluginsDir.dirName().toLower() == "debug" ||  pluginsDir.dirName().toLower() == "release") {
-        pluginsDir.cdUp();
-        pluginsDir.cdUp();
+    for (auto *tileLayer : pluginManager->getTileLayers()) {
+        ui->slippyMap->addLayer(tileLayer);
+        auto *action = new QAction();
+        action->setText(tileLayer->name());
+        action->setCheckable(true);
+        action->setChecked(true);
+        connect(action,
+            &QAction::triggered,
+            [this, tileLayer](bool checked) {
+            tileLayer->setVisible(checked);
+        });
+        ui->menuLayer_TileLayers->addAction(action);
     }
-#elif defined(Q_OS_MAC)
-    if (pluginsDir.dirName() == "MacOS") {
-        pluginsDir.cdUp();
-        pluginsDir.cdUp();
-        pluginsDir.cdUp();
+
+    for (auto *layer : pluginManager->getLayers()) {
+        m_layerManager->addLayer(layer);
     }
-#endif
-
-#ifdef QT_DEBUG
-    QStringList pluginPaths;
-    pluginPaths << "plugins/APRS";
-    pluginPaths << "plugins/RainViewer";
-
-    for (const auto& pluginPath : pluginPaths) {
-#else
-    QString pluginPath = "/usr/lib";
-#endif
-    pluginsDir.cd(pluginPath);
-
-    foreach (QString fileName, pluginsDir.entryList(QDir::Files)) {
-        qDebug() << "Loading plugin file:" << fileName;
-        QPluginLoader pluginLoader(pluginsDir.absoluteFilePath(fileName));
-        QObject *plugin = pluginLoader.instance();
-        if (plugin) {
-            ExplorerPluginInterface *interface =
-                    qobject_cast<ExplorerPluginInterface*>(plugin);
-            interface->loadConfiguration();
-            m_plugins.append(interface);
-
-            QList<SlippyMapWidgetLayer*> pluginTileLayers = interface->tileLayers();
-            for (auto *tileLayer : pluginTileLayers) {
-                tileLayer->setVisible(true);
-                ui->slippyMap->addLayer(tileLayer);
-
-                auto *tileLayerAction = new QAction();
-                tileLayerAction->setText(tileLayer->name());
-                tileLayerAction->setCheckable(true);
-                tileLayerAction->setChecked(true);
-                ui->menuLayer_TileLayers->addAction(tileLayerAction);
-            }
-
-            QList<SlippyMapLayer*> pluginLayers = interface->layers();
-            for (SlippyMapLayer *layer : pluginLayers) {
-                m_layerManager->addLayer(layer);
-            }
-        }
-    }
-#ifdef QT_DEBUG
-    pluginsDir.cdUp();
-    pluginsDir.cdUp();
-    }
-#endif
 }
 
 void MainWindow::loadMarkers()
 {
-//    QSettings settings;
 
-//    for (SlippyMapWidgetMarker *marker : m_loadedMarkers) {
-//        ui->slippyMap->deleteMarker(marker);
-//        delete marker;
-//    }
-//    m_loadedMarkers.clear();
-
-//    int count = settings.beginReadArray("places/my-places");
-//    for (int i = 0; i < count; i++) {
-//        settings.setArrayIndex(i);
-//        double lat = settings.value("latitude").toDouble();
-//        double lon = settings.value("longitude").toDouble();
-//        QPointF pos(lon, lat);
-//        QString label = settings.value("name").toString();
-//        SlippyMapWidgetMarker *marker =
-//                new SlippyMapWidgetMarker(pos, label);
-//        marker->setInformation(settings.value("information").toString());
-//        ui->slippyMap->addMarker(marker);
-//        m_loadedMarkers.append(marker);
-//        connect(marker, &SlippyMapWidgetMarker::changed, this, &MainWindow::saveMarkers);
-//    }
-//    settings.endArray();
 }
 
 void MainWindow::setupContextMenus()
@@ -798,16 +739,14 @@ void MainWindow::onSlippyMapLayerObjectDoubleClicked(SlippyMapLayerObject* objec
     else if (auto *weatherMarker = qobject_cast<WeatherStationMarker*>(object)) {
         propertyPage = new WeatherStationPropertyPage(weatherMarker);
     }
+    else if (auto *marker = qobject_cast<SlippyMapWidgetMarker*>(object)) {
+        propertyPage = new SlippyMapLayerMarkerPropertyPage(marker);
+    }
 
-    auto *layout = new QHBoxLayout();
-    layout->addWidget(propertyPage);
-
-    QDialog dialog(this);
-    dialog.setLayout(layout);
-    dialog.setWindowTitle(object->label());
-    dialog.setSizeGripEnabled(true);
-    dialog.setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
-    dialog.exec();
+    propertyPage->setWindowTitle(object->label());
+    propertyPage->setWindowFlags(
+        propertyPage->windowFlags() & ~Qt::WindowMaximizeButtonHint);
+    propertyPage->show();
 }
 
 void MainWindow::onSlippyMapDragFinished()

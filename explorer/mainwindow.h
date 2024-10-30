@@ -51,7 +51,7 @@ public:
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
-    void loadPlugins();
+    void loadPluginLayers();
     void loadMarkers();
     void setupContextMenus();
     void loadStartupSettings();
