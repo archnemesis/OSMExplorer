@@ -13,6 +13,7 @@
 class QTableWidget;
 class QTabWidget;
 class QVBoxLayout;
+class QMessageBox;
 
 namespace QtCharts {
     class QChartView;
@@ -40,6 +41,7 @@ private:
     QTableWidget *m_forecastTable;
     QTabWidget *m_tabWidget;
     QVBoxLayout *m_forecastLayout;
+    QMessageBox *m_loadingMessageBox;
     QtCharts::QLineSeries *m_tempLineSeries;
     QtCharts::QChartView *m_tempForecastChart;
 };

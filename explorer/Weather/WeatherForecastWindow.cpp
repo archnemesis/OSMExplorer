@@ -7,6 +7,7 @@
 #include <QTabWidget>
 #include <QVBoxLayout>
 #include <QScrollArea>
+#include <QMessageBox>
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
 
@@ -35,14 +36,15 @@ WeatherForecastWindow::WeatherForecastWindow(const QPointF& location) :
 
     setupUi();
 
+    m_loadingMessageBox = new QMessageBox(this);
+    m_loadingMessageBox->setText(tr("Loading forecast data..."));
+    m_loadingMessageBox->setWindowTitle(tr("Loading"));
+    m_loadingMessageBox->show();
     m_nationalWeatherService->getForecast(location);
 }
 
 void WeatherForecastWindow::setupUi()
 {
-    setMinimumWidth(800);
-    setMinimumHeight(1000);
-
     m_forecastLayout = new QVBoxLayout();
     auto *forecastWidget = new QWidget();
     forecastWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
@@ -94,4 +96,6 @@ void WeatherForecastWindow::onNationalWeatherService_hourlyForecastReady(
     chart->setTitle("Temperatures");
     m_tempForecastChart->setChart(chart);
     m_tempForecastChart->setRenderHint(QPainter::Antialiasing);
+
+    m_loadingMessageBox->hide();
 }
