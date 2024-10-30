@@ -20,6 +20,8 @@ set(PROJECT_SOURCES
         rainviewerplugin.cpp
         RainViewerTileLayer.h
         RainViewerTileLayer.cpp
+        RainViewerMarkerPropertyPage.cpp
+        RainViewerMarkerPropertyPage.h
 )
 
 add_library(rainviewerplugin MODULE ${PROJECT_SOURCES})
