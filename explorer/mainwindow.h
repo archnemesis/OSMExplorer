@@ -77,6 +77,10 @@ private:
     NationalWeatherServiceInterface *m_weatherService = nullptr;
     QAction *m_markerDeleteAction = nullptr;
     QAction *m_markerVisibilityAction;
+    QAction *m_animationPlayAction;
+    QAction *m_animationPauseAction;
+    QAction *m_animationForwardAction;
+    QAction *m_animationReverseAction;
     QColor m_directionLineColor;
     QHash<QString,SlippyMapWidgetMarker*> m_gpsMarkers;
     QLabel *m_statusBarGpsStatusLabel;
@@ -188,6 +192,16 @@ protected slots:
      * @brief Refresh settings that would have immediate impact.
      */
     void refreshSettings();
+
+    /**
+     * @brief Ask user for a layer name and create a new layer.
+     */
+     void createNewLayer();
+
+     /**
+      * @brief Delete the active layer (ask first).
+      */
+      void deleteLayer();
 private slots:
     void on_actionNewMarker_triggered();
     void on_actionViewSidebar_toggled(bool arg1);

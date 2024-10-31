@@ -155,37 +155,6 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->slippyMap,
             &SlippyMapWidget::decreaseZoomLevel);
 
-    /**
-     * Color and stroke width selectors for drawing
-     */
-    m_strokeColorSelector = new ColorSelector();
-    m_strokeColorSelector->setColor(Qt::black);
-    m_strokeColorSelector->setToolTip(tr("Stroke color"));
-    connect(m_strokeColorSelector,
-        &ColorSelector::colorSelected,
-        [this](const QColor& color) {
-            ui->slippyMap->setDrawingStrokeColor(color.lighter());
-    });
-
-    m_fillColorSelector = new ColorSelector();
-    m_fillColorSelector->setColor(Qt::white);
-    m_fillColorSelector->setToolTip(tr("Fill color"));
-    connect(m_fillColorSelector,
-        &ColorSelector::colorSelected,
-        [this](const QColor& color) {
-            ui->slippyMap->setDrawingFillColor(color.lighter());
-    });
-
-    m_strokeWidth = new QSpinBox();
-    m_strokeWidth->setMinimum(0);
-    m_strokeWidth->setValue(2);
-    m_strokeWidth->setToolTip(tr("Stroke width"));
-    connect(m_strokeWidth,
-        QOverload<int>::of(&QSpinBox::valueChanged),
-        [this](int value) {
-            ui->slippyMap->setDrawingStrokeWidth(value);
-    });
-
     ui->slippyMap->setDrawingFillColor(Qt::white);
     ui->slippyMap->setDrawingStrokeColor(QColor(Qt::black).lighter());
     ui->slippyMap->setDrawingStrokeWidth(2);
@@ -257,6 +226,22 @@ MainWindow::MainWindow(QWidget *parent) :
     refreshSettings();
     setupToolbar();
 
+    /*
+     * New layer action
+     */
+    connect(ui->actionLayer_New,
+            &QAction::triggered,
+            this,
+            &MainWindow::createNewLayer);
+
+    /*
+     * Delete layer action
+     */
+    connect(ui->actionLayer_Delete,
+            &QAction::triggered,
+            this,
+            &MainWindow::deleteLayer);
+
     connect(ui->tvwMarkers,
             &QTreeView::customContextMenuRequested,
             this,
@@ -298,22 +283,8 @@ MainWindow::MainWindow(QWidget *parent) :
     m_markerMenu->addAction(m_newLayerAction);
     connect(m_newLayerAction,
             &QAction::triggered,
-            [this]() {
-
-        bool ok;
-        QString layerName = QInputDialog::getText(this,
-                                                  tr("New Layer"),
-                                                  tr("Name"),
-                                                  QLineEdit::Normal,
-                                                  "New Layer",
-                                                  &ok);
-
-        if (ok) {
-            auto *newLayer = new SlippyMapLayer();
-            newLayer->setName(layerName);
-            m_layerManager->addLayer(newLayer);
-        }
-    });
+            this,
+            &MainWindow::createNewLayer);
 
     m_markerVisibilityAction = new QAction();
     m_markerVisibilityAction->setText(tr("Visible"));
@@ -566,6 +537,45 @@ void MainWindow::saveLayers()
 
 void MainWindow::setupToolbar()
 {
+    /**
+     * Color and stroke width selectors for drawing
+     */
+    m_strokeColorSelector = new ColorSelector();
+    m_strokeColorSelector->setColor(Qt::black);
+    m_strokeColorSelector->setToolTip(tr("Stroke color"));
+    connect(m_strokeColorSelector,
+            &ColorSelector::colorSelected,
+            [this](const QColor& color) {
+                ui->slippyMap->setDrawingStrokeColor(color.lighter());
+            });
+
+    m_fillColorSelector = new ColorSelector();
+    m_fillColorSelector->setColor(Qt::white);
+    m_fillColorSelector->setToolTip(tr("Fill color"));
+    connect(m_fillColorSelector,
+            &ColorSelector::colorSelected,
+            [this](const QColor& color) {
+                ui->slippyMap->setDrawingFillColor(color.lighter());
+            });
+
+    m_strokeWidth = new QSpinBox();
+    m_strokeWidth->setMinimum(0);
+    m_strokeWidth->setValue(2);
+    m_strokeWidth->setToolTip(tr("Stroke width"));
+    connect(m_strokeWidth,
+            QOverload<int>::of(&QSpinBox::valueChanged),
+            [this](int value) {
+                ui->slippyMap->setDrawingStrokeWidth(value);
+            });
+
+    /*
+     * Animation buttons
+     */
+    m_animationPlayAction = new QAction(tr("Play"));
+    m_animationPauseAction = new QAction(tr("Pause"));
+    m_animationForwardAction = new QAction(tr("Fwd"));
+    m_animationReverseAction = new QAction(tr("Rev"));
+
     ui->toolBar->addAction(ui->actionDrawRectangle);
     ui->toolBar->addAction(ui->actionDrawEllipse);
     ui->toolBar->addAction(ui->actionDrawPolygon);
@@ -577,6 +587,11 @@ void MainWindow::setupToolbar()
     ui->toolBar->addWidget(m_strokeColorSelector);
     ui->toolBar->addWidget(m_fillColorSelector);
     ui->toolBar->addWidget(m_strokeWidth);
+    ui->toolBar->addSeparator();
+    ui->toolBar->addAction(m_animationPlayAction);
+    ui->toolBar->addAction(m_animationPauseAction);
+    ui->toolBar->addAction(m_animationForwardAction);
+    ui->toolBar->addAction(m_animationReverseAction);
 }
 
 void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
@@ -1491,4 +1506,38 @@ void MainWindow::onActionFileCloseWorkspaceTriggered()
 void MainWindow::updateRecentFileList()
 {
     ui->menuRecent->clear();
+}
+
+void MainWindow::createNewLayer()
+{
+    bool ok;
+    QString layerName = QInputDialog::getText(this,
+                                              tr("New Layer"),
+                                              tr("Name"),
+                                              QLineEdit::Normal,
+                                              "New Layer",
+                                              &ok);
+
+    if (ok) {
+        auto *newLayer = new SlippyMapLayer();
+        newLayer->setName(layerName);
+        m_layerManager->addLayer(newLayer);
+    }
+}
+
+void MainWindow::deleteLayer()
+{
+    if (m_layerManager->activeLayer() != nullptr) {
+        int result = QMessageBox::question(
+                this,
+                tr("Delete Layer"),
+                tr("Do you want to delete the layer '%1'?").arg(m_layerManager->activeLayer()->name()),
+                QMessageBox::StandardButtons(QMessageBox::Yes | QMessageBox::No));
+
+        if (result == QMessageBox::Yes) {
+            SlippyMapLayer *layer = m_layerManager->activeLayer();
+            m_layerManager->takeLayer(layer);
+            delete layer;
+        }
+    }
 }
