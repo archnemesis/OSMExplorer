@@ -8,6 +8,7 @@
 #include <QObject>
 
 class ExplorerPluginInterface;
+class SlippyMapLayerObjectPropertyPage;
 
 namespace SlippyMap {
     class SlippyMapWidgetLayer;
@@ -22,6 +23,7 @@ public:
     const QList<ExplorerPluginInterface*> getPlugins() const;
     QList<SlippyMap::SlippyMapWidgetLayer*> getTileLayers() const;
     QList<SlippyMap::SlippyMapLayer*> getLayers() const;
+    QList<SlippyMapLayerObjectPropertyPage*> getPropertyPages() const;
 
 protected:
     QList<ExplorerPluginInterface*> m_plugins;

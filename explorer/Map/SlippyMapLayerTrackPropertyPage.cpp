@@ -10,9 +10,9 @@
 #include "gpx/gpxtracksegment.h"
 #include "gpx/gpxwaypoint.h"
 
-SlippyMapLayerTrackPropertyPage::SlippyMapLayerTrackPropertyPage(SlippyMapLayerTrack *track):
-    SlippyMapLayerObjectPropertyPage(track),
-    m_track(track) {
+SlippyMapLayerTrackPropertyPage::SlippyMapLayerTrackPropertyPage(SlippyMapLayerObject *object):
+    SlippyMapLayerObjectPropertyPage(object) {
+    m_track = qobject_cast<SlippyMapLayerTrack*>(object);
     setupUi();
     setWindowTitle(m_track->label());
 }

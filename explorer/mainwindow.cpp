@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 
 #include <QAction>
+#include <QInputDialog>
 #include <QFile>
 #include <QFileDialog>
 #include <QGuiApplication>
@@ -27,12 +28,12 @@
 #include <SlippyMap/SlippyMapLayerPolygon.h>
 #include <SlippyMap/SlippyMapWidgetMarker.h>
 #include <SlippyMap/SlippyMapLayerManager.h>
+#include <SlippyMap/SlippyMapLayerObjectPropertyPage.h>
+#include <SlippyMap/SlippyMapLayerMarkerPropertyPage.h>
+#include <SlippyMap/SlippyMapLayerPolygonPropertyPage.h>
+#include "Map/SlippyMapLayerTrackPropertyPage.h"
 
-#include "SlippyMapLayerTrack.h"
-#include "PropertyPage/SlippyMapLayerObjectPropertyPage.h"
-#include "PropertyPage/SlippyMapLayerMarkerPropertyPage.h"
-#include "PropertyPage/SlippyMapLayerPolygonPropertyPage.h"
-#include "PropertyPage/SlippyMapLayerTrackPropertyPage.h"
+#include "Map/SlippyMapLayerTrack.h"
 #include "Weather/WeatherForecastWindow.h"
 #include "Application/ExplorerApplication.h"
 
@@ -40,10 +41,10 @@
 #include "directionlistitemwidget.h"
 #include "explorerplugininterface.h"
 #include "gpssourcedialog.h"
-#include "gpx/gpxmetadata.h"
-#include "gpx/gpxparser.h"
-#include "gpx/gpxtrack.h"
-#include "gpx/gpxtracksegment.h"
+#include "Map/gpx/gpxmetadata.h"
+#include "Map/gpx/gpxparser.h"
+#include "Map/gpx/gpxtrack.h"
+#include "Map/gpx/gpxtracksegment.h"
 #include "mapdataimportdialog.h"
 #include "nmeaseriallocationdataprovider.h"
 #include "settingsdialog.h"
@@ -70,7 +71,7 @@ MainWindow::MainWindow(QWidget *parent) :
     m_weatherStationMarker(nullptr)
 {
     ui->setupUi(this);
-
+    setWindowTitle(tr("OSMExplorer") + " - Untitled.osm");
     loadPluginLayers();
 
     ui->tabShapeEditor->setVisible(false);
@@ -79,7 +80,8 @@ MainWindow::MainWindow(QWidget *parent) :
     /*
      * Layer manager and tree view model
     */
-    m_layerManager = new SlippyMapLayerManager();
+    //m_layerManager = new SlippyMapLayerManager();
+    m_layerManager = ExplorerApplication::layerManager();
     ui->slippyMap->setLayerManager(m_layerManager);
     ui->tvwMarkers->setModel(m_layerManager);
     ui->tvwMarkers->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -97,6 +99,7 @@ MainWindow::MainWindow(QWidget *parent) :
      */
     m_gpsMarkerLayer = new SlippyMapLayer();
     m_gpsMarkerLayer->setName(tr("GPS"));
+    m_gpsMarkerLayer->setEditable(false);
     m_layerManager->addLayer(m_gpsMarkerLayer);
 
     /*
@@ -123,6 +126,7 @@ MainWindow::MainWindow(QWidget *parent) :
     m_weatherLayer = new SlippyMapLayer();
     m_weatherLayer->setName(tr("Weather"));
     m_weatherLayer->setVisible(true);
+    m_weatherLayer->setEditable(false);
     m_layerManager->addLayer(m_weatherLayer);
 
     /*
@@ -143,6 +147,15 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->slippyMap, &SlippyMapWidget::objectDeactivated, this, &MainWindow::onSlippyMapLayerObjectDeactivated);
     connect(ui->slippyMap, &SlippyMapWidget::objectDoubleClicked, this, &MainWindow::onSlippyMapLayerObjectDoubleClicked);
     connect(ui->slippyMap, &SlippyMapWidget::dragFinished, this, &MainWindow::onSlippyMapDragFinished);
+
+    connect(ui->zoomInButton,
+            &QPushButton::clicked,
+            ui->slippyMap,
+            &SlippyMapWidget::increaseZoomLevel);
+    connect(ui->zoomOutButton,
+            &QPushButton::clicked,
+            ui->slippyMap,
+            &SlippyMapWidget::decreaseZoomLevel);
 
     /*
      * Lat/Lon inputs in the toolbar
@@ -174,6 +187,23 @@ MainWindow::MainWindow(QWidget *parent) :
     });
 
     /*
+     * Save workspace action
+     */
+    connect(ui->actionFile_SaveWorkspace,
+        &QAction::triggered,
+        this,
+        &MainWindow::onActionFileSaveWorkspaceTriggered);
+
+    connect(ui->actionFile_OpenWorkspace,
+            &QAction::triggered,
+            this,
+            &MainWindow::onActionFileOpenWorkspaceTriggered);
+    connect(ui->actionFile_CloseWorkspace,
+            &QAction::triggered,
+            this,
+            &MainWindow::onActionFileCloseWorkspaceTriggered);
+
+    /*
      * Enable showing forecast data as the map moves
      */
     connect(ui->actionWeather_ShowWFOGrid,
@@ -194,7 +224,10 @@ MainWindow::MainWindow(QWidget *parent) :
     refreshSettings();
     setupToolbar();
 
-    connect(ui->tvwMarkers, &QTreeView::customContextMenuRequested, this, &MainWindow::onTvwMarkersContextMenuRequested);
+    connect(ui->tvwMarkers,
+            &QTreeView::customContextMenuRequested,
+            this,
+            &MainWindow::onTvwMarkersContextMenuRequested);
 
     m_statusBarPositionLabel = new QLabel();
     m_statusBarPositionLabel->setFrameStyle(QFrame::Sunken);
@@ -219,35 +252,58 @@ MainWindow::MainWindow(QWidget *parent) :
     m_saveWindowSizeTimer = new QTimer();
     m_saveWindowSizeTimer->setSingleShot(true);
     m_saveWindowSizeTimer->setInterval(100);
-    connect(m_saveWindowSizeTimer, &QTimer::timeout, this, &MainWindow::onWindowSizeTimerTimeout);
+    connect(m_saveWindowSizeTimer,
+            &QTimer::timeout,
+            this,
+            &MainWindow::onWindowSizeTimerTimeout);
 
-    m_markerMenu = new QMenu();
+    m_markerMenu = new QMenu(this);
     m_markerMenu->setTitle(tr("Marker"));
+
+    m_newLayerAction = new QAction();
+    m_newLayerAction->setText(tr("New Layer"));
+    m_markerMenu->addAction(m_newLayerAction);
+    connect(m_newLayerAction,
+            &QAction::triggered,
+            [this]() {
+
+        bool ok;
+        QString layerName = QInputDialog::getText(this,
+                                                  tr("New Layer"),
+                                                  tr("Name"),
+                                                  QLineEdit::Normal,
+                                                  "New Layer",
+                                                  &ok);
+
+        if (ok) {
+            auto *newLayer = new SlippyMapLayer();
+            newLayer->setName(layerName);
+            m_layerManager->addLayer(newLayer);
+        }
+    });
 
     m_markerVisibilityAction = new QAction();
     m_markerVisibilityAction->setText(tr("Visible"));
     m_markerVisibilityAction->setCheckable(true);
+    m_markerMenu->addAction(m_markerVisibilityAction);
+    connect(ui->tvwMarkers, &QTreeView::clicked, [this](const QModelIndex& index) {
+        if (index.parent().isValid()) return;
+        Q_ASSERT(index.row() < m_layerManager->layers().count());
+        SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
+        m_markerVisibilityAction->setChecked(layer->isVisible());
+    });
     connect(ui->tvwMarkers, &QTreeView::activated, [this](const QModelIndex& index) {
         if (index.parent().isValid()) return;
         Q_ASSERT(index.row() < m_layerManager->layers().count());
-
         SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
         m_markerVisibilityAction->setChecked(layer->isVisible());
     });
     connect(m_markerVisibilityAction, &QAction::toggled, [this](bool checked) {
         QModelIndex index = ui->tvwMarkers->currentIndex();
         Q_ASSERT(index.row() < m_layerManager->layers().count());
-
         SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
         layer->setVisible(checked);
     });
-
-    m_markerPropertiesAction = new QAction();
-    m_markerPropertiesAction->setText(tr("Properties..."));
-    m_markerMenu->addAction(m_markerPropertiesAction);
-    m_markerMenu->addSeparator();
-    m_markerMenu->addAction(m_markerVisibilityAction);
-    connect(m_markerPropertiesAction, &QAction::triggered, this, &MainWindow::onMarkerMenuPropertiesActionTriggered);
 
     qDebug() << "Loading plugin marker groups...";
 
@@ -311,18 +367,27 @@ void MainWindow::setupContextMenus()
 
     m_addMarkerAction = new QAction();
     m_addMarkerAction->setText(tr("Add Marker"));
-    connect(m_addMarkerAction, &QAction::triggered, this, &MainWindow::onAddMarkerActionTriggered);
+    connect(m_addMarkerAction,
+            &QAction::triggered,
+            this,
+            &MainWindow::onAddMarkerActionTriggered);
 
     m_deleteMarkerAction = new QAction();
     m_deleteMarkerAction->setText(tr("Delete Marker"));
 
-    m_setMarkerLabelAction = new QAction();
-    m_setMarkerLabelAction->setText(tr("Properties..."));
-    connect(m_setMarkerLabelAction, &QAction::triggered, this, &MainWindow::onEditMarkerActionTriggered);
+    m_markerPropertiesAction = new QAction();
+    m_markerPropertiesAction->setText(tr("Properties..."));
+    connect(m_markerPropertiesAction,
+            &QAction::triggered,
+            this,
+            &MainWindow::onMarkerMenuPropertiesActionTriggered);
 
     m_centerMapAction = new QAction();
     m_centerMapAction->setText(tr("Center Here"));
-    connect(m_centerMapAction, &QAction::triggered, this, &MainWindow::onCenterMapActionTriggered);
+    connect(m_centerMapAction,
+            &QAction::triggered,
+            this,
+            &MainWindow::onCenterMapActionTriggered);
 
     m_zoomInHereMapAction = new QAction();
     m_zoomInHereMapAction->setText(tr("Zoom In"));
@@ -370,7 +435,7 @@ void MainWindow::setupContextMenus()
     m_contextMenu->addSeparator();
     m_contextMenu->addAction(m_addMarkerAction);
     m_contextMenu->addAction(m_deleteMarkerAction);
-    m_contextMenu->addAction(m_setMarkerLabelAction);
+    m_contextMenu->addAction(m_markerPropertiesAction);
     m_contextMenu->addAction(m_editShapeAction);
     m_contextMenu->addAction(m_deleteShapeAction);
     m_contextMenu->addSeparator();
@@ -397,6 +462,14 @@ void MainWindow::loadStartupSettings()
         int height = settings.value("view/windowHeight").toInt();
         resize(width, height);
     }
+
+    int recentFileCount = settings.beginReadArray("recentFiles");
+    for (int i = 0; i < recentFileCount; i++) {
+        settings.setArrayIndex(i);
+        QString fileName = settings.value("filename").toString();
+        m_recentFileList.append(fileName);
+    }
+    settings.endArray();
 
     int layerCount = settings.beginReadArray("layers");
     for (int i = 0; i < layerCount; i++) {
@@ -560,7 +633,7 @@ void MainWindow::onSlippyMapCursorLeft()
 //void MainWindow::onSlippyMapMarkerAdded(SlippyMapWidgetMarker *marker)
 //{
 ////    m_markerModelGroup_myMarkers->addMarker(marker);
-////    connect(marker, &SlippyMapWidgetMarker::changed, this, &MainWindow::saveMarkers);
+////    connect(marker, &SlippyMapWidgetMarker::changed, this, &MainWindow::onActionFileSaveWorkspaceTriggered);
 ////    ui->tvwMarkers->update();
 //}
 
@@ -602,7 +675,7 @@ void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
 
     m_addMarkerAction->setVisible(true);
     m_deleteMarkerAction->setVisible(false);
-    m_setMarkerLabelAction->setVisible(false);
+    m_markerPropertiesAction->setVisible(false);
     m_editShapeAction->setVisible(false);
     m_deleteShapeAction->setVisible(false);
 
@@ -619,8 +692,15 @@ void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
                     10, 10);
 
                 if (clickbox.contains(m_contextMenuLocation)) {
+                    m_coordAction->setText(object->label());
                     m_addMarkerAction->setVisible(false);
-                    m_setMarkerLabelAction->setVisible(true);
+                    m_markerPropertiesAction->setVisible(true);
+                    connect(m_markerPropertiesAction,
+                            &QAction::triggered,
+                            [this, object]() {
+                        showPropertyPage(object);
+                    });
+                    m_deleteMarkerAction->setVisible(true);
 
                     break;
                 }
@@ -688,14 +768,14 @@ void MainWindow::onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object)
 
     SlippyMapLayerObjectPropertyPage *propertyPage = nullptr;
 
-    if (auto *polygon = qobject_cast<SlippyMapLayerPolygon *>(object)) {
-        propertyPage = new SlippyMapLayerPolygonPropertyPage(polygon);
-        ui->tabShapeEditor->insertTab(1, propertyPage, propertyPage->tabTitle());
-    }
-    else if (auto *track = qobject_cast<SlippyMapLayerTrack *>(object)) {
-        propertyPage = new SlippyMapLayerTrackPropertyPage(track);
-        ui->tabShapeEditor->insertTab(1, propertyPage, propertyPage->tabTitle());
-    }
+//    if (auto *polygon = qobject_cast<SlippyMapLayerPolygon *>(object)) {
+//        propertyPage = new SlippyMapLayerPolygonPropertyPage(polygon);
+//        ui->tabShapeEditor->insertTab(1, propertyPage, propertyPage->tabTitle());
+//    }
+//    else if (auto *track = qobject_cast<SlippyMapLayerTrack *>(object)) {
+//        propertyPage = new SlippyMapLayerTrackPropertyPage(track);
+//        ui->tabShapeEditor->insertTab(1, propertyPage, propertyPage->tabTitle());
+//    }
 
     ui->selectedObjectName->setText(object->label());
     ui->selectedObjectDescription->setPlainText(object->description());
@@ -708,7 +788,7 @@ void MainWindow::onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object)
     // get rid of existing property page
     //
     if (m_selectedObjectPropertyPage != nullptr)
-        m_selectedObjectPropertyPage->deleteLater();
+        //m_selectedObjectPropertyPage->deleteLater();
 
     m_selectedObjectPropertyPage = propertyPage;
 }
@@ -725,28 +805,67 @@ void MainWindow::onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object)
     }
 }
 
+void MainWindow::showPropertyPage(SlippyMapLayerObject *object)
+{
+    QList<SlippyMapLayerObjectPropertyPage*> propertyPages;
+    propertyPages.append(new SlippyMapLayerObjectPropertyPage(object, m_layerManager));
+    propertyPages.append(object->propertyPage());
+
+    for (auto *propertyPage : ExplorerApplication::pluginManager()->getPropertyPages()) {
+        propertyPages.append(propertyPage);
+    }
+
+    auto *tabWidget = new QTabWidget();
+
+    for (auto *propertyPage : propertyPages) {
+        propertyPage->setupUi();
+        tabWidget->addTab(propertyPage, propertyPage->tabTitle());
+    }
+
+    auto *dialog = new QDialog(this);
+
+    auto *saveButton = new QPushButton(tr("Save"));
+    connect(saveButton,
+            &QPushButton::clicked,
+            [this, object, propertyPages, dialog]() {
+                if (object->isEditable()) {
+                    for (auto *propertyPage: propertyPages)
+                        propertyPage->save();
+                    setWorkspaceDirty(true);
+                }
+                dialog->accept();
+            });
+
+    if (!object->isEditable())
+        saveButton->setEnabled(false);
+
+    auto *cancelButton = new QPushButton(tr("Cancel"));
+    connect(cancelButton,
+            &QPushButton::clicked,
+            dialog,
+            &QDialog::reject);
+
+    auto *buttonLayout = new QHBoxLayout();
+    buttonLayout->addStretch();
+    buttonLayout->addWidget(saveButton);
+    buttonLayout->addWidget(cancelButton);
+
+    auto *layout = new QVBoxLayout();
+    layout->setSizeConstraint(QVBoxLayout::SetFixedSize);
+    layout->addWidget(tabWidget);
+    layout->addLayout(buttonLayout);
+
+    dialog->setWindowTitle(object->label());
+    dialog->setLayout(layout);
+    dialog->setSizeGripEnabled(false);
+
+    int result = dialog->exec();
+    delete dialog;
+}
+
 void MainWindow::onSlippyMapLayerObjectDoubleClicked(SlippyMapLayerObject* object) {
     if (m_selectedObject == nullptr) return;
-
-    SlippyMapLayerObjectPropertyPage *propertyPage = nullptr;
-
-    if (auto *polygon = qobject_cast<SlippyMapLayerPolygon *>(object)) {
-        propertyPage = new SlippyMapLayerPolygonPropertyPage(object);
-    }
-    else if (auto *track = qobject_cast<SlippyMapLayerTrack *>(object)) {
-        propertyPage = new SlippyMapLayerTrackPropertyPage(track);
-    }
-    else if (auto *weatherMarker = qobject_cast<WeatherStationMarker*>(object)) {
-        propertyPage = new WeatherStationPropertyPage(weatherMarker);
-    }
-    else if (auto *marker = qobject_cast<SlippyMapWidgetMarker*>(object)) {
-        propertyPage = new SlippyMapLayerMarkerPropertyPage(marker);
-    }
-
-    propertyPage->setWindowTitle(object->label());
-    propertyPage->setWindowFlags(
-        propertyPage->windowFlags() & ~Qt::WindowMaximizeButtonHint);
-    propertyPage->show();
+    showPropertyPage(object);
 }
 
 void MainWindow::onSlippyMapDragFinished()
@@ -772,6 +891,7 @@ void MainWindow::onWeatherService_stationListReady(
 
     for (const auto& station : m_weatherService->stations()) {
         auto *marker = new WeatherStationMarker(station.stationId);
+        marker->setEditable(false);
         marker->setLabel(station.stationId);
         marker->setPosition(QPointF(station.longitude, station.latitude));
         m_layerManager->addLayerObject(m_weatherLayer, marker);
@@ -786,11 +906,103 @@ void MainWindow::onWeatherService_forecastReady(
 
 }
 
-void MainWindow::saveMarkers()
+void MainWindow::saveWorkspace(QString fileName)
 {
-    QSettings settings;
+    QFile file(fileName);
 
+    if (!file.open(QIODevice::WriteOnly)) {
+        qCritical() << "Unable to open file" << fileName;
+        QMessageBox::critical(this,
+                              tr("File Error"),
+                              tr("Unable to open file '%1'").arg(fileName));
+        return;
+    }
 
+    m_workspaceFileName = fileName;
+
+    QDataStream out(&file);
+    out.setVersion(QDataStream::Qt_5_15);
+
+    out << QString("layers");
+    out << m_layerManager->objectCount();
+
+    for (auto *layer : m_layerManager->layers()) {
+        // todo: serialize the layer
+        for (auto *object : layer->objects()) {
+            out << QString(object->metaObject()->className());
+            object->serialize(out);
+        }
+    }
+
+    setWorkspaceDirty(false);
+}
+
+void MainWindow::onActionFileSaveWorkspaceTriggered()
+{
+    QString fileName = m_workspaceFileName;
+    if (fileName.isEmpty()) {
+        QString fileName = QFileDialog::getSaveFileName(
+                this,
+                tr("Save Workspace"));
+    }
+
+    saveWorkspace(fileName);
+}
+
+void MainWindow::onActionFileOpenWorkspaceTriggered()
+{
+    if (!m_workspaceFileName.isEmpty()) {
+        if (!closeWorkspace())
+            return;
+    }
+
+    QString fileName = QFileDialog::getOpenFileName(
+            this,
+            tr("Open Workspace"));
+
+    QFile file(fileName);
+
+    if (!file.open(QIODevice::ReadOnly)) {
+        qCritical() << "Unable to open file" << fileName;
+        QMessageBox::critical(this,
+                              tr("File Error"),
+                              tr("Unable to open file '%1'").arg(fileName));
+        return;
+    }
+
+    m_workspaceFileName = fileName;
+
+    QDataStream in(&file);
+    in.setVersion(QDataStream::Qt_5_15);
+
+    QString section;
+    QString className;
+    int count = 0;
+
+    in >> section;
+
+    if (section == "layers") {
+        in >> count;
+
+        for (int i = 0; i < count; i++) {
+            in >> className;
+            className.append("*");
+
+            // get the type information from qt meta
+            int typeId = QMetaType::type(className.toLocal8Bit());
+            const QMetaObject *metaObject = QMetaType::metaObjectForType(typeId);
+
+            // create a new object and cast to layer object
+            QObject *o = metaObject->newInstance();
+            auto *object = qobject_cast<SlippyMapLayerObject*>(o);
+
+            // unserialize and add to layer
+            object->unserialize(in);
+            m_layerManager->addLayerObject(m_layerManager->defaultLayer(), object);
+        }
+    }
+
+    setWorkspaceDirty(false);
 }
 
 void MainWindow::onDirectionsToHereTriggered()
@@ -923,6 +1135,7 @@ void MainWindow::weatherNetworkAccessManager_onRequestFinished(QNetworkReply* re
     marker->setPosition(QPointF(longitude, latitude));
     m_layerManager->addLayerObject(m_weatherLayer, marker);
     m_weatherLayer->setVisible(true);
+    m_weatherLayer->setEditable(false);
     qDebug() << "Got weather station" << gridId;
     qDebug() << "Got location" << city << "," << state;
     qDebug() << "Got coordinates" << latitude << "," << longitude;
@@ -967,23 +1180,21 @@ void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF po
 
 void MainWindow::onTvwMarkersContextMenuRequested(const QPoint &point)
 {
+    qDebug() << "Context menu requested...";
     QModelIndex index = ui->tvwMarkers->indexAt(point);
     if (index.isValid()) {
-        if (!index.parent().isValid())
+        if (!index.parent().isValid()) {
             m_markerMenu->exec(ui->tvwMarkers->viewport()->mapToGlobal(point));
+        }
+    }
+    else {
+        qDebug() << "No selected item";
     }
 }
 
 void MainWindow::onMarkerMenuPropertiesActionTriggered()
 {
-    // QModelIndex index = ui->tvwMarkers->currentIndex();
-    // SlippyMapLayerObject *obj = static_cast<SlippyMapLayerObject*>(index.internalPointer());
-    // if (m_layerManager->contains(obj)) {
-    //     SlippyMapLayerObjectPropertyPage *page = obj->propertyPage();
-    //     if (page != nullptr) {
-    //         page->show();
-    //     }
-    // }
+
 }
 
 void MainWindow::onPluginLayerObjectProviderMarkerAdded(SlippyMapLayerObject *object)
@@ -997,13 +1208,16 @@ void MainWindow::onAddMarkerActionTriggered()
     double lon = ui->slippyMap->widgetX2long(m_contextMenuLocation.x());
     double lat = ui->slippyMap->widgetY2lat(m_contextMenuLocation.y());
     QPointF markerPoint(lon, lat);
+
     SlippyMapWidgetMarker *marker = new SlippyMapWidgetMarker(markerPoint);
     marker->setLabel(SlippyMapWidget::latLonToString(lat, lon));
     marker->setDescription(tr("Test Label"));
-    //m_layerManager->defaultLayer()->addObject(marker);
+
     m_layerManager->addLayerObject(
         m_layerManager->defaultLayer(),
         marker);
+
+    setWorkspaceDirty(true);
 }
 
 void MainWindow::onDeleteMarkerActionTriggered()
@@ -1343,4 +1557,56 @@ void MainWindow::on_actionToolsOSMImport_triggered()
     }
     m_importDialog->show();
     m_importDialog->raise();
+}
+
+void MainWindow::setWorkspaceDirty(bool dirty)
+{
+    QString fileName = m_workspaceFileName;
+    if (fileName.isEmpty())
+        fileName = "Untitled.osm";
+
+    m_workspaceDirty = dirty;
+
+    if (dirty) {
+        ui->actionFile_SaveWorkspace->setEnabled(true);
+        setWindowTitle(tr("OSMExplorer") + " - " + fileName + "*");
+    }
+    else {
+        ui->actionFile_SaveWorkspace->setEnabled(false);
+        setWindowTitle(tr("OSMExplorer") + " - " + fileName);
+    }
+}
+
+bool MainWindow::closeWorkspace()
+{
+    if (m_workspaceDirty) {
+        int result = QMessageBox::question(this,
+                              tr("Save Workspace?"),
+                              tr("You have unsaved changes. Would you like to save?"),
+                              QMessageBox::StandardButtons(QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel));
+
+        if (result == QMessageBox::Yes) {
+            onActionFileSaveWorkspaceTriggered();
+            return true;
+        }
+        else if (result == QMessageBox::Cancel)
+            return false;
+    }
+
+    for (auto *layer : m_layerManager->layers()) {
+        layer->removeAll();
+    }
+    m_workspaceFileName.clear();
+    setWorkspaceDirty(true);
+    return true;
+}
+
+void MainWindow::onActionFileCloseWorkspaceTriggered()
+{
+    closeWorkspace();
+}
+
+void MainWindow::updateRecentFileList()
+{
+    ui->menuRecent->clear();
 }

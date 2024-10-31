@@ -3,7 +3,7 @@
 
 #include <QObject>
 
-#include "gpx/gpxtracklink.h"
+#include "gpxtracklink.h"
 
 class GPXPerson : public QObject
 {

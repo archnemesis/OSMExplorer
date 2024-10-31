@@ -30,22 +30,22 @@ set(PROJECT_SOURCES
         explorer/gpssourcedialog.cpp
         explorer/gpssourcedialog.h
         explorer/gpssourcedialog.ui
-        explorer/gpx/gpxcopyright.cpp
-        explorer/gpx/gpxcopyright.h
-        explorer/gpx/gpxmetadata.cpp
-        explorer/gpx/gpxmetadata.h
-        explorer/gpx/gpxparser.cpp
-        explorer/gpx/gpxparser.h
-        explorer/gpx/gpxperson.cpp
-        explorer/gpx/gpxperson.h
-        explorer/gpx/gpxtrack.cpp
-        explorer/gpx/gpxtrack.h
-        explorer/gpx/gpxtracklink.cpp
-        explorer/gpx/gpxtracklink.h
-        explorer/gpx/gpxtracksegment.cpp
-        explorer/gpx/gpxtracksegment.h
-        explorer/gpx/gpxwaypoint.cpp
-        explorer/gpx/gpxwaypoint.h
+        explorer/Map/gpx/gpxcopyright.cpp
+        explorer/Map/gpx/gpxcopyright.h
+        explorer/Map/gpx/gpxmetadata.cpp
+        explorer/Map/gpx/gpxmetadata.h
+        explorer/Map/gpx/gpxparser.cpp
+        explorer/Map/gpx/gpxparser.h
+        explorer/Map/gpx/gpxperson.cpp
+        explorer/Map/gpx/gpxperson.h
+        explorer/Map/gpx/gpxtrack.cpp
+        explorer/Map/gpx/gpxtrack.h
+        explorer/Map/gpx/gpxtracklink.cpp
+        explorer/Map/gpx/gpxtracklink.h
+        explorer/Map/gpx/gpxtracksegment.cpp
+        explorer/Map/gpx/gpxtracksegment.h
+        explorer/Map/gpx/gpxwaypoint.cpp
+        explorer/Map/gpx/gpxwaypoint.h
         explorer/layerpropertiesdialog.cpp
         explorer/layerpropertiesdialog.h
         explorer/layerpropertiesdialog.ui
@@ -64,16 +64,10 @@ set(PROJECT_SOURCES
         explorer/settingsdialog.cpp
         explorer/settingsdialog.h
         explorer/settingsdialog.ui
-        explorer/SlippyMapLayerTrack.cpp
-        explorer/SlippyMapLayerTrack.h
-        explorer/PropertyPage/SlippyMapLayerObjectPropertyPage.cpp
-        explorer/PropertyPage/SlippyMapLayerObjectPropertyPage.h
+        explorer/Map/SlippyMapLayerTrack.cpp
+        explorer/Map/SlippyMapLayerTrack.h
         explorer/slippymaplayerobjectprovider.cpp
         explorer/slippymaplayerobjectprovider.h
-        explorer/PropertyPage/SlippyMapLayerPolygonPropertyPage.cpp
-        explorer/PropertyPage/SlippyMapLayerPolygonPropertyPage.h
-        explorer/PropertyPage/SlippyMapLayerTrackPropertyPage.cpp
-        explorer/PropertyPage/SlippyMapLayerTrackPropertyPage.h
         explorer/textlogviewerform.cpp
         explorer/textlogviewerform.h
         explorer/textlogviewerform.ui
@@ -91,8 +85,8 @@ set(PROJECT_SOURCES
         explorer/Application/ExplorerApplication.h
         explorer/Application/PluginManager.cpp
         explorer/Application/PluginManager.h
-        explorer/PropertyPage/SlippyMapLayerMarkerPropertyPage.cpp
-        explorer/PropertyPage/SlippyMapLayerMarkerPropertyPage.h
+        explorer/Map/SlippyMapTreeView.cpp
+        explorer/Map/SlippyMapTreeView.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -118,9 +112,9 @@ target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::Charts)
 target_link_libraries(osmexplorer PRIVATE SlippyMap)
 target_link_libraries(osmexplorer PRIVATE LocationServices)
 
-target_include_directories(osmexplorer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/explorer)
-target_include_directories(osmexplorer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/SlippyMap/include)
-target_include_directories(osmexplorer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/LocationServices)
+target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/explorer)
+target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/SlippyMap/include)
+target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/LocationServices)
 
 set_target_properties(osmexplorer PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER osmexplorer.robingingras.com

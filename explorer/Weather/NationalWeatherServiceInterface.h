@@ -83,11 +83,14 @@ signals:
     void hourlyForecastReady(const Forecast12Hr& forecast);
     void latestObservationReady(const Observation& observation);
     void receivedGridId(QString gridId);
+    void requestError(QString errorString);
 
 private slots:
     void networkManager_onRequestFinished(QNetworkReply *reply);
 
 private:
+    void handleError(QString message);
+
     enum RequestState
     {
         Forecast,

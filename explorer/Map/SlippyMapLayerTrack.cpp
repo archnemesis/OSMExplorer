@@ -1,4 +1,5 @@
 #include "SlippyMapLayerTrack.h"
+#include "SlippyMapLayerTrackPropertyPage.h"
 
 #include <cmath>
 
@@ -7,8 +8,6 @@
 #include <QPainter>
 #include <QPointF>
 #include <QBrush>
-#include <QPen>
-#include <QColor>
 #include <QPolygonF>
 
 #include "gpx/gpxwaypoint.h"
@@ -126,4 +125,19 @@ void SlippyMapLayerTrack::initStyle()
     m_linePen.setStyle(Qt::SolidLine);
     m_linePen.setColor(Qt::darkGray);
     m_linePen.setWidth(8);
+}
+
+QDataStream &SlippyMapLayerTrack::serialize(QDataStream &stream) const
+{
+    return stream;
+}
+
+void SlippyMapLayerTrack::unserialize(QDataStream &stream)
+{
+
+}
+
+SlippyMapLayerObjectPropertyPage *SlippyMapLayerTrack::propertyPage() const
+{
+    return new SlippyMapLayerTrackPropertyPage((SlippyMapLayerObject *) this);
 }

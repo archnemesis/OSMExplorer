@@ -56,7 +56,12 @@ protected:
     void setupContextMenus();
     void loadStartupSettings();
     void saveLayers();
+    void saveWorkspace(QString fileName);
+    bool closeWorkspace();
     void setupToolbar();
+    void setWorkspaceDirty(bool dirty);
+    void showPropertyPage(SlippyMapLayerObject *object);
+    void updateRecentFileList();
 
 private:
     Ui::MainWindow *ui;
@@ -66,7 +71,6 @@ private:
     QAction *m_directionsFromHereAction;
     QAction *m_directionsToHereAction;
     QAction *m_markerDeleteAction = nullptr;
-    QAction *m_markerPropertiesAction = nullptr;
     QAction *m_markerVisibilityAction;
     QColor m_directionLineColor;
     QHash<QString,SlippyMapWidgetMarker*> m_gpsMarkers;
@@ -77,6 +81,7 @@ private:
     QLineEdit *m_toolBarLongitudeInput;
     QList<ExplorerPluginInterface*> m_plugins;
     QList<LocationDataProvider*> m_gpsProviders;
+    QList<QString> m_recentFileList;
     QList<SlippyMapWidgetLayer*> m_layers;
     QList<SlippyMapWidgetMarker*> m_loadedMarkers;
     QList<SlippyMapWidgetMarker*> m_weatherStationMarkers;
@@ -90,6 +95,10 @@ private:
     QPointF m_contextMenuPoint;
     QPointF m_slippyContextMenuLocation;
     QPushButton *m_toolBarLatLonButton;
+    QPushButton *m_zoomInButton;
+    QPushButton *m_zoomOutButton;
+    QPushButton *m_currentLocationButton;
+    QString m_workspaceFileName;
     QTimer *m_saveSplitterPosTimer = nullptr;
     QTimer *m_saveWindowSizeTimer = nullptr;
     SettingsDialog *m_settingsDialog = nullptr;
@@ -105,13 +114,14 @@ private:
     WeatherStationMarker *m_weatherStationMarker;
     TextLogViewerForm *m_nmeaLog = nullptr;
     int m_requestCount = 0;
+    bool m_workspaceDirty = true;
 
     QPoint m_contextMenuLocation;
     QMenu *m_contextMenu = nullptr;
     QAction *m_coordAction = nullptr;
     QAction *m_addMarkerAction = nullptr;
     QAction *m_deleteMarkerAction = nullptr;
-    QAction *m_setMarkerLabelAction = nullptr;
+    QAction *m_markerPropertiesAction = nullptr;
     QAction *m_centerMapAction = nullptr;
     QAction *m_zoomInHereMapAction = nullptr;
     QAction *m_zoomOutHereMapAction = nullptr;
@@ -121,6 +131,7 @@ private:
     QAction *m_editShapeAction = nullptr;
     QAction *m_deleteShapeAction = nullptr;
     QAction *m_getForecastHereAction = nullptr;
+    QAction *m_newLayerAction = nullptr;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -144,7 +155,9 @@ protected slots:
     void onWeatherService_forecastReady(
             const NationalWeatherServiceInterface::Forecast12Hr& forecast);
 
-    void saveMarkers();
+    void onActionFileSaveWorkspaceTriggered();
+    void onActionFileOpenWorkspaceTriggered();
+    void onActionFileCloseWorkspaceTriggered();
     void onDirectionsToHereTriggered();
     void onDirectionsFromHereTriggered();
     void onNetworkRequestFinished(QNetworkReply *reply);
@@ -188,6 +201,7 @@ private slots:
     void on_actionImport_triggered();
     void on_actionMarkerImport_triggered();
     void on_actionToolsOSMImport_triggered();
+
 };
 
 #endif // MAINWINDOW_H

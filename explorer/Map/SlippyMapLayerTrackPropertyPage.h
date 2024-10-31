@@ -2,7 +2,8 @@
 #define SLIPPYMAPLAYERTRACKPROPERTYPAGE_H
 
 #include <QWidget>
-#include "SlippyMapLayerObjectPropertyPage.h"
+#include <SlippyMap/SlippyMapLayerObjectPropertyPage.h>
+
 #include "SlippyMapLayerTrack.h"
 
 class SlippyMapLayerTrackPropertyPage : public SlippyMapLayerObjectPropertyPage
@@ -10,7 +11,7 @@ class SlippyMapLayerTrackPropertyPage : public SlippyMapLayerObjectPropertyPage
     Q_OBJECT
 
 public:
-    explicit SlippyMapLayerTrackPropertyPage(SlippyMapLayerTrack *track);
+    explicit SlippyMapLayerTrackPropertyPage(SlippyMapLayerObject *object);
     ~SlippyMapLayerTrackPropertyPage() override;
     QString tabTitle() override;
 

@@ -23,6 +23,9 @@ public:
     const QPointF position() const override;
     const QSizeF size() const override;
     const GPXTrack& track();
+    SlippyMapLayerObjectPropertyPage* propertyPage() const;
+    QDataStream& serialize(QDataStream& stream) const override;
+    void unserialize(QDataStream& stream) override;
 
 private:
     void initStyle();

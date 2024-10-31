@@ -8,6 +8,8 @@
 #include <QVBoxLayout>
 #include <QScrollArea>
 #include <QMessageBox>
+#include <QSettings>
+#include <QTimer>
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
 
@@ -29,12 +31,25 @@ WeatherForecastWindow::WeatherForecastWindow(const QPointF& location) :
             &NationalWeatherServiceInterface::hourlyForecastReady,
             this,
             &WeatherForecastWindow::onNationalWeatherService_hourlyForecastReady);
+    connect(m_nationalWeatherService,
+            &NationalWeatherServiceInterface::requestError,
+            this,
+            &WeatherForecastWindow::onNationalWeatherService_requestError);
 
     m_tabWidget = new QTabWidget();
     m_tempForecastChart = new QChartView();
     m_location = location;
 
+    m_windowResizeTimer = new QTimer();
+    m_windowResizeTimer->setSingleShot(true);
+    m_windowResizeTimer->setInterval(100);
+    connect(m_windowResizeTimer,
+            &QTimer::timeout,
+            this,
+            &WeatherForecastWindow::onWindowResizeTimer_timeout);
+
     setupUi();
+    loadSettings();
 
     m_loadingMessageBox = new QMessageBox(this);
     m_loadingMessageBox->setText(tr("Loading forecast data..."));
@@ -98,4 +113,44 @@ void WeatherForecastWindow::onNationalWeatherService_hourlyForecastReady(
     m_tempForecastChart->setRenderHint(QPainter::Antialiasing);
 
     m_loadingMessageBox->hide();
+}
+
+void WeatherForecastWindow::onNationalWeatherService_requestError(QString errorMessage)
+{
+    m_loadingMessageBox->hide();
+    QMessageBox::critical(
+            this,
+            tr("Forecast Error"),
+            tr("There was an error getting the forecast: %1").arg(errorMessage)
+            );
+}
+
+void WeatherForecastWindow::saveWindowSize()
+{
+    QSettings settings;
+    settings.setValue("weatherForecastWindow/windowWidth", width());
+    settings.setValue("weatherForecastWindow/windowHeight", height());
+}
+
+void WeatherForecastWindow::onWindowResizeTimer_timeout()
+{
+    saveWindowSize();
+}
+
+void WeatherForecastWindow::resizeEvent(QResizeEvent *event)
+{
+    m_windowResizeTimer->stop();
+    m_windowResizeTimer->start();
+}
+
+void WeatherForecastWindow::loadSettings()
+{
+    QSettings settings;
+
+    if (settings.contains("weatherForecastWindow/windowWidth") \
+        && settings.contains("weatherForecastWindow/windowHeight")) {
+        int width = settings.value("weatherForecastWindow/windowWidth").toInt();
+        int height = settings.value("weatherForecastWindow/windowHeight").toInt();
+        resize(width, height);
+    }
 }

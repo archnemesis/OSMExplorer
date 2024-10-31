@@ -9,6 +9,9 @@
 
 class PluginManager;
 
+namespace SlippyMap {
+    class SlippyMapLayerManager;
+}
 
 class ExplorerApplication : public QApplication {
     Q_OBJECT
@@ -17,9 +20,11 @@ public:
 
     static ExplorerApplication *instance();
     static PluginManager *pluginManager();
+    static SlippyMap::SlippyMapLayerManager *layerManager();
 
 private:
     PluginManager *m_pluginManager;
+    SlippyMap::SlippyMapLayerManager *m_layerManager;
 };
 
 
