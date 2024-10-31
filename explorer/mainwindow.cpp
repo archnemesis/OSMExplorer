@@ -286,6 +286,14 @@ MainWindow::MainWindow(QWidget *parent) :
             this,
             &MainWindow::createNewLayer);
 
+    m_deleteLayerAction = new QAction();
+    m_deleteLayerAction->setText(tr("Delete"));
+    m_markerMenu->addAction(m_deleteLayerAction);
+    connect(m_deleteLayerAction,
+        &QAction::triggered,
+        this,
+        &MainWindow::deleteLayer);
+
     m_markerVisibilityAction = new QAction();
     m_markerVisibilityAction->setText(tr("Visible"));
     m_markerVisibilityAction->setCheckable(true);
@@ -1126,11 +1134,15 @@ void MainWindow::onTvwMarkersContextMenuRequested(const QPoint &point)
     QModelIndex index = ui->tvwMarkers->indexAt(point);
     if (index.isValid()) {
         if (!index.parent().isValid()) {
+            m_newLayerAction->setVisible(false);
+            m_deleteLayerAction->setVisible(true);
             m_markerMenu->exec(ui->tvwMarkers->viewport()->mapToGlobal(point));
         }
     }
     else {
-        qDebug() << "No selected item";
+        m_newLayerAction->setVisible(true);
+        m_deleteLayerAction->setVisible(false);
+        m_markerMenu->exec(ui->tvwMarkers->viewport()->mapToGlobal(point));
     }
 }
 
@@ -1155,10 +1167,13 @@ void MainWindow::onAddMarkerActionTriggered()
     marker->setLabel(SlippyMapWidget::latLonToString(lat, lon));
     marker->setDescription(tr("Test Label"));
 
-    m_layerManager->addLayerObject(
-        m_layerManager->defaultLayer(),
-        marker);
+    SlippyMapLayer *target = m_layerManager->activeLayer();
+    if (target == nullptr)
+        target = m_layerManager->defaultLayer();
+    if (target == nullptr)
+        return;
 
+    m_layerManager->addLayerObject(target, marker);
     setWorkspaceDirty(true);
 }
 

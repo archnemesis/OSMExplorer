@@ -141,6 +141,7 @@ private:
     QAction *m_deleteShapeAction = nullptr;
     QAction *m_getForecastHereAction = nullptr;
     QAction *m_newLayerAction = nullptr;
+    QAction *m_deleteLayerAction = nullptr;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
