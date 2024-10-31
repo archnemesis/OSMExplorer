@@ -27,10 +27,15 @@ class QMenu;
 class QMessageBox;
 class QNetworkAccessManager;
 class QNetworkReply;
+class QSpinBox;
 class SettingsDialog;
 class SlippyMapLayerObjectPropertyPage;
 class TextLogViewerForm;
 class WeatherForecastWindow;
+
+namespace color_widgets {
+    class ColorSelector;
+}
 
 namespace SlippyMap
 {
@@ -65,11 +70,11 @@ protected:
 
 private:
     Ui::MainWindow *ui;
+    color_widgets::ColorSelector *m_strokeColorSelector;
+    color_widgets::ColorSelector *m_fillColorSelector;
     DirectionListItemWidget *m_currentRouteListItemWidget = nullptr;
     MapDataImportDialog *m_importDialog = nullptr;
     NationalWeatherServiceInterface *m_weatherService = nullptr;
-    QAction *m_directionsFromHereAction;
-    QAction *m_directionsToHereAction;
     QAction *m_markerDeleteAction = nullptr;
     QAction *m_markerVisibilityAction;
     QColor m_directionLineColor;
@@ -89,7 +94,6 @@ private:
     QMap<SlippyMapWidgetMarker*,QListWidgetItem*> m_markerListItemMap;
     QMenu *m_markerMenu = nullptr;
     QMessageBox *m_loadingDialog = nullptr;
-    QNetworkAccessManager *m_net;
     QNetworkAccessManager *m_weatherNetworkAccessManager;
     QPalette m_defaultPalette;
     QPointF m_contextMenuPoint;
@@ -98,6 +102,7 @@ private:
     QPushButton *m_zoomInButton;
     QPushButton *m_zoomOutButton;
     QPushButton *m_currentLocationButton;
+    QSpinBox *m_strokeWidth;
     QString m_workspaceFileName;
     QTimer *m_saveSplitterPosTimer = nullptr;
     QTimer *m_saveWindowSizeTimer = nullptr;
@@ -158,9 +163,6 @@ protected slots:
     void onActionFileSaveWorkspaceTriggered();
     void onActionFileOpenWorkspaceTriggered();
     void onActionFileCloseWorkspaceTriggered();
-    void onDirectionsToHereTriggered();
-    void onDirectionsFromHereTriggered();
-    void onNetworkRequestFinished(QNetworkReply *reply);
     void weatherNetworkAccessManager_onRequestFinished(QNetworkReply *reply);
     void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
     void onTvwMarkersContextMenuRequested(const QPoint& point);
@@ -191,7 +193,6 @@ private slots:
     void on_actionViewSidebar_toggled(bool arg1);
     void on_actionViewClearRoute_triggered();
     void on_actionFileSettings_triggered();
-    void on_btnDirectionsGo_clicked();
     void on_actionMapGpsAddSource_triggered();
     void on_actionViewGpsLog_triggered();
     void on_tvwMarkers_activated(const QModelIndex &index);

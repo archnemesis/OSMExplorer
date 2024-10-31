@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(osmexplorer VERSION 1.0.0 LANGUAGES CXX)
+project(osmexplorer VERSION 1.0.0 LANGUAGES C CXX)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 cmake_policy(SET CMP0074 NEW)
+cmake_policy(SET CMP0153 OLD)
 
 find_package(QT NAMES Qt5 REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort Charts)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort Charts)
@@ -17,6 +18,7 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedi
 add_subdirectory(SlippyMap)
 add_subdirectory(LocationServices)
 add_subdirectory(plugins)
+add_subdirectory(externals/Qt-Color-Widgets)
 
 set(PROJECT_SOURCES
         explorer/main.cpp
@@ -66,6 +68,8 @@ set(PROJECT_SOURCES
         explorer/settingsdialog.ui
         explorer/Map/SlippyMapLayerTrack.cpp
         explorer/Map/SlippyMapLayerTrack.h
+        explorer/Map/SlippyMapLayerTrackPropertyPage.cpp
+        explorer/Map/SlippyMapLayerTrackPropertyPage.h
         explorer/slippymaplayerobjectprovider.cpp
         explorer/slippymaplayerobjectprovider.h
         explorer/textlogviewerform.cpp
@@ -111,10 +115,12 @@ target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::SerialPort)
 target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::Charts)
 target_link_libraries(osmexplorer PRIVATE SlippyMap)
 target_link_libraries(osmexplorer PRIVATE LocationServices)
+target_link_libraries(osmexplorer PRIVATE QtColorWidgets)
 
 target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/explorer)
 target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/SlippyMap/include)
 target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/LocationServices)
+target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/externals/Qt-Color-Widgets/include)
 
 set_target_properties(osmexplorer PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER osmexplorer.robingingras.com

@@ -58,3 +58,12 @@ void SlippyMapLayerTrackPropertyPage::setupUi() {
     hLayout->addWidget(tableWidget);
     setLayout(hLayout);
 }
+
+void SlippyMapLayerTrackPropertyPage::updateUi()
+{
+}
+
+void SlippyMapLayerTrackPropertyPage::save()
+{
+
+}

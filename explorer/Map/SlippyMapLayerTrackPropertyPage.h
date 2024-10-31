@@ -14,9 +14,13 @@ public:
     explicit SlippyMapLayerTrackPropertyPage(SlippyMapLayerObject *object);
     ~SlippyMapLayerTrackPropertyPage() override;
     QString tabTitle() override;
+    void save() override;
+    void setupUi() override;
+
+public slots:
+    void updateUi() override;
 
 protected:
-    void setupUi();
     SlippyMapLayerTrack *m_track;
 };
 

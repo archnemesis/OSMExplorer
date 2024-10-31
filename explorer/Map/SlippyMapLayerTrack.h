@@ -21,6 +21,7 @@ public:
     bool contains(const QPointF& point, int zoom) const override;
     bool isMovable() override;
     const QPointF position() const override;
+    void setPosition(const QPointF& position) override;
     const QSizeF size() const override;
     const GPXTrack& track();
     SlippyMapLayerObjectPropertyPage* propertyPage() const;

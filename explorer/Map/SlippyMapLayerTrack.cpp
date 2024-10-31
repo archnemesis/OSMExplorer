@@ -103,6 +103,10 @@ const QPointF SlippyMapLayerTrack::position() const
     return m_points.at(0);
 }
 
+void SlippyMapLayerTrack::setPosition(const QPointF &position) {
+
+}
+
 const QSizeF SlippyMapLayerTrack::size() const
 {
     QPolygonF poly(m_points);

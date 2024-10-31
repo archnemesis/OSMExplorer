@@ -1,3 +1,6 @@
 [submodule "SlippyMap"]
 	path = SlippyMap
 	url = git@github.com:archnemesis/SlippyMap.git
+[submodule "externals/Qt-Color-Widgets"]
+	path = externals/Qt-Color-Widgets
+	url = https://gitlab.com/mattbas/Qt-Color-Widgets.git

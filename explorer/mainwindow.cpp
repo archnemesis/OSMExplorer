@@ -17,10 +17,13 @@
 #include <QPalette>
 #include <QPluginLoader>
 #include <QSettings>
+#include <QSpinBox>
 #include <QStandardPaths>
 #include <QTimer>
 #include <QUrl>
 #include <QVector>
+
+#include <QtColorWidgets/ColorSelector>
 
 #include <SlippyMap/SlippyMapWidget.h>
 #include <SlippyMap/SlippyMapLayer.h>
@@ -51,8 +54,10 @@
 #include "textlogviewerform.h"
 
 #include <math.h>
+#include <QSpinBox>
 
 #include "Application/PluginManager.h"
+#include "SlippyMap/SlippyMapLayerObjectCommonPropertyPage.h"
 #include "Weather/WeatherStationMarker.h"
 #include "Weather/WeatherStationPropertyPage.h"
 
@@ -61,13 +66,12 @@
 #endif
 
 using namespace SlippyMap;
+using namespace color_widgets;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     m_forecastZonePolygon(nullptr),
-    m_directionsFromHereAction(nullptr),
-    m_directionsToHereAction(nullptr),
     m_weatherStationMarker(nullptr)
 {
     ui->setupUi(this);
@@ -101,12 +105,6 @@ MainWindow::MainWindow(QWidget *parent) :
     m_gpsMarkerLayer->setName(tr("GPS"));
     m_gpsMarkerLayer->setEditable(false);
     m_layerManager->addLayer(m_gpsMarkerLayer);
-
-    /*
-     * DeleteMe: Directions Stuff
-     */
-    m_net = new QNetworkAccessManager();
-    connect(m_net, &QNetworkAccessManager::finished, this, &MainWindow::onNetworkRequestFinished);
 
     /*
      * Weather Service Integration
@@ -156,6 +154,41 @@ MainWindow::MainWindow(QWidget *parent) :
             &QPushButton::clicked,
             ui->slippyMap,
             &SlippyMapWidget::decreaseZoomLevel);
+
+    /**
+     * Color and stroke width selectors for drawing
+     */
+    m_strokeColorSelector = new ColorSelector();
+    m_strokeColorSelector->setColor(Qt::black);
+    m_strokeColorSelector->setToolTip(tr("Stroke color"));
+    connect(m_strokeColorSelector,
+        &ColorSelector::colorSelected,
+        [this](const QColor& color) {
+            ui->slippyMap->setDrawingStrokeColor(color.lighter());
+    });
+
+    m_fillColorSelector = new ColorSelector();
+    m_fillColorSelector->setColor(Qt::white);
+    m_fillColorSelector->setToolTip(tr("Fill color"));
+    connect(m_fillColorSelector,
+        &ColorSelector::colorSelected,
+        [this](const QColor& color) {
+            ui->slippyMap->setDrawingFillColor(color.lighter());
+    });
+
+    m_strokeWidth = new QSpinBox();
+    m_strokeWidth->setMinimum(0);
+    m_strokeWidth->setValue(2);
+    m_strokeWidth->setToolTip(tr("Stroke width"));
+    connect(m_strokeWidth,
+        QOverload<int>::of(&QSpinBox::valueChanged),
+        [this](int value) {
+            ui->slippyMap->setDrawingStrokeWidth(value);
+    });
+
+    ui->slippyMap->setDrawingFillColor(Qt::white);
+    ui->slippyMap->setDrawingStrokeColor(QColor(Qt::black).lighter());
+    ui->slippyMap->setDrawingStrokeWidth(2);
 
     /*
      * Lat/Lon inputs in the toolbar
@@ -251,7 +284,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     m_saveWindowSizeTimer = new QTimer();
     m_saveWindowSizeTimer->setSingleShot(true);
-    m_saveWindowSizeTimer->setInterval(100);
+    m_saveWindowSizeTimer->setInterval(1000);
     connect(m_saveWindowSizeTimer,
             &QTimer::timeout,
             this,
@@ -400,11 +433,6 @@ void MainWindow::setupContextMenus()
     m_copyLongitudeAction = new QAction();
     m_copyLongitudeAction->setText(tr("Copy Longitude"));
 
-    m_directionsFromHereAction = new QAction();
-    m_directionsFromHereAction->setText("Directions From Here");
-    m_directionsToHereAction = new QAction();
-    m_directionsToHereAction->setText("Directions To Here");
-
     m_editShapeAction = new QAction();
     m_editShapeAction->setText(tr("Properties..."));
     m_editShapeAction->setVisible(false);
@@ -427,9 +455,6 @@ void MainWindow::setupContextMenus()
         m_weatherForecastWindow->show();
     });
 
-    connect(m_directionsFromHereAction, &QAction::triggered, this, &MainWindow::onDirectionsFromHereTriggered);
-    connect(m_directionsToHereAction, &QAction::triggered, this, &MainWindow::onDirectionsToHereTriggered);
-
     m_contextMenu = new QMenu();
     m_contextMenu->addAction(m_coordAction);
     m_contextMenu->addSeparator();
@@ -448,9 +473,6 @@ void MainWindow::setupContextMenus()
     m_contextMenu->addAction(m_copyCoordinatesAction);
     m_contextMenu->addAction(m_copyLatitudeAction);
     m_contextMenu->addAction(m_copyLongitudeAction);
-    m_contextMenu->addSeparator();
-    m_contextMenu->addAction(m_directionsFromHereAction);
-    m_contextMenu->addAction(m_directionsToHereAction);
 }
 
 void MainWindow::loadStartupSettings()
@@ -458,9 +480,15 @@ void MainWindow::loadStartupSettings()
     QSettings settings;
 
     if (settings.contains("view/windowWidth") && settings.contains("view/windowHeight")) {
-        int width = settings.value("view/windowWidth").toInt();
-        int height = settings.value("view/windowHeight").toInt();
-        resize(width, height);
+        if (settings.value("view/maximized", false).toBool()) {
+            qDebug() << "Saved maximized state";
+            showMaximized();
+        }
+        else {
+            int width = settings.value("view/windowWidth").toInt();
+            int height = settings.value("view/windowHeight").toInt();
+            resize(width, height);
+        }
     }
 
     int recentFileCount = settings.beginReadArray("recentFiles");
@@ -545,6 +573,10 @@ void MainWindow::setupToolbar()
     ui->toolBar->addWidget(m_toolBarLatitudeInput);
     ui->toolBar->addWidget(m_toolBarLongitudeInput);
     ui->toolBar->addWidget(m_toolBarLatLonButton);
+    ui->toolBar->addSeparator();
+    ui->toolBar->addWidget(m_strokeColorSelector);
+    ui->toolBar->addWidget(m_fillColorSelector);
+    ui->toolBar->addWidget(m_strokeWidth);
 }
 
 void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
@@ -734,11 +766,13 @@ void MainWindow::onSlippyMapRectSelected(QRect rect)
     points[1] = QPointF(bottomRight.x(), topleft.y());
     points[2] = QPointF(bottomRight);
     points[3] = QPointF(topleft.x(), bottomRight.y());
+
     SlippyMapLayerPolygon *poly = new SlippyMapLayerPolygon(points);
     poly->setLabel(tr("New Rect"));
     poly->setDescription(tr("New rectangle"));
-//    poly->setBrush(br);
-//    poly->setPen(pn);
+    poly->setFillColor(m_fillColorSelector->color());
+    poly->setStrokeColor(m_strokeColorSelector->color());
+    poly->setStrokeWidth(m_strokeWidth->value());
     m_layerManager->addLayerObject(poly);
 }
 
@@ -760,37 +794,31 @@ void MainWindow::onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode)
 
 void MainWindow::onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object)
 {
-    qDebug() << "Selected object" << object->label();
+    auto *commonPropertyPage = new SlippyMapLayerObjectCommonPropertyPage(
+        object, m_layerManager);
 
-    if (m_selectedObject != nullptr && m_selectedObject == object) {
-        return;
+    connect(object,
+        &SlippyMapLayerObject::updated,
+        commonPropertyPage,
+        &SlippyMapLayerObjectCommonPropertyPage::updateUi);
+
+    QList<SlippyMapLayerObjectPropertyPage*> propertyPages;
+    propertyPages.append(commonPropertyPage);
+    propertyPages.append(object->propertyPage());
+
+    for (auto *propertyPage : ExplorerApplication::pluginManager()->getPropertyPages()) {
+        propertyPages.append(propertyPage);
     }
 
-    SlippyMapLayerObjectPropertyPage *propertyPage = nullptr;
-
-//    if (auto *polygon = qobject_cast<SlippyMapLayerPolygon *>(object)) {
-//        propertyPage = new SlippyMapLayerPolygonPropertyPage(polygon);
-//        ui->tabShapeEditor->insertTab(1, propertyPage, propertyPage->tabTitle());
-//    }
-//    else if (auto *track = qobject_cast<SlippyMapLayerTrack *>(object)) {
-//        propertyPage = new SlippyMapLayerTrackPropertyPage(track);
-//        ui->tabShapeEditor->insertTab(1, propertyPage, propertyPage->tabTitle());
-//    }
-
-    ui->selectedObjectName->setText(object->label());
-    ui->selectedObjectDescription->setPlainText(object->description());
+    ui->tabShapeEditor->clear();
+    for (auto *propertyPage : propertyPages) {
+        propertyPage->setupUi();
+        ui->tabShapeEditor->addTab(propertyPage, propertyPage->tabTitle());
+    }
     ui->tabShapeEditor->setVisible(true);
     ui->lblNoShapeSelected->setVisible(false);
 
     m_selectedObject = object;
-
-    //
-    // get rid of existing property page
-    //
-    if (m_selectedObjectPropertyPage != nullptr)
-        //m_selectedObjectPropertyPage->deleteLater();
-
-    m_selectedObjectPropertyPage = propertyPage;
 }
 
 void MainWindow::onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object)
@@ -808,7 +836,7 @@ void MainWindow::onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object)
 void MainWindow::showPropertyPage(SlippyMapLayerObject *object)
 {
     QList<SlippyMapLayerObjectPropertyPage*> propertyPages;
-    propertyPages.append(new SlippyMapLayerObjectPropertyPage(object, m_layerManager));
+    propertyPages.append(new SlippyMapLayerObjectCommonPropertyPage(object, m_layerManager));
     propertyPages.append(object->propertyPage());
 
     for (auto *propertyPage : ExplorerApplication::pluginManager()->getPropertyPages()) {
@@ -893,6 +921,7 @@ void MainWindow::onWeatherService_stationListReady(
         auto *marker = new WeatherStationMarker(station.stationId);
         marker->setEditable(false);
         marker->setLabel(station.stationId);
+        marker->setMovable(false);
         marker->setPosition(QPointF(station.longitude, station.latitude));
         m_layerManager->addLayerObject(m_weatherLayer, marker);
         m_weatherStationMarkers.append(marker);
@@ -941,7 +970,7 @@ void MainWindow::onActionFileSaveWorkspaceTriggered()
 {
     QString fileName = m_workspaceFileName;
     if (fileName.isEmpty()) {
-        QString fileName = QFileDialog::getSaveFileName(
+        fileName = QFileDialog::getSaveFileName(
                 this,
                 tr("Save Workspace"));
     }
@@ -1003,108 +1032,6 @@ void MainWindow::onActionFileOpenWorkspaceTriggered()
     }
 
     setWorkspaceDirty(false);
-}
-
-void MainWindow::onDirectionsToHereTriggered()
-{
-    QString latlon = QString("%1,%2")
-            .arg(m_slippyContextMenuLocation.x())
-            .arg(m_slippyContextMenuLocation.y());
-    ui->lneDirectionsFinish->setText(latlon);
-    ui->lneDirectionsStart->setFocus();
-}
-
-void MainWindow::onDirectionsFromHereTriggered()
-{
-    QString latlon = QString("%1,%2")
-            .arg(m_slippyContextMenuLocation.x())
-            .arg(m_slippyContextMenuLocation.y());
-    ui->lneDirectionsStart->setText(latlon);
-    ui->lneDirectionsFinish->setFocus();
-}
-
-void MainWindow::onNetworkRequestFinished(QNetworkReply *reply)
-{
-    m_loadingDialog->hide();
-
-    if (reply->error() != QNetworkReply::NoError) {
-        QMessageBox::critical(
-                    this,
-                    tr("Network Error"),
-                    tr("Failed to get directions from server."));
-        reply->deleteLater();
-        return;
-    }
-
-    QByteArray data = reply->readAll();
-
-    qDebug() << QString::fromUtf8(data);
-
-    QJsonDocument doc = QJsonDocument::fromJson(data);
-    QJsonObject obj = doc.object();
-
-    if (obj.contains("routes") && obj["routes"].isArray()) {
-        QJsonArray routesArray = obj["routes"].toArray();
-        QJsonObject routes = routesArray[0].toObject();
-        if (routes.contains("geometry") && routes["geometry"].isObject()) {
-            QJsonObject geometry = routes["geometry"].toObject();
-            if (geometry.contains("coordinates") && geometry["coordinates"].isArray()) {
-                QJsonArray coordinates = geometry["coordinates"].toArray();
-                QVector<QPointF> *points = new QVector<QPointF>();
-                for (int i = 0; i < coordinates.count(); i++) {
-                    QJsonArray tuple = coordinates[i].toArray();
-                    points->append(QPointF(tuple[0].toDouble(), tuple[1].toDouble()));
-                }
-
-                auto *lineSet = new SlippyMapWidget::LineSet(points, 3, m_directionLineColor);
-                //ui->slippyMap->addLineSet(lineSet);
-                m_currentRouteLineSet = lineSet;
-            }
-            else {
-                qDebug() << "Could not find coordinates object";
-            }
-        }
-        else {
-            qDebug() << "Could not find geometry object";
-        }
-
-        if (routes.contains("segments") && routes["segments"].isArray()) {
-            QJsonArray segments = routes["segments"].toArray();
-            QJsonObject segment = segments[0].toObject();
-            if (segment.contains("steps") && segment["steps"].isArray()) {
-                QJsonArray steps = segment["steps"].toArray();
-
-                for (int i = 0; i < steps.count(); i++) {
-                    QJsonObject step = steps[i].toObject();
-                    double distance = step["distance"].toDouble();
-                    double duration = step["duration"].toDouble();
-                    QString instruction = step["instruction"].toString();
-
-                    auto *itemWidget = new DirectionListItemWidget();
-                    itemWidget->setInstruction(instruction);
-                    itemWidget->setDistance(distance);
-                    itemWidget->setDuration(duration);
-
-                    auto *item = new QListWidgetItem();
-                    item->setSizeHint(itemWidget->sizeHint());
-                    ui->lstDirections->addItem(item);
-                    ui->lstDirections->setItemWidget(item, itemWidget);
-
-                    m_currentRouteListItem = item;
-                    m_currentRouteListItemWidget = itemWidget;
-                }
-            }
-            else {
-                qDebug() << "Could not find steps array";
-            }
-        }
-        else {
-            qDebug() << "Could not find segments object";
-        }
-    }
-    else {
-        qDebug() << "Could not find routes object!";
-    }
 }
 
 void MainWindow::weatherNetworkAccessManager_onRequestFinished(QNetworkReply* reply) {
@@ -1320,6 +1247,9 @@ void MainWindow::onWindowSizeTimerTimeout()
     QSettings settings;
     settings.setValue("view/windowWidth", width());
     settings.setValue("view/windowHeight", height());
+    settings.setValue("view/maximized", isMaximized());
+
+    qDebug() << "Is it max?" << (windowState() == Qt::WindowMaximized);
 }
 
 void MainWindow::refreshSettings()
@@ -1367,58 +1297,6 @@ void MainWindow::on_actionFileSettings_triggered()
 
     m_settingsDialog->setModal(true);
     m_settingsDialog->show();
-}
-
-void MainWindow::on_btnDirectionsGo_clicked()
-{
-    QSettings settings;
-
-    on_actionViewClearRoute_triggered();
-
-    if (settings.contains("wayfinding/service")) {
-        QString service = settings.value("wayfinding/service").toString();
-        if (service == "openrouteservice.org") {
-            QString startLocation = ui->lneDirectionsStart->text();
-            QStringList startLocationParts = startLocation.split(",");
-            double startLongitude = startLocationParts[0].toDouble();
-            double startLatitude = startLocationParts[1].toDouble();
-            QPointF startPoint(startLongitude, startLatitude);
-
-            QString finishLocation = ui->lneDirectionsFinish->text();
-            QStringList finishLocationParts = finishLocation.split(",");
-            double finishLongitude = finishLocationParts[0].toDouble();
-            double finishLatitude = finishLocationParts[1].toDouble();
-            QPointF finishPoint(finishLongitude, finishLatitude);
-
-
-
-            QString urlBase = settings.value("wayfinding/openrouteservice/url").toString();
-            QString apiKey = settings.value("wayfinding/openrouteservice/apikey").toString();
-            QString req = QString("%1?api_key=%2&coordinates=%3|%4&profile=driving-car&geometry_format=geojson")
-                    .arg(urlBase)
-                    .arg(apiKey)
-                    .arg(ui->lneDirectionsStart->text())
-                    .arg(ui->lneDirectionsFinish->text());
-            qDebug() << "Requesting from" << req;
-
-            //QSslConfiguration config = QSslConfiguration::defaultConfiguration();
-            //config.setProtocol(QSsl::TlsV1_2);
-            QNetworkRequest request(req);
-            //request.setSslConfiguration(config);
-            m_net->get(request);
-
-            if (m_loadingDialog == nullptr) {
-                m_loadingDialog = new QMessageBox();
-            }
-            m_loadingDialog->setWindowTitle(tr("Loading"));
-            m_loadingDialog->setText(tr("Loading directions..."));
-            m_loadingDialog->setInformativeText(tr("Click Cancel to abort."));
-            m_loadingDialog->setStandardButtons(QMessageBox::Cancel);
-            m_loadingDialog->setDefaultButton(QMessageBox::Cancel);
-            m_loadingDialog->setModal(true);
-            m_loadingDialog->show();
-        }
-    }
 }
 
 void MainWindow::on_actionMapGpsAddSource_triggered()
@@ -1481,12 +1359,16 @@ void MainWindow::on_actionViewGpsLog_triggered()
 
 void MainWindow::on_tvwMarkers_activated(const QModelIndex &index)
 {
-//    SlippyMapWidgetMarker *marker =
-//            static_cast<SlippyMapWidgetMarker *>(index.internalPointer());
-//    if (m_markerModel->contains(marker)) {
-//        ui->slippyMap->setCenter(marker->position());
-//    }
-    //SlippyMapLayerObject *obj = static_cast<SlippyMapLayerObject*>(index.internalPointer());
+    if (index.isValid() && !index.parent().isValid()) {
+        int layerIndex = index.row();
+        for (int i = 0; i < m_layerManager->layers().count(); i++) {
+            if (i == layerIndex) {
+                qDebug() << "Activating layer" << m_layerManager->layers().at(i)->name();
+                m_layerManager->setActiveLayer(m_layerManager->layers().at(i));
+                break;
+            }
+        }
+    }
 
 }
 

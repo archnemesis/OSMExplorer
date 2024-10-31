@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "Application/ExplorerApplication.h"
 #include <SlippyMap/SlippyMapWidgetMarker.h>
+#include <SlippyMap/SlippyMapLayerPolygon.h>
 #include <QStyleFactory>
 
 int main(int argc, char *argv[])
@@ -10,6 +11,7 @@ int main(int argc, char *argv[])
     QApplication::setApplicationName("OSMExplorer");
 
     qRegisterMetaType<SlippyMap::SlippyMapWidgetMarker*>();
+    qRegisterMetaType<SlippyMap::SlippyMapLayerPolygon*>();
 
     ExplorerApplication a(argc, argv);
     a.setStyle(QStyleFactory::create("Fusion"));
