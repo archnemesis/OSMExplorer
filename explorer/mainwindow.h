@@ -69,6 +69,7 @@ protected:
     void setupWeather();
     void showPropertyPage(SlippyMapLayerObject *object);
     void updateRecentFileList();
+    void closeEvent(QCloseEvent *event) override;
 
 private:
     enum AnimationState {

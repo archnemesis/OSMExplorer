@@ -91,6 +91,8 @@ set(PROJECT_SOURCES
         explorer/Application/PluginManager.h
         explorer/Map/SlippyMapTreeView.cpp
         explorer/Map/SlippyMapTreeView.h
+        explorer/Map/SlippyMapLayerTrackStylePropertyPage.cpp
+        explorer/Map/SlippyMapLayerTrackStylePropertyPage.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

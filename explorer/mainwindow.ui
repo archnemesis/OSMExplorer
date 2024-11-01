@@ -222,7 +222,7 @@
      <x>0</x>
      <y>0</y>
      <width>1094</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -334,6 +334,8 @@
      <string>Weather</string>
     </property>
     <addaction name="actionWeather_ShowWFOGrid"/>
+    <addaction name="actionShow_Alerts"/>
+    <addaction name="separator"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuLayer"/>
@@ -672,7 +674,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show WFO Grid</string>
+    <string>Show Weather Stations</string>
    </property>
   </action>
   <action name="actionFile_SaveWorkspace">
@@ -688,6 +690,11 @@
   <action name="actionFile_CloseWorkspace">
    <property name="text">
     <string>Close Workspace</string>
+   </property>
+  </action>
+  <action name="actionShow_Alerts">
+   <property name="text">
+    <string>Show Alerts</string>
    </property>
   </action>
  </widget>

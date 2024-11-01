@@ -6,6 +6,8 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QHBoxLayout>
+#include <QFormLayout>
+#include <QLabel>
 
 #include "gpx/gpxtracksegment.h"
 #include "gpx/gpxwaypoint.h"
@@ -27,7 +29,11 @@ QString SlippyMapLayerTrackPropertyPage::tabTitle()
     return m_track->label();
 }
 
-void SlippyMapLayerTrackPropertyPage::setupUi() {
+void SlippyMapLayerTrackPropertyPage::setupUi()
+{
+    auto *layout = new QFormLayout();
+    layout->addRow(tr("Date"), new QLabel(tr("Date")));;
+
     auto *tableWidget = new QTableWidget();
     tableWidget->setColumnCount(4);
 

@@ -110,10 +110,16 @@ MainWindow::MainWindow(QWidget *parent) :
             &QAction::triggered,
             this,
             &MainWindow::onActionFileOpenWorkspaceTriggered);
+
     connect(ui->actionFile_CloseWorkspace,
             &QAction::triggered,
             this,
             &MainWindow::onActionFileCloseWorkspaceTriggered);
+
+    connect(ui->actionExit,
+        &QAction::triggered,
+        this,
+        &MainWindow::close);
 
     /*
      * Enable showing forecast data as the map moves
@@ -178,6 +184,7 @@ MainWindow::MainWindow(QWidget *parent) :
     m_statusBarPositionLabel = new QLabel();
     m_statusBarPositionLabel->setFrameStyle(QFrame::Sunken);
     m_statusBarStatusLabel = new QLabel();
+
 
     m_statusBarGpsStatusLabel = new QLabel();
     m_statusBarGpsStatusLabel->setFrameStyle(QFrame::Sunken);
@@ -495,7 +502,7 @@ void MainWindow::setupMap()
      * Default layer setup
      */
     m_defaultMarkerLayer = new SlippyMapLayer();
-    m_defaultMarkerLayer->setName(tr("Markers"));
+    m_defaultMarkerLayer->setName(tr("Layer1"));
     m_layerManager->addLayer(m_defaultMarkerLayer);
     m_layerManager->setDefaultLayer(m_defaultMarkerLayer);
 
@@ -954,11 +961,12 @@ void MainWindow::onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object)
 
     QList<SlippyMapLayerObjectPropertyPage*> propertyPages;
     propertyPages.append(commonPropertyPage);
-    propertyPages.append(object->propertyPage());
 
-    for (auto *propertyPage : ExplorerApplication::pluginManager()->getPropertyPages()) {
+    for (auto *propertyPage : object->propertyPages())
         propertyPages.append(propertyPage);
-    }
+
+    for (auto *propertyPage : ExplorerApplication::pluginManager()->getPropertyPages())
+        propertyPages.append(propertyPage);
 
     ui->tabShapeEditor->clear();
     for (auto *propertyPage : propertyPages) {
@@ -987,11 +995,12 @@ void MainWindow::showPropertyPage(SlippyMapLayerObject *object)
 {
     QList<SlippyMapLayerObjectPropertyPage*> propertyPages;
     propertyPages.append(new SlippyMapLayerObjectCommonPropertyPage(object, m_layerManager));
-    propertyPages.append(object->propertyPage());
 
-    for (auto *propertyPage : ExplorerApplication::pluginManager()->getPropertyPages()) {
+    for (auto *propertyPage : object->propertyPages())
         propertyPages.append(propertyPage);
-    }
+
+    for (auto *propertyPage : ExplorerApplication::pluginManager()->getPropertyPages())
+        propertyPages.append(propertyPage);
 
     auto *tabWidget = new QTabWidget();
 
@@ -1623,21 +1632,24 @@ void MainWindow::on_actionImport_triggered()
         GPXParser parser;
         parser.read(&file);
 
-        qDebug() << "Found" << parser.tracks().count() << "tracks";
-
         for (const GPXTrack& track : parser.tracks()) {
-            qDebug() << "Found" << track.segments().count() << "segments";
             for (const GPXTrackSegment& segment : track.segments()) {
-                qDebug() << "Found" << segment.points().count() << "points";
                 auto *layerTrack = new SlippyMapLayerTrack(track);
                 QString trackName = parser.metadata().name();
+
+                qDebug() << "Name:" << parser.metadata().name();
+                qDebug() << "Time:" << parser.metadata().time();
+                qDebug() << "Author:" << parser.metadata().author().name();
+                qDebug() << "Bounds:" << parser.metadata().bounds();
+
                 if (trackName.isEmpty()) {
                     QFileInfo trackFileInfo(fileName);
                     trackName = trackFileInfo.baseName();
                 }
+
                 layerTrack->setLabel(trackName);
                 layerTrack->setDescription(parser.metadata().description());
-                m_layerManager->addLayerObject(m_defaultMarkerLayer, layerTrack);
+                m_layerManager->addLayerObject(layerTrack);
             }
         }
     }
@@ -1686,7 +1698,7 @@ bool MainWindow::closeWorkspace()
             onActionFileSaveWorkspaceTriggered();
             return true;
         }
-        else if (result == QMessageBox::Cancel)
+        if (result == QMessageBox::Cancel)
             return false;
     }
 
@@ -1711,6 +1723,17 @@ void MainWindow::onActionFileCloseWorkspaceTriggered()
 void MainWindow::updateRecentFileList()
 {
     ui->menuRecent->clear();
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if (m_workspaceDirty) {
+        if (!closeWorkspace()) {
+            event->ignore();
+            return;
+        }
+    }
+    event->accept();
 }
 
 void MainWindow::createNewLayer()
@@ -1864,7 +1887,6 @@ void MainWindow::startPolygonSelection()
 
 void MainWindow::onAnimationTimerTimeout()
 {
-    qDebug() << "Animation timeout";
     if (m_animationState == Forward)
         ui->slippyMap->nextFrame();
     else if (m_animationState == Reverse)

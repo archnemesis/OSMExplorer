@@ -1,5 +1,6 @@
 #include "SlippyMapLayerTrack.h"
 #include "SlippyMapLayerTrackPropertyPage.h"
+#include "SlippyMapLayerTrackStylePropertyPage.h"
 
 #include <cmath>
 
@@ -10,12 +11,17 @@
 #include <QBrush>
 #include <QPolygonF>
 
+#include "SlippyMapLayerTrackStylePropertyPage.h"
 #include "gpx/gpxwaypoint.h"
 #include "gpx/gpxtracksegment.h"
 
 SlippyMapLayerTrack::SlippyMapLayerTrack(const GPXTrack& track) :
-    m_trackLineWidth(1),
-    m_trackLineStrokeWidth(1)
+    m_trackLineWidth(5),
+    m_trackLineStrokeWidth(1),
+    m_trackLineColor(Qt::green),
+    m_trackLineStrokeColor(Qt::darkGreen),
+    m_waypointRadius(5),
+    m_waypointColor(Qt::darkYellow)
 {
     m_track = track;
     initStyle();
@@ -32,18 +38,30 @@ SlippyMapLayerTrack::~SlippyMapLayerTrack() {
 
 void SlippyMapLayerTrack::draw(QPainter *painter, const QTransform &transform, SlippyMapLayerObject::ObjectState state)
 {
+    if (m_trackLineStrokeWidth > 0) {
+        for (int i = 0; i < m_points.length(); i++) {
+            QPointF thisPoint = transform.map(m_points.at(i));
+
+            if ((i + 1) < m_points.length()) {
+                QPointF nextPoint = transform.map(m_points.at(i + 1));
+                painter->setPen(m_strokePen);
+                painter->setBrush(Qt::NoBrush);
+                painter->drawLine(thisPoint, nextPoint);
+            }
+        }
+    }
     for (int i = 0; i < m_points.length(); i++) {
         QPointF thisPoint = transform.map(m_points.at(i));
 
         if ((i + 1) < m_points.length()) {
             QPointF nextPoint = transform.map(m_points.at(i + 1));
             painter->setPen(m_linePen);
-            painter->setBrush(m_lineBrush);
+            painter->setBrush(Qt::NoBrush);
             painter->drawLine(thisPoint, nextPoint);
         }
 
         painter->setPen(m_dotPen);
-        painter->setBrush(m_dotBrush);
+        painter->setBrush(Qt::NoBrush);
         painter->drawPoint(thisPoint);
     }
 }
@@ -120,15 +138,17 @@ const GPXTrack& SlippyMapLayerTrack::track() {
 
 void SlippyMapLayerTrack::initStyle()
 {
-    m_dotBrush.setColor(Qt::black);
-    m_dotBrush.setStyle(Qt::SolidPattern);
-    m_dotPen.setColor(Qt::green);
+    m_dotPen.setColor(m_waypointColor);
     m_dotPen.setStyle(Qt::SolidLine);
-    m_dotPen.setWidth(8);
+    m_dotPen.setWidth(m_waypointRadius);
 
     m_linePen.setStyle(Qt::SolidLine);
-    m_linePen.setColor(Qt::darkGray);
-    m_linePen.setWidth(8);
+    m_linePen.setColor(m_trackLineColor);
+    m_linePen.setWidth(m_trackLineWidth);
+
+    m_strokePen.setStyle(Qt::SolidLine);
+    m_strokePen.setColor(m_trackLineStrokeColor);
+    m_strokePen.setWidth(m_trackLineWidth + (m_trackLineStrokeWidth * 2));
 }
 
 QDataStream &SlippyMapLayerTrack::serialize(QDataStream &stream) const
@@ -141,7 +161,82 @@ void SlippyMapLayerTrack::unserialize(QDataStream &stream)
 
 }
 
-SlippyMapLayerObjectPropertyPage *SlippyMapLayerTrack::propertyPage() const
+void SlippyMapLayerTrack::setTrackLineWidth(int width)
 {
-    return new SlippyMapLayerTrackPropertyPage((SlippyMapLayerObject *) this);
+    m_trackLineWidth = width;
+    initStyle();
+    emit updated();
+}
+
+void SlippyMapLayerTrack::setTrackLineColor(const QColor &color)
+{
+    m_trackLineColor = color;
+    initStyle();
+    emit updated();
+}
+
+void SlippyMapLayerTrack::setTrackLineStrokeWidth(int width)
+{
+    m_trackLineStrokeWidth = width;
+    initStyle();
+    emit updated();
+}
+
+void SlippyMapLayerTrack::setTrackLineStrokeColor(const QColor &color)
+{
+    m_trackLineStrokeColor = color;
+    initStyle();
+    emit updated();
+}
+
+void SlippyMapLayerTrack::setWaypointColor(const QColor &color)
+{
+    m_waypointColor = color;
+    initStyle();
+    emit updated();
+}
+
+void SlippyMapLayerTrack::setWaypointRadius(int radius)
+{
+    m_waypointRadius = radius;
+    initStyle();
+    emit updated();
+}
+
+int SlippyMapLayerTrack::trackLineWidth() const
+{
+    return m_trackLineWidth;
+}
+
+const QColor & SlippyMapLayerTrack::trackLineColor() const
+{
+    return m_trackLineColor;
+}
+
+int SlippyMapLayerTrack::trackLineStrokeWidth() const
+{
+    return m_trackLineStrokeWidth;
+}
+
+const QColor & SlippyMapLayerTrack::trackLineStrokeColor() const
+{
+    return m_trackLineStrokeColor;
+}
+
+const QColor & SlippyMapLayerTrack::waypointColor() const
+{
+    return m_waypointColor;
+}
+
+int SlippyMapLayerTrack::waypointRadius() const
+{
+    return m_waypointRadius;
+}
+
+QList<SlippyMapLayerObjectPropertyPage*> SlippyMapLayerTrack::propertyPages() const
+{
+    return {
+        new SlippyMapLayerTrackPropertyPage((SlippyMapLayerObject *) this),
+        new SlippyMapLayerTrackStylePropertyPage((SlippyMapLayerObject *)this)
+    };
 }
