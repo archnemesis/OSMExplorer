@@ -72,13 +72,13 @@ QList<SlippyMapWidgetLayer*> RainViewerExplorerPlugin::tileLayers() {
         m_radarLayer = new RainViewerSlippyMapTileLayer();
         m_radarLayer->update();
 
-        m_radarFrameTimer = new QTimer();
-        connect(m_radarFrameTimer,
-            &QTimer::timeout,
-            [this]() {
-                m_radarLayer->nextFrame();
-        });
-        m_radarFrameTimer->start(1000);
+//        m_radarFrameTimer = new QTimer();
+//        connect(m_radarFrameTimer,
+//            &QTimer::timeout,
+//            [this]() {
+//                m_radarLayer->nextFrame();
+//        });
+//        m_radarFrameTimer->start(1000);
     }
 
     QList<SlippyMapWidgetLayer*> list;

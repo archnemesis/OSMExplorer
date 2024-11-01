@@ -222,7 +222,7 @@
      <x>0</x>
      <y>0</y>
      <width>1094</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -265,14 +265,13 @@
    </widget>
    <widget class="QMenu" name="menuMarker">
     <property name="title">
-     <string>Marker</string>
+     <string>Object</string>
     </property>
-    <addaction name="actionNewMarker"/>
-    <addaction name="actionNewMarkerCurrentLocation"/>
-    <addaction name="actionMarkerManage"/>
+    <addaction name="actionObject_NewMarker"/>
+    <addaction name="actionObject_NewMarkerAtCurrent"/>
     <addaction name="separator"/>
-    <addaction name="actionMarkerProperties"/>
-    <addaction name="actionMarkerDelete"/>
+    <addaction name="actionObject_Properties"/>
+    <addaction name="actionObject_Delete"/>
     <addaction name="separator"/>
     <addaction name="actionMarkerExport"/>
     <addaction name="actionMarkerImport"/>
@@ -338,9 +337,9 @@
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuLayer"/>
+   <addaction name="menuMarker"/>
    <addaction name="menuWeather"/>
    <addaction name="menuDraw"/>
-   <addaction name="menuMarker"/>
    <addaction name="menuView"/>
    <addaction name="menuTools"/>
    <addaction name="menuHelp"/>
@@ -460,28 +459,28 @@
     <string>Exit</string>
    </property>
   </action>
-  <action name="actionNewMarker">
+  <action name="actionObject_NewMarker">
    <property name="icon">
     <iconset resource="resources.qrc">
      <normaloff>:/icons/pushpin.png</normaloff>:/icons/pushpin.png</iconset>
    </property>
    <property name="text">
-    <string>New...</string>
+    <string>New marker...</string>
    </property>
   </action>
-  <action name="actionNewMarkerCurrentLocation">
+  <action name="actionObject_NewMarkerAtCurrent">
    <property name="text">
-    <string>New at current location</string>
+    <string>New marker at current location</string>
    </property>
   </action>
-  <action name="actionMarkerProperties">
+  <action name="actionObject_Properties">
    <property name="text">
     <string>Properties...</string>
    </property>
   </action>
-  <action name="actionMarkerDelete">
+  <action name="actionObject_Delete">
    <property name="text">
-    <string>Delete</string>
+    <string>Delete...</string>
    </property>
   </action>
   <action name="actionMarkerExport">

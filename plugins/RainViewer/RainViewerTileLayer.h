@@ -5,7 +5,7 @@
 #ifndef PANELAPP_RAINVIEWERSLIPPYMAPTILELAYER_H
 #define PANELAPP_RAINVIEWERSLIPPYMAPTILELAYER_H
 
-#include <SlippyMap/SlippyMapWidgetLayer.h>
+#include <SlippyMap/SlippyMapAnimatedLayer.h>
 
 QT_BEGIN_NAMESPACE
 class QNetworkAccessManager;
@@ -14,15 +14,15 @@ QT_END_NAMESPACE
 
 using namespace SlippyMap;
 
-class RainViewerSlippyMapTileLayer : public SlippyMapWidgetLayer
+class RainViewerSlippyMapTileLayer : public SlippyMapAnimatedLayer
 {
     Q_OBJECT
 public:
     explicit RainViewerSlippyMapTileLayer(QObject *parent = nullptr);
     bool isVisible() override;
-    void update();
-    void nextFrame();
-    void previousFrame();
+    void update() override;
+    void nextFrame() override;
+    void previousFrame() override;
 
     private slots:
         void nam_onFinished(QNetworkReply *reply);

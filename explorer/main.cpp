@@ -2,6 +2,7 @@
 #include "Application/ExplorerApplication.h"
 #include <SlippyMap/SlippyMapWidgetMarker.h>
 #include <SlippyMap/SlippyMapLayerPolygon.h>
+#include <SlippyMap/SlippyMapAnimatedLayer.h>
 #include <QStyleFactory>
 
 int main(int argc, char *argv[])
@@ -12,6 +13,7 @@ int main(int argc, char *argv[])
 
     qRegisterMetaType<SlippyMap::SlippyMapWidgetMarker*>();
     qRegisterMetaType<SlippyMap::SlippyMapLayerPolygon*>();
+    qRegisterMetaType<SlippyMap::SlippyMapAnimatedLayer*>();
 
     ExplorerApplication a(argc, argv);
     a.setStyle(QStyleFactory::create("Fusion"));

@@ -55,33 +55,57 @@ public:
     ~MainWindow() override;
 
 protected:
-    void resizeEvent(QResizeEvent *event) override;
-    void loadPluginLayers();
+    bool closeWorkspace();
     void loadMarkers();
-    void setupContextMenus();
+    void loadPluginLayers();
     void loadStartupSettings();
+    void resizeEvent(QResizeEvent *event) override;
     void saveLayers();
     void saveWorkspace(QString fileName);
-    bool closeWorkspace();
-    void setupToolbar();
     void setWorkspaceDirty(bool dirty);
+    void setupContextMenus();
+    void setupMap();
+    void setupToolbar();
+    void setupWeather();
     void showPropertyPage(SlippyMapLayerObject *object);
     void updateRecentFileList();
 
 private:
+    enum AnimationState {
+        Forward,
+        Reverse,
+        Paused
+    };
+
     Ui::MainWindow *ui;
-    color_widgets::ColorSelector *m_strokeColorSelector;
-    color_widgets::ColorSelector *m_fillColorSelector;
+    AnimationState m_animationState = Forward;
     DirectionListItemWidget *m_currentRouteListItemWidget = nullptr;
     MapDataImportDialog *m_importDialog = nullptr;
     NationalWeatherServiceInterface *m_weatherService = nullptr;
-    QAction *m_markerDeleteAction = nullptr;
-    QAction *m_markerVisibilityAction;
-    QAction *m_animationPlayAction;
-    QAction *m_animationPauseAction;
+    QAction *m_addMarkerAction = nullptr;
     QAction *m_animationForwardAction;
+    QAction *m_animationPauseAction;
+    QAction *m_animationPlayAction;
     QAction *m_animationReverseAction;
-    QColor m_directionLineColor;
+    QAction *m_centerMapAction = nullptr;
+    QAction *m_clearLayerAction = nullptr;
+    QAction *m_coordAction = nullptr;
+    QAction *m_copyCoordinatesAction = nullptr;
+    QAction *m_copyLatitudeAction = nullptr;
+    QAction *m_copyLongitudeAction = nullptr;
+    QAction *m_deleteLayerAction = nullptr;
+    QAction *m_deleteObjectAction = nullptr;
+    QAction *m_deleteShapeAction = nullptr;
+    QAction *m_editShapeAction = nullptr;
+    QAction *m_getForecastHereAction = nullptr;
+    QAction *m_markerDeleteAction = nullptr;
+    QAction *m_objectPropertiesAction = nullptr;
+    QAction *m_markerVisibilityAction = nullptr;
+    QAction *m_markerLockedAction = nullptr;
+    QAction *m_newLayerAction = nullptr;
+    QAction *m_renameLayerAction = nullptr;
+    QAction *m_zoomInHereMapAction = nullptr;
+    QAction *m_zoomOutHereMapAction = nullptr;
     QHash<QString,SlippyMapWidgetMarker*> m_gpsMarkers;
     QLabel *m_statusBarGpsStatusLabel;
     QLabel *m_statusBarPositionLabel;
@@ -96,19 +120,21 @@ private:
     QList<SlippyMapWidgetMarker*> m_weatherStationMarkers;
     QListWidgetItem *m_currentRouteListItem = nullptr;
     QMap<SlippyMapWidgetMarker*,QListWidgetItem*> m_markerListItemMap;
-    QMenu *m_markerMenu = nullptr;
+    QMenu *m_contextMenu = nullptr;
+    QMenu *m_treeViewMenu = nullptr;
     QMessageBox *m_loadingDialog = nullptr;
     QNetworkAccessManager *m_weatherNetworkAccessManager;
     QPalette m_defaultPalette;
+    QPoint m_contextMenuLocation;
     QPointF m_contextMenuPoint;
     QPointF m_slippyContextMenuLocation;
+    QPushButton *m_currentLocationButton;
     QPushButton *m_toolBarLatLonButton;
     QPushButton *m_zoomInButton;
     QPushButton *m_zoomOutButton;
-    QPushButton *m_currentLocationButton;
     QSpinBox *m_strokeWidth;
     QString m_workspaceFileName;
-    QTimer *m_saveSplitterPosTimer = nullptr;
+    QTimer *m_animationTimer = nullptr;
     QTimer *m_saveWindowSizeTimer = nullptr;
     SettingsDialog *m_settingsDialog = nullptr;
     SlippyMapLayer *m_defaultMarkerLayer = nullptr;
@@ -119,29 +145,13 @@ private:
     SlippyMapLayerObjectPropertyPage *m_selectedObjectPropertyPage = nullptr;
     SlippyMapLayerPolygon *m_forecastZonePolygon;
     SlippyMapWidget::LineSet *m_currentRouteLineSet = nullptr;
+    TextLogViewerForm *m_nmeaLog = nullptr;
     WeatherForecastWindow *m_weatherForecastWindow = nullptr;
     WeatherStationMarker *m_weatherStationMarker;
-    TextLogViewerForm *m_nmeaLog = nullptr;
-    int m_requestCount = 0;
     bool m_workspaceDirty = true;
-
-    QPoint m_contextMenuLocation;
-    QMenu *m_contextMenu = nullptr;
-    QAction *m_coordAction = nullptr;
-    QAction *m_addMarkerAction = nullptr;
-    QAction *m_deleteMarkerAction = nullptr;
-    QAction *m_markerPropertiesAction = nullptr;
-    QAction *m_centerMapAction = nullptr;
-    QAction *m_zoomInHereMapAction = nullptr;
-    QAction *m_zoomOutHereMapAction = nullptr;
-    QAction *m_copyCoordinatesAction = nullptr;
-    QAction *m_copyLatitudeAction = nullptr;
-    QAction *m_copyLongitudeAction = nullptr;
-    QAction *m_editShapeAction = nullptr;
-    QAction *m_deleteShapeAction = nullptr;
-    QAction *m_getForecastHereAction = nullptr;
-    QAction *m_newLayerAction = nullptr;
-    QAction *m_deleteLayerAction = nullptr;
+    color_widgets::ColorSelector *m_fillColorSelector;
+    color_widgets::ColorSelector *m_strokeColorSelector;
+    int m_requestCount = 0;
 
 protected slots:
     void onSlippyMapCenterChanged(double latitude, double longitude);
@@ -155,6 +165,7 @@ protected slots:
     void onSlippyMapSearchTextChanged(const QString &text);
     void onSlippyMapContextMenuRequested(const QPoint& point);
     void onSlippyMapRectSelected(QRect rect);
+    void onSlippyMapPolygonSelected(const QList<QPointF>& points);
     void onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode);
     void onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object);
     void onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object);
@@ -171,18 +182,19 @@ protected slots:
     void weatherNetworkAccessManager_onRequestFinished(QNetworkReply *reply);
     void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
     void onTvwMarkersContextMenuRequested(const QPoint& point);
-    void onMarkerMenuPropertiesActionTriggered();
+    void onTvwMarkersClicked(const QModelIndex& index);
+    void showActiveObjectPropertyPage();
     void onPluginLayerObjectProviderMarkerAdded(SlippyMapLayerObject *object);
-    void onAddMarkerActionTriggered();
+    void createMarkerAtContextMenuPosition();
+    void createMarkerAtCurrentPosition();
+    void createMarkerAtPosition(const QPointF& position);
     void onDeleteMarkerActionTriggered();
     void onEditMarkerActionTriggered();
     void onCenterMapActionTriggered();
     void setDarkModeEnabled(bool enabled);
     void onEditShapeActionTriggered();
-    /**
-     * @brief Save splitter position after finish moving.
-     */
-    void onSplitterPosTimerTimeout();
+    void startPolygonSelection();
+    void onAnimationTimerTimeout();
 
     /**
      * @brief Save window size after finish moving.
@@ -197,12 +209,33 @@ protected slots:
     /**
      * @brief Ask user for a layer name and create a new layer.
      */
-     void createNewLayer();
+    void createNewLayer();
 
-     /**
-      * @brief Delete the active layer (ask first).
-      */
-      void deleteLayer();
+    /**
+     * @brief Delete the selected layer from the context menu (ask first).
+     */
+    void deleteSelectedLayer();
+
+    /**
+     * @brief Delete the active layer from the menu bar.
+     */
+    void deleteActiveLayer();
+
+    /**
+     * @brief Clear the active layer of all objects.
+     */
+    void clearSelectedLayer();
+
+    /**
+     * @brief Delete the active marker.
+     */
+    void deleteActiveObject();
+
+    /**
+     * @brief Renames the active layer.
+     */
+    void renameActiveLayer();
+
 private slots:
     void on_actionNewMarker_triggered();
     void on_actionViewSidebar_toggled(bool arg1);

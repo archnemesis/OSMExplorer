@@ -82,96 +82,6 @@ MainWindow::MainWindow(QWidget *parent) :
     m_defaultPalette = qApp->palette();
 
     /*
-     * Layer manager and tree view model
-    */
-    //m_layerManager = new SlippyMapLayerManager();
-    m_layerManager = ExplorerApplication::layerManager();
-    ui->slippyMap->setLayerManager(m_layerManager);
-    ui->tvwMarkers->setModel(m_layerManager);
-    ui->tvwMarkers->setContextMenuPolicy(Qt::CustomContextMenu);
-
-    /*
-     * Default layer setup
-     */
-    m_defaultMarkerLayer = new SlippyMapLayer();
-    m_defaultMarkerLayer->setName(tr("Markers"));
-    m_layerManager->addLayer(m_defaultMarkerLayer);
-    m_layerManager->setDefaultLayer(m_defaultMarkerLayer);
-
-    /*
-     * GPS Marker Layer
-     */
-    m_gpsMarkerLayer = new SlippyMapLayer();
-    m_gpsMarkerLayer->setName(tr("GPS"));
-    m_gpsMarkerLayer->setEditable(false);
-    m_layerManager->addLayer(m_gpsMarkerLayer);
-
-    /*
-     * Weather Service Integration
-     */
-    m_weatherNetworkAccessManager = new QNetworkAccessManager();
-    connect(m_weatherNetworkAccessManager,
-        &QNetworkAccessManager::finished,
-        this,
-        &MainWindow::weatherNetworkAccessManager_onRequestFinished);
-
-    m_weatherService = new NationalWeatherServiceInterface(this);
-    connect(m_weatherService,
-        &NationalWeatherServiceInterface::stationListReady,
-        this,
-            &MainWindow::onWeatherService_stationListReady);
-
-    m_weatherLayer = new SlippyMapLayer();
-    m_weatherLayer->setName(tr("Weather"));
-    m_weatherLayer->setVisible(true);
-    m_weatherLayer->setEditable(false);
-    m_layerManager->addLayer(m_weatherLayer);
-
-    /*
-     * SlippyMap Signals and Slots
-     */
-    connect(ui->slippyMap, &SlippyMapWidget::centerChanged, this, &MainWindow::onSlippyMapCenterChanged);
-    connect(ui->slippyMap, &SlippyMapWidget::zoomLevelChanged, this, &MainWindow::onSlippyMapZoomLevelChanged);
-    connect(ui->slippyMap, &SlippyMapWidget::tileRequestInitiated, this, &MainWindow::onSlippyMapTileRequestStarted);
-    connect(ui->slippyMap, &SlippyMapWidget::tileRequestFinished, this, &MainWindow::onSlippyMapTileRequestFinished);
-    connect(ui->slippyMap, &SlippyMapWidget::cursorPositionChanged, this, &MainWindow::onSlippyMapCursorPositionChanged);
-    connect(ui->slippyMap, &SlippyMapWidget::cursorEntered, this, &MainWindow::onSlippyMapCursorEntered);
-    connect(ui->slippyMap, &SlippyMapWidget::cursorLeft, this, &MainWindow::onSlippyMapCursorLeft);
-    connect(ui->slippyMap, &SlippyMapWidget::searchTextChanged, this, &MainWindow::onSlippyMapSearchTextChanged);
-    connect(ui->slippyMap, &SlippyMapWidget::contextMenuRequested, this, &MainWindow::onSlippyMapContextMenuRequested);
-    connect(ui->slippyMap, &SlippyMapWidget::drawModeChanged, this, &MainWindow::onSlippyMapDrawModeChanged);
-    connect(ui->slippyMap, &SlippyMapWidget::rectSelected, this, &MainWindow::onSlippyMapRectSelected);
-    connect(ui->slippyMap, &SlippyMapWidget::objectActivated, this, &MainWindow::onSlippyMapLayerObjectActivated);
-    connect(ui->slippyMap, &SlippyMapWidget::objectDeactivated, this, &MainWindow::onSlippyMapLayerObjectDeactivated);
-    connect(ui->slippyMap, &SlippyMapWidget::objectDoubleClicked, this, &MainWindow::onSlippyMapLayerObjectDoubleClicked);
-    connect(ui->slippyMap, &SlippyMapWidget::dragFinished, this, &MainWindow::onSlippyMapDragFinished);
-
-    connect(ui->zoomInButton,
-            &QPushButton::clicked,
-            ui->slippyMap,
-            &SlippyMapWidget::increaseZoomLevel);
-    connect(ui->zoomOutButton,
-            &QPushButton::clicked,
-            ui->slippyMap,
-            &SlippyMapWidget::decreaseZoomLevel);
-
-    ui->slippyMap->setDrawingFillColor(Qt::white);
-    ui->slippyMap->setDrawingStrokeColor(QColor(Qt::black).lighter());
-    ui->slippyMap->setDrawingStrokeWidth(2);
-
-    /*
-     * Lat/Lon inputs in the toolbar
-     */
-    m_toolBarLatitudeInput = new QLineEdit();
-    m_toolBarLatitudeInput->setPlaceholderText(tr("Latitude"));
-    m_toolBarLatitudeInput->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-    m_toolBarLongitudeInput = new QLineEdit();
-    m_toolBarLongitudeInput->setPlaceholderText(tr("Longitude"));
-    m_toolBarLongitudeInput->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-    m_toolBarLatLonButton = new QPushButton();
-    m_toolBarLatLonButton->setText(tr("Go"));
-
-    /*
      * Text inputs for label and description that let you edit the marker label.
      */
     connect(ui->selectedObjectName,
@@ -221,7 +131,17 @@ MainWindow::MainWindow(QWidget *parent) :
             }
         });
 
+    /*
+     * Drawing
+     */
+    connect(ui->actionDrawPolygon,
+            &QAction::triggered,
+            this,
+            &MainWindow::startPolygonSelection);
+
     loadStartupSettings();
+    setupMap();
+    setupWeather();
     setupContextMenus();
     refreshSettings();
     setupToolbar();
@@ -240,12 +160,20 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionLayer_Delete,
             &QAction::triggered,
             this,
-            &MainWindow::deleteLayer);
+            &MainWindow::deleteSelectedLayer);
 
+    /*
+     * TreeView signals and slots
+     */
     connect(ui->tvwMarkers,
             &QTreeView::customContextMenuRequested,
             this,
             &MainWindow::onTvwMarkersContextMenuRequested);
+
+    connect(ui->tvwMarkers,
+            &QTreeView::clicked,
+            this,
+            &MainWindow::onTvwMarkersClicked);
 
     m_statusBarPositionLabel = new QLabel();
     m_statusBarPositionLabel->setFrameStyle(QFrame::Sunken);
@@ -254,18 +182,19 @@ MainWindow::MainWindow(QWidget *parent) :
     m_statusBarGpsStatusLabel = new QLabel();
     m_statusBarGpsStatusLabel->setFrameStyle(QFrame::Sunken);
     m_statusBarGpsStatusLabel->setText("GPS Position: 0.000 N 0.000 E");
-    statusBar()->addPermanentWidget(m_statusBarGpsStatusLabel);
 
+    statusBar()->addPermanentWidget(m_statusBarGpsStatusLabel);
     statusBar()->addPermanentWidget(m_statusBarPositionLabel);
+
     ui->slippyMap->setFocus(Qt::OtherFocusReason);
 
-    QPalette systemPalette = QGuiApplication::palette();
-    m_directionLineColor = systemPalette.highlight().color();
-
-    m_saveSplitterPosTimer = new QTimer();
-    m_saveSplitterPosTimer->setSingleShot(true);
-    m_saveSplitterPosTimer->setInterval(100);
-    connect(m_saveSplitterPosTimer, &QTimer::timeout, this, &MainWindow::onSplitterPosTimerTimeout);
+    m_animationTimer = new QTimer();
+    m_animationTimer->setInterval(1000);
+    connect(m_animationTimer,
+            &QTimer::timeout,
+            this,
+            &MainWindow::onAnimationTimerTimeout);
+    m_animationTimer->start();
 
     m_saveWindowSizeTimer = new QTimer();
     m_saveWindowSizeTimer->setSingleShot(true);
@@ -275,57 +204,12 @@ MainWindow::MainWindow(QWidget *parent) :
             this,
             &MainWindow::onWindowSizeTimerTimeout);
 
-    m_markerMenu = new QMenu(this);
-    m_markerMenu->setTitle(tr("Marker"));
-
-    m_newLayerAction = new QAction();
-    m_newLayerAction->setText(tr("New Layer"));
-    m_markerMenu->addAction(m_newLayerAction);
-    connect(m_newLayerAction,
-            &QAction::triggered,
-            this,
-            &MainWindow::createNewLayer);
-
-    m_deleteLayerAction = new QAction();
-    m_deleteLayerAction->setText(tr("Delete"));
-    m_markerMenu->addAction(m_deleteLayerAction);
-    connect(m_deleteLayerAction,
-        &QAction::triggered,
-        this,
-        &MainWindow::deleteLayer);
-
-    m_markerVisibilityAction = new QAction();
-    m_markerVisibilityAction->setText(tr("Visible"));
-    m_markerVisibilityAction->setCheckable(true);
-    m_markerMenu->addAction(m_markerVisibilityAction);
-    connect(ui->tvwMarkers, &QTreeView::clicked, [this](const QModelIndex& index) {
-        if (index.parent().isValid()) return;
-        Q_ASSERT(index.row() < m_layerManager->layers().count());
-        SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
-        m_markerVisibilityAction->setChecked(layer->isVisible());
-    });
-    connect(ui->tvwMarkers, &QTreeView::activated, [this](const QModelIndex& index) {
-        if (index.parent().isValid()) return;
-        Q_ASSERT(index.row() < m_layerManager->layers().count());
-        SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
-        m_markerVisibilityAction->setChecked(layer->isVisible());
-    });
-    connect(m_markerVisibilityAction, &QAction::toggled, [this](bool checked) {
-        QModelIndex index = ui->tvwMarkers->currentIndex();
-        Q_ASSERT(index.row() < m_layerManager->layers().count());
-        SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
-        layer->setVisible(checked);
-    });
-
-    qDebug() << "Loading plugin marker groups...";
-
     for (ExplorerPluginInterface *plugin : ExplorerApplication::pluginManager()->getPlugins()) {
         QList<QDockWidget *> dockWidgets = plugin->dockWidgetList();
         for (QDockWidget *dockWidget : dockWidgets) {
             dockWidget->setParent(this);
             addDockWidget(Qt::LeftDockWidgetArea, dockWidget);
         }
-
     }
 
     loadMarkers();
@@ -346,21 +230,35 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 
 void MainWindow::loadPluginLayers()
 {
+    QSettings settings;
     auto *pluginManager = ExplorerApplication::pluginManager();
 
-    for (auto *tileLayer : pluginManager->getTileLayers()) {
-        ui->slippyMap->addLayer(tileLayer);
-        auto *action = new QAction();
-        action->setText(tileLayer->name());
-        action->setCheckable(true);
-        action->setChecked(true);
-        connect(action,
-            &QAction::triggered,
-            [this, tileLayer](bool checked) {
-            tileLayer->setVisible(checked);
-        });
-        ui->menuLayer_TileLayers->addAction(action);
+    for (auto *plugin : pluginManager->getPlugins()) {
+        for (auto *tileLayer : plugin->tileLayers()) {
+            QString key = QString("plugins/%1/layers/%2/visible")
+                    .arg(plugin->name())
+                    .arg(tileLayer->name());
+            bool visible = settings.value(key, true).toBool();
+
+            tileLayer->setVisible(visible);
+            ui->slippyMap->addLayer(tileLayer);
+
+            auto *action = new QAction();
+            action->setText(tileLayer->name());
+            action->setCheckable(true);
+            action->setChecked(visible);
+            connect(action,
+                    &QAction::triggered,
+                    [this, key, tileLayer](bool checked) {
+                        tileLayer->setVisible(checked);
+                        QSettings settings;
+                        settings.setValue(key, checked);
+                    });
+
+            ui->menuLayer_TileLayers->addAction(action);
+        }
     }
+
 
     for (auto *layer : pluginManager->getLayers()) {
         m_layerManager->addLayer(layer);
@@ -372,8 +270,123 @@ void MainWindow::loadMarkers()
 
 }
 
+void MainWindow::setupWeather()
+{
+    m_weatherNetworkAccessManager = new QNetworkAccessManager();
+    connect(m_weatherNetworkAccessManager,
+            &QNetworkAccessManager::finished,
+            this,
+            &MainWindow::weatherNetworkAccessManager_onRequestFinished);
+
+    m_weatherService = new NationalWeatherServiceInterface(this);
+    connect(m_weatherService,
+            &NationalWeatherServiceInterface::stationListReady,
+            this,
+            &MainWindow::onWeatherService_stationListReady);
+
+    m_weatherLayer = new SlippyMapLayer();
+    m_weatherLayer->setName(tr("Weather"));
+    m_weatherLayer->setVisible(true);
+    m_weatherLayer->setEditable(false);
+    m_layerManager->addLayer(m_weatherLayer);
+}
+
 void MainWindow::setupContextMenus()
 {
+    /*
+     * Layer tree view context menu
+     */
+
+    m_treeViewMenu = new QMenu(this);
+    m_treeViewMenu->setTitle(tr("Layers"));
+
+    m_newLayerAction = new QAction();
+    m_newLayerAction->setText(tr("New Layer"));
+    m_treeViewMenu->addAction(m_newLayerAction);
+    connect(m_newLayerAction,
+            &QAction::triggered,
+            this,
+            &MainWindow::createNewLayer);
+
+    m_renameLayerAction = new QAction();
+    m_renameLayerAction->setText(tr("Rename..."));
+    m_treeViewMenu->addAction(m_renameLayerAction);
+    connect(m_renameLayerAction,
+            &QAction::triggered,
+            this,
+            &MainWindow::renameActiveLayer);
+    connect(ui->actionLayer_Rename,
+            &QAction::triggered,
+            this,
+            &MainWindow::renameActiveLayer);
+
+    m_deleteLayerAction = new QAction();
+    m_deleteLayerAction->setText(tr("Delete"));
+    m_treeViewMenu->addAction(m_deleteLayerAction);
+    connect(m_deleteLayerAction,
+            &QAction::triggered,
+            this,
+            &MainWindow::deleteSelectedLayer);
+    connect(ui->actionLayer_Delete,
+            &QAction::triggered,
+            this,
+            &MainWindow::deleteActiveLayer);
+
+    m_clearLayerAction = new QAction();
+    m_clearLayerAction->setText(tr("Clear Layer"));
+    m_treeViewMenu->addAction(m_clearLayerAction);
+    connect(m_clearLayerAction,
+            &QAction::triggered,
+            this,
+            &MainWindow::clearSelectedLayer);
+
+    m_treeViewMenu->addSeparator();
+
+    m_markerVisibilityAction = new QAction();
+    m_markerVisibilityAction->setText(tr("Visible"));
+    m_markerVisibilityAction->setCheckable(true);
+    m_treeViewMenu->addAction(m_markerVisibilityAction);
+    connect(m_markerVisibilityAction, &QAction::toggled, [this](bool checked) {
+        QModelIndex index = ui->tvwMarkers->currentIndex();
+        Q_ASSERT(index.row() < m_layerManager->layers().count());
+        SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
+        layer->setVisible(checked);
+    });
+
+    m_markerLockedAction = new QAction();
+    m_markerLockedAction->setText(tr("Locked"));
+    m_markerLockedAction->setCheckable(true);
+    m_treeViewMenu->addAction(m_markerLockedAction);
+    connect(m_markerLockedAction,
+            &QAction::toggled,
+            [this](bool checked) {
+                QModelIndex index = ui->tvwMarkers->currentIndex();
+                if (!index.isValid() || index.parent().isValid()) return;
+                Q_ASSERT(index.row() < m_layerManager->layers().count());
+                SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
+                layer->setEditable(!checked);
+            });
+
+    connect(ui->tvwMarkers, &QTreeView::clicked, [this](const QModelIndex& index) {
+        if (!index.isValid() || index.parent().isValid()) return;
+        Q_ASSERT(index.row() < m_layerManager->layers().count());
+        SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
+        m_markerVisibilityAction->setChecked(layer->isVisible());
+        m_markerLockedAction->setChecked(!layer->isEditable());
+    });
+
+    connect(ui->tvwMarkers, &QTreeView::activated, [this](const QModelIndex& index) {
+        if (!index.isValid() || index.parent().isValid()) return;
+        Q_ASSERT(index.row() < m_layerManager->layers().count());
+        SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
+        m_markerVisibilityAction->setChecked(layer->isVisible());
+        m_markerLockedAction->setChecked(!layer->isEditable());
+    });
+
+    /*
+     * SlippyMapWidget context menu
+     */
+
     m_coordAction = new QAction();
     m_coordAction->setEnabled(false);
 
@@ -382,17 +395,33 @@ void MainWindow::setupContextMenus()
     connect(m_addMarkerAction,
             &QAction::triggered,
             this,
-            &MainWindow::onAddMarkerActionTriggered);
-
-    m_deleteMarkerAction = new QAction();
-    m_deleteMarkerAction->setText(tr("Delete Marker"));
-
-    m_markerPropertiesAction = new QAction();
-    m_markerPropertiesAction->setText(tr("Properties..."));
-    connect(m_markerPropertiesAction,
+            &MainWindow::createMarkerAtContextMenuPosition);
+    connect(ui->actionObject_NewMarkerAtCurrent,
             &QAction::triggered,
             this,
-            &MainWindow::onMarkerMenuPropertiesActionTriggered);
+            &MainWindow::createMarkerAtCurrentPosition);
+
+    m_deleteObjectAction = new QAction();
+    m_deleteObjectAction->setText(tr("Delete..."));
+    connect(m_markerDeleteAction,
+            &QAction::triggered,
+            this,
+            &MainWindow::deleteActiveObject);
+    connect(ui->actionObject_Delete,
+            &QAction::triggered,
+            this,
+            &MainWindow::deleteActiveObject);
+
+    m_objectPropertiesAction = new QAction();
+    m_objectPropertiesAction->setText(tr("Properties..."));
+    connect(m_objectPropertiesAction,
+            &QAction::triggered,
+            this,
+            &MainWindow::showActiveObjectPropertyPage);
+    connect(ui->actionObject_Properties,
+            &QAction::triggered,
+            this,
+            &MainWindow::showActiveObjectPropertyPage);
 
     m_centerMapAction = new QAction();
     m_centerMapAction->setText(tr("Center Here"));
@@ -438,8 +467,8 @@ void MainWindow::setupContextMenus()
     m_contextMenu->addAction(m_coordAction);
     m_contextMenu->addSeparator();
     m_contextMenu->addAction(m_addMarkerAction);
-    m_contextMenu->addAction(m_deleteMarkerAction);
-    m_contextMenu->addAction(m_markerPropertiesAction);
+    m_contextMenu->addAction(m_deleteObjectAction);
+    m_contextMenu->addAction(m_objectPropertiesAction);
     m_contextMenu->addAction(m_editShapeAction);
     m_contextMenu->addAction(m_deleteShapeAction);
     m_contextMenu->addSeparator();
@@ -452,6 +481,57 @@ void MainWindow::setupContextMenus()
     m_contextMenu->addAction(m_copyCoordinatesAction);
     m_contextMenu->addAction(m_copyLatitudeAction);
     m_contextMenu->addAction(m_copyLongitudeAction);
+}
+
+void MainWindow::setupMap()
+{
+    m_layerManager = ExplorerApplication::layerManager();
+
+    ui->slippyMap->setLayerManager(m_layerManager);
+    ui->tvwMarkers->setModel(m_layerManager);
+    ui->tvwMarkers->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    /*
+     * Default layer setup
+     */
+    m_defaultMarkerLayer = new SlippyMapLayer();
+    m_defaultMarkerLayer->setName(tr("Markers"));
+    m_layerManager->addLayer(m_defaultMarkerLayer);
+    m_layerManager->setDefaultLayer(m_defaultMarkerLayer);
+
+    /*
+     * GPS Marker Layer
+     */
+    m_gpsMarkerLayer = new SlippyMapLayer();
+    m_gpsMarkerLayer->setName(tr("GPS"));
+    m_gpsMarkerLayer->setEditable(false);
+    m_layerManager->addLayer(m_gpsMarkerLayer);
+
+    connect(ui->slippyMap, &SlippyMapWidget::centerChanged, this, &MainWindow::onSlippyMapCenterChanged);
+    connect(ui->slippyMap, &SlippyMapWidget::zoomLevelChanged, this, &MainWindow::onSlippyMapZoomLevelChanged);
+    connect(ui->slippyMap, &SlippyMapWidget::tileRequestInitiated, this, &MainWindow::onSlippyMapTileRequestStarted);
+    connect(ui->slippyMap, &SlippyMapWidget::tileRequestFinished, this, &MainWindow::onSlippyMapTileRequestFinished);
+    connect(ui->slippyMap, &SlippyMapWidget::cursorPositionChanged, this, &MainWindow::onSlippyMapCursorPositionChanged);
+    connect(ui->slippyMap, &SlippyMapWidget::cursorEntered, this, &MainWindow::onSlippyMapCursorEntered);
+    connect(ui->slippyMap, &SlippyMapWidget::cursorLeft, this, &MainWindow::onSlippyMapCursorLeft);
+    connect(ui->slippyMap, &SlippyMapWidget::searchTextChanged, this, &MainWindow::onSlippyMapSearchTextChanged);
+    connect(ui->slippyMap, &SlippyMapWidget::contextMenuRequested, this, &MainWindow::onSlippyMapContextMenuRequested);
+    connect(ui->slippyMap, &SlippyMapWidget::drawModeChanged, this, &MainWindow::onSlippyMapDrawModeChanged);
+    connect(ui->slippyMap, &SlippyMapWidget::rectSelected, this, &MainWindow::onSlippyMapRectSelected);
+    connect(ui->slippyMap, &SlippyMapWidget::polygonSelected, this, &MainWindow::onSlippyMapPolygonSelected);
+    connect(ui->slippyMap, &SlippyMapWidget::objectActivated, this, &MainWindow::onSlippyMapLayerObjectActivated);
+    connect(ui->slippyMap, &SlippyMapWidget::objectDeactivated, this, &MainWindow::onSlippyMapLayerObjectDeactivated);
+    connect(ui->slippyMap, &SlippyMapWidget::objectDoubleClicked, this, &MainWindow::onSlippyMapLayerObjectDoubleClicked);
+    connect(ui->slippyMap, &SlippyMapWidget::dragFinished, this, &MainWindow::onSlippyMapDragFinished);
+
+    connect(ui->zoomInButton,
+            &QPushButton::clicked,
+            ui->slippyMap,
+            &SlippyMapWidget::increaseZoomLevel);
+    connect(ui->zoomOutButton,
+            &QPushButton::clicked,
+            ui->slippyMap,
+            &SlippyMapWidget::decreaseZoomLevel);
 }
 
 void MainWindow::loadStartupSettings()
@@ -546,10 +626,24 @@ void MainWindow::saveLayers()
 void MainWindow::setupToolbar()
 {
     /**
+     * Lat/Lon inputs in the toolbar
+     */
+    m_toolBarLatitudeInput = new QLineEdit();
+    m_toolBarLatitudeInput->setPlaceholderText(tr("Latitude"));
+    m_toolBarLatitudeInput->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+
+    m_toolBarLongitudeInput = new QLineEdit();
+    m_toolBarLongitudeInput->setPlaceholderText(tr("Longitude"));
+    m_toolBarLongitudeInput->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+
+    m_toolBarLatLonButton = new QPushButton();
+    m_toolBarLatLonButton->setText(tr("Go"));
+
+    /**
      * Color and stroke width selectors for drawing
      */
     m_strokeColorSelector = new ColorSelector();
-    m_strokeColorSelector->setColor(Qt::black);
+    m_strokeColorSelector->setColor(qApp->palette().text().color());
     m_strokeColorSelector->setToolTip(tr("Stroke color"));
     connect(m_strokeColorSelector,
             &ColorSelector::colorSelected,
@@ -558,7 +652,7 @@ void MainWindow::setupToolbar()
             });
 
     m_fillColorSelector = new ColorSelector();
-    m_fillColorSelector->setColor(Qt::white);
+    m_fillColorSelector->setColor(qApp->palette().highlight().color());
     m_fillColorSelector->setToolTip(tr("Fill color"));
     connect(m_fillColorSelector,
             &ColorSelector::colorSelected,
@@ -580,9 +674,32 @@ void MainWindow::setupToolbar()
      * Animation buttons
      */
     m_animationPlayAction = new QAction(tr("Play"));
-    m_animationPauseAction = new QAction(tr("Pause"));
-    m_animationForwardAction = new QAction(tr("Fwd"));
-    m_animationReverseAction = new QAction(tr("Rev"));
+    m_animationPlayAction->setCheckable(true);
+    m_animationPlayAction->setChecked(true);
+    connect(m_animationPlayAction,
+            &QAction::toggled,
+            [this](bool state) {
+        if (state)
+            m_animationState = Forward;
+        else
+            m_animationState = Paused;
+    });
+
+    m_animationForwardAction = new QAction(tr(">>"));
+    connect(m_animationForwardAction,
+            &QAction::triggered,
+            [this]() {
+        qDebug() << "Next frame";
+        ui->slippyMap->nextFrame();
+    });
+
+    m_animationReverseAction = new QAction(tr("<<"));
+    connect(m_animationReverseAction,
+            &QAction::triggered,
+            [this]() {
+        qDebug() << "Previous frame";
+        ui->slippyMap->previousFrame();
+    });
 
     ui->toolBar->addAction(ui->actionDrawRectangle);
     ui->toolBar->addAction(ui->actionDrawEllipse);
@@ -596,10 +713,9 @@ void MainWindow::setupToolbar()
     ui->toolBar->addWidget(m_fillColorSelector);
     ui->toolBar->addWidget(m_strokeWidth);
     ui->toolBar->addSeparator();
-    ui->toolBar->addAction(m_animationPlayAction);
-    ui->toolBar->addAction(m_animationPauseAction);
-    ui->toolBar->addAction(m_animationForwardAction);
     ui->toolBar->addAction(m_animationReverseAction);
+    ui->toolBar->addAction(m_animationPlayAction);
+    ui->toolBar->addAction(m_animationForwardAction);
 }
 
 void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
@@ -729,8 +845,8 @@ void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
                                ui->slippyMap->widgetX2long(point.x())));
 
     m_addMarkerAction->setVisible(true);
-    m_deleteMarkerAction->setVisible(false);
-    m_markerPropertiesAction->setVisible(false);
+    m_deleteObjectAction->setVisible(false);
+    m_objectPropertiesAction->setVisible(false);
     m_editShapeAction->setVisible(false);
     m_deleteShapeAction->setVisible(false);
 
@@ -747,16 +863,11 @@ void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
                     10, 10);
 
                 if (clickbox.contains(m_contextMenuLocation)) {
+                    ui->slippyMap->setActiveObject(object);
                     m_coordAction->setText(object->label());
                     m_addMarkerAction->setVisible(false);
-                    m_markerPropertiesAction->setVisible(true);
-                    connect(m_markerPropertiesAction,
-                            &QAction::triggered,
-                            [this, object]() {
-                        showPropertyPage(object);
-                    });
-                    m_deleteMarkerAction->setVisible(true);
-
+                    m_objectPropertiesAction->setVisible(true);
+                    m_deleteObjectAction->setVisible(true);
                     break;
                 }
             }
@@ -807,8 +918,24 @@ void MainWindow::onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode)
         ui->actionDrawRectangle->setChecked(false);
         ui->actionDrawPolygon->setChecked(false);
         ui->actionDrawEllipse->setChecked(false);
-        ui->slippyMap->setCursor(Qt::ArrowCursor);
         break;
+    case SlippyMapWidget::RectDrawing:
+        ui->actionDrawLine->setChecked(false);
+        ui->actionDrawRectangle->setChecked(true);
+        ui->actionDrawPolygon->setChecked(false);
+        ui->actionDrawEllipse->setChecked(false);
+        break;
+    case SlippyMapWidget::EllipseDrawing:
+        ui->actionDrawLine->setChecked(false);
+        ui->actionDrawRectangle->setChecked(false);
+        ui->actionDrawPolygon->setChecked(false);
+        ui->actionDrawEllipse->setChecked(true);
+        break;
+    case SlippyMapWidget::PolygonDrawing:
+        ui->actionDrawLine->setChecked(false);
+        ui->actionDrawRectangle->setChecked(false);
+        ui->actionDrawPolygon->setChecked(true);
+        ui->actionDrawEllipse->setChecked(false);
     default:
         ui->slippyMap->setCursor(Qt::CrossCursor);
         break;
@@ -972,17 +1099,30 @@ void MainWindow::saveWorkspace(QString fileName)
 
     m_workspaceFileName = fileName;
 
+    int layerCount = 0;
+    for (auto *layer: m_layerManager->layers()) {
+        if (layer->isEditable())
+            layerCount++;
+    }
+
     QDataStream out(&file);
     out.setVersion(QDataStream::Qt_5_15);
 
     out << QString("layers");
-    out << m_layerManager->objectCount();
+    out << layerCount;
 
     for (auto *layer : m_layerManager->layers()) {
-        // todo: serialize the layer
-        for (auto *object : layer->objects()) {
-            out << QString(object->metaObject()->className());
-            object->serialize(out);
+        if (layer->isEditable()) {
+            out << layer->name();
+            out << layer->description();
+            out << layer->isVisible();
+            out << layer->isEditable();
+            out << layer->objects().count();
+
+            for (auto *object : layer->objects()) {
+                out << QString(object->metaObject()->className());
+                object->serialize(out);
+            }
         }
     }
 
@@ -1003,7 +1143,7 @@ void MainWindow::onActionFileSaveWorkspaceTriggered()
 
 void MainWindow::onActionFileOpenWorkspaceTriggered()
 {
-    if (!m_workspaceFileName.isEmpty()) {
+    if (m_workspaceDirty) {
         if (!closeWorkspace())
             return;
     }
@@ -1029,28 +1169,49 @@ void MainWindow::onActionFileOpenWorkspaceTriggered()
 
     QString section;
     QString className;
-    int count = 0;
+    QString layerName;
+    QString layerDescription;
+    bool layerVisible;
+    bool layerEditable;
+    int objectCount = 0;
+    int layerCount = 0;
 
     in >> section;
 
     if (section == "layers") {
-        in >> count;
+        in >> layerCount;
 
-        for (int i = 0; i < count; i++) {
-            in >> className;
-            className.append("*");
+        for (int i = 0; i < layerCount; i++) {
+            in >> layerName;
+            in >> layerDescription;
+            in >> layerVisible;
+            in >> layerEditable;
+            in >> objectCount;
 
-            // get the type information from qt meta
-            int typeId = QMetaType::type(className.toLocal8Bit());
-            const QMetaObject *metaObject = QMetaType::metaObjectForType(typeId);
+            auto *layer = new SlippyMapLayer();
+            layer->setName(layerName);
+            layer->setDescription(layerDescription);
+            layer->setVisible(layerVisible);
+            layer->setEditable(layerEditable);
 
-            // create a new object and cast to layer object
-            QObject *o = metaObject->newInstance();
-            auto *object = qobject_cast<SlippyMapLayerObject*>(o);
+            m_layerManager->addLayer(layer);
 
-            // unserialize and add to layer
-            object->unserialize(in);
-            m_layerManager->addLayerObject(m_layerManager->defaultLayer(), object);
+            for (int j = 0; j < objectCount; j++) {
+                in >> className;
+                className.append("*");
+
+                // get the type information from qt meta
+                int typeId = QMetaType::type(className.toLocal8Bit());
+                const QMetaObject *metaObject = QMetaType::metaObjectForType(typeId);
+
+                // create a new object and cast to layer object
+                QObject *o = metaObject->newInstance();
+                auto *object = qobject_cast<SlippyMapLayerObject *>(o);
+
+                // unserialize and add to layer
+                object->unserialize(in);
+                m_layerManager->addLayerObject(layer, object);
+            }
         }
     }
 
@@ -1134,21 +1295,34 @@ void MainWindow::onTvwMarkersContextMenuRequested(const QPoint &point)
     QModelIndex index = ui->tvwMarkers->indexAt(point);
     if (index.isValid()) {
         if (!index.parent().isValid()) {
-            m_newLayerAction->setVisible(false);
+            SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
+
+            m_clearLayerAction->setVisible(true);
             m_deleteLayerAction->setVisible(true);
-            m_markerMenu->exec(ui->tvwMarkers->viewport()->mapToGlobal(point));
+            m_renameLayerAction->setVisible(true);
+
+            // can only do this if layer is editable
+            m_clearLayerAction->setEnabled(layer->isEditable());
+            m_deleteLayerAction->setEnabled(layer->isEditable());
+            m_renameLayerAction->setEnabled(layer->isEditable());
+
+            m_newLayerAction->setVisible(false);
+            m_treeViewMenu->exec(ui->tvwMarkers->viewport()->mapToGlobal(point));
         }
     }
     else {
         m_newLayerAction->setVisible(true);
+        m_clearLayerAction->setVisible(false);
         m_deleteLayerAction->setVisible(false);
-        m_markerMenu->exec(ui->tvwMarkers->viewport()->mapToGlobal(point));
+        m_renameLayerAction->setVisible(false);
+        m_treeViewMenu->exec(ui->tvwMarkers->viewport()->mapToGlobal(point));
     }
 }
 
-void MainWindow::onMarkerMenuPropertiesActionTriggered()
+void MainWindow::showActiveObjectPropertyPage()
 {
-
+    if (m_selectedObject == nullptr) return;
+    showPropertyPage(m_selectedObject);
 }
 
 void MainWindow::onPluginLayerObjectProviderMarkerAdded(SlippyMapLayerObject *object)
@@ -1157,21 +1331,40 @@ void MainWindow::onPluginLayerObjectProviderMarkerAdded(SlippyMapLayerObject *ob
 
 }
 
-void MainWindow::onAddMarkerActionTriggered()
+void MainWindow::createMarkerAtContextMenuPosition()
 {
     double lon = ui->slippyMap->widgetX2long(m_contextMenuLocation.x());
     double lat = ui->slippyMap->widgetY2lat(m_contextMenuLocation.y());
-    QPointF markerPoint(lon, lat);
+    QPointF position(lon, lat);
+    createMarkerAtPosition(position);
+}
 
-    SlippyMapWidgetMarker *marker = new SlippyMapWidgetMarker(markerPoint);
-    marker->setLabel(SlippyMapWidget::latLonToString(lat, lon));
+void MainWindow::createMarkerAtCurrentPosition()
+{
+    QPointF position = ui->slippyMap->position();
+    createMarkerAtPosition(position);
+}
+
+void MainWindow::createMarkerAtPosition(const QPointF& position)
+{
+    SlippyMapWidgetMarker *marker = new SlippyMapWidgetMarker(position);
+    marker->setLabel(SlippyMapWidget::latLonToString(position.y(), position.x()));
     marker->setDescription(tr("Test Label"));
+    marker->setColor(m_fillColorSelector->color());
 
     SlippyMapLayer *target = m_layerManager->activeLayer();
     if (target == nullptr)
         target = m_layerManager->defaultLayer();
     if (target == nullptr)
         return;
+
+    if (!target->isEditable()) {
+        QMessageBox::warning(this,
+                             tr("Layer Locked"),
+                             tr("Cannot create marker on a locked layer."),
+                             QMessageBox::StandardButtons(QMessageBox::Ok));
+        return;
+    }
 
     m_layerManager->addLayerObject(target, marker);
     setWorkspaceDirty(true);
@@ -1262,14 +1455,6 @@ void MainWindow::onEditShapeActionTriggered()
             }
         }
     }
-}
-
-void MainWindow::onSplitterPosTimerTimeout()
-{
-//    QSettings settings;
-//    QList<int> widths = ui->splitter->sizes();
-//    double ratio = static_cast<double>(widths[0]) / static_cast<double>(width());
-//    settings.setValue("view/sidebarWidth", ratio);
 }
 
 void MainWindow::onWindowSizeTimerTimeout()
@@ -1506,8 +1691,13 @@ bool MainWindow::closeWorkspace()
     }
 
     for (auto *layer : m_layerManager->layers()) {
-        layer->removeAll();
+        if (layer->isEditable()) {
+            m_layerManager->takeLayer(layer);
+            layer->removeAll();
+            delete layer;
+        }
     }
+
     m_workspaceFileName.clear();
     setWorkspaceDirty(true);
     return true;
@@ -1540,19 +1730,143 @@ void MainWindow::createNewLayer()
     }
 }
 
-void MainWindow::deleteLayer()
+void MainWindow::deleteSelectedLayer()
 {
-    if (m_layerManager->activeLayer() != nullptr) {
+    QModelIndex selectedLayer = ui->tvwMarkers->currentIndex();
+    if (selectedLayer.isValid() && !selectedLayer.parent().isValid()) {
+        SlippyMapLayer *layer = m_layerManager->layers().at(selectedLayer.row());
+        if (layer->isEditable()) {
+            int result = QMessageBox::question(
+                    this,
+                    tr("Clear Layer"),
+                    tr("Do you want to delete the layer '%1'?").arg(layer->name()),
+                    QMessageBox::StandardButtons(QMessageBox::Yes | QMessageBox::No));
+
+            if (result == QMessageBox::Yes) {
+                m_layerManager->takeLayer(layer);
+                delete layer;
+            }
+        }
+    }
+}
+
+void MainWindow::clearSelectedLayer()
+{
+    QModelIndex selectedLayer = ui->tvwMarkers->currentIndex();
+    if (selectedLayer.isValid() && !selectedLayer.parent().isValid()) {
+        SlippyMapLayer *layer = m_layerManager->layers().at(selectedLayer.row());
+        if (layer->isEditable()) {
+            int result = QMessageBox::question(
+                    this,
+                    tr("Clear Layer"),
+                    tr("Do you want to remove all objects from the layer '%1'?").arg(layer->name()),
+                    QMessageBox::StandardButtons(QMessageBox::Yes | QMessageBox::No));
+
+            if (result == QMessageBox::Yes)
+                m_layerManager->removeLayerObjects(layer);
+        }
+    }
+}
+
+void MainWindow::deleteActiveObject()
+{
+    if (m_selectedObject == nullptr) return;
+
+    int result = QMessageBox::question(
+            this,
+            tr("Delete Object"),
+            tr("Do you want to delete the object '%1'?").arg(m_selectedObject->label()),
+            QMessageBox::StandardButtons(QMessageBox::Yes | QMessageBox::No));
+
+    if (result == QMessageBox::Yes) {
+        m_layerManager->removeLayerObject(
+                m_layerManager->activeLayer(),
+                m_selectedObject);
+    }
+}
+
+void MainWindow::onTvwMarkersClicked(const QModelIndex &index)
+{
+    if (!index.isValid()) return;
+
+    //
+    // set the selected layer to active
+    //
+    if (!index.parent().isValid()) {
+        auto *layer = m_layerManager->layers().at(index.row());
+        m_layerManager->setActiveLayer(layer);
+    }
+    //
+    // set the selected object to active
+    //
+    else {
+        auto *object = static_cast<SlippyMapLayerObject*>(index.internalPointer());
+        if (object != nullptr)
+            ui->slippyMap->setActiveObject(object);
+    }
+}
+
+void MainWindow::renameActiveLayer()
+{
+    if (m_layerManager->activeLayer() == nullptr) return;
+
+    bool ok;
+    QString name = QInputDialog::getText(
+            this,
+            tr("Rename Layer"),
+            tr("Enter a new name for '%1':").arg(m_layerManager->activeLayer()->name()),
+            QLineEdit::Normal,
+            m_layerManager->activeLayer()->name(),
+            &ok);
+
+    if (ok) {
+        m_layerManager->activeLayer()->setName(name);
+        m_layerManager->updateActiveLayer();
+    }
+}
+
+void MainWindow::deleteActiveLayer()
+{
+    if (m_layerManager->activeLayer() == nullptr) return;
+    auto *layer = m_layerManager->activeLayer();
+
+    if (layer->isEditable()) {
         int result = QMessageBox::question(
                 this,
-                tr("Delete Layer"),
-                tr("Do you want to delete the layer '%1'?").arg(m_layerManager->activeLayer()->name()),
+                tr("Clear Layer"),
+                tr("Do you want to delete the layer '%1'?").arg(layer->name()),
                 QMessageBox::StandardButtons(QMessageBox::Yes | QMessageBox::No));
 
         if (result == QMessageBox::Yes) {
-            SlippyMapLayer *layer = m_layerManager->activeLayer();
             m_layerManager->takeLayer(layer);
             delete layer;
         }
     }
+}
+
+void MainWindow::onSlippyMapPolygonSelected(const QList<QPointF>& points)
+{
+    if (m_layerManager->activeLayer() == nullptr) return;
+
+    QVector<QPointF> pointVector = QVector<QPointF>::fromList(points);
+    auto *polygon = new SlippyMapLayerPolygon(pointVector);
+    polygon->setLabel(tr("New Polygon"));
+    polygon->setStrokeColor(m_strokeColorSelector->color());
+    polygon->setStrokeWidth(m_strokeWidth->value());
+    polygon->setFillColor(m_fillColorSelector->color());
+    m_layerManager->addLayerObject(polygon);
+}
+
+void MainWindow::startPolygonSelection()
+{
+    ui->slippyMap->setDrawMode(SlippyMapWidget::PolygonDrawing);
+}
+
+void MainWindow::onAnimationTimerTimeout()
+{
+    qDebug() << "Animation timeout";
+    if (m_animationState == Forward)
+        ui->slippyMap->nextFrame();
+    else if (m_animationState == Reverse)
+        ui->slippyMap->previousFrame();
 }
