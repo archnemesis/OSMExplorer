@@ -18,7 +18,7 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedi
 add_subdirectory(SlippyMap)
 add_subdirectory(LocationServices)
 add_subdirectory(plugins)
-add_subdirectory(externals/Qt-Color-Widgets)
+add_subdirectory(externals/nmea)
 
 set(PROJECT_SOURCES
         explorer/main.cpp
@@ -93,6 +93,12 @@ set(PROJECT_SOURCES
         explorer/Map/SlippyMapTreeView.h
         explorer/Map/SlippyMapLayerTrackStylePropertyPage.cpp
         explorer/Map/SlippyMapLayerTrackStylePropertyPage.h
+        explorer/Map/SlippyMapGpsMarker.cpp
+        explorer/Map/SlippyMapGpsMarker.h
+        explorer/Map/SlippyMapGpsMarkerPropertyPage.cpp
+        explorer/Map/SlippyMapGpsMarkerPropertyPage.h
+        explorer/Weather/SlippyMapWeatherStationMarker.cpp
+        explorer/Weather/SlippyMapWeatherStationMarker.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -118,11 +124,13 @@ target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::Charts)
 target_link_libraries(osmexplorer PRIVATE SlippyMap)
 target_link_libraries(osmexplorer PRIVATE LocationServices)
 target_link_libraries(osmexplorer PRIVATE QtColorWidgets)
+target_link_libraries(osmexplorer PRIVATE nmea)
 
 target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/explorer)
 target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/SlippyMap/include)
+target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/SlippyMap/externals/Qt-Color-Widgets/include)
 target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/LocationServices)
-target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/externals/Qt-Color-Widgets/include)
+target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/externals/nmea/include)
 
 set_target_properties(osmexplorer PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER osmexplorer.robingingras.com

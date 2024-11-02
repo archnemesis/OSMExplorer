@@ -92,20 +92,6 @@ bool SlippyMapLayerTrack::contains(const QPointF& point, int zoom) const
         if (deg_rect.contains(point)) {
             return true;
         }
-
-//        if ((i + 1) < m_points.length()) {
-//            QPointF thisPoint = m_points.at(i);
-//            QPointF nextPoint = m_points.at(i + 1);
-
-//            qreal a = (nextPoint.y() - thisPoint.y()) / (nextPoint.x() - thisPoint.x());
-//            qreal b = thisPoint.y() - (a * thisPoint.x());
-
-//            //
-//            // check if point lies within line up/down
-//            // then check if point lies within x on either side of where it interects line
-//            //
-
-//        }
     }
 
     return false;
@@ -145,10 +131,12 @@ void SlippyMapLayerTrack::initStyle()
     m_linePen.setStyle(Qt::SolidLine);
     m_linePen.setColor(m_trackLineColor);
     m_linePen.setWidth(m_trackLineWidth);
+    m_linePen.setCapStyle(Qt::RoundCap);
 
     m_strokePen.setStyle(Qt::SolidLine);
     m_strokePen.setColor(m_trackLineStrokeColor);
     m_strokePen.setWidth(m_trackLineWidth + (m_trackLineStrokeWidth * 2));
+    m_strokePen.setCapStyle(Qt::RoundCap);
 }
 
 QDataStream &SlippyMapLayerTrack::serialize(QDataStream &stream) const

@@ -4,7 +4,9 @@
 #include "locationdataprovider.h"
 #include <QSerialPort>
 #include <QTimer>
-#include <QVector>
+#include <QList>
+
+
 
 class NmeaSerialLocationDataProvider : public LocationDataProvider
 {
@@ -51,10 +53,11 @@ public:
         int m_snr;
     };
 
-    QVector<SatelliteStatus> m_satellites;
-
 signals:
     void lineReceived(const QString& line);
+    void satellitesUpdated(QString portName,
+                           const QList<SatelliteStatus>& satellites,
+                           QHash<QString, QVariant> metadata);
 
 protected slots:
     void onSerialPortReadyRead();
@@ -70,6 +73,7 @@ protected:
     QSerialPort::StopBits m_stopBits;
     QSerialPort *m_serialPort = nullptr;
     QTimer m_readTimer;
+    QList<SatelliteStatus> m_satellites;
 };
 
 #endif // NMEASERIALLOCATIONDATAPROVIDER_H

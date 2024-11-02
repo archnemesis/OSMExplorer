@@ -11,5 +11,16 @@
         <file alias="path.png">resources/icons/path.png</file>
         <file alias="ellipse.png">resources/icons/ellipse.png</file>
         <file alias="polygon.png">resources/icons/polygon.png</file>
+        <file alias="save.png">resources/icons/save.png</file>
+        <file alias="line.png">resources/icons/line.png</file>
+        <file alias="play.png">resources/icons/play.png</file>
+        <file alias="pause.png">resources/icons/pause.png</file>
+        <file alias="fforward.png">resources/icons/fforward.png</file>
+        <file alias="rewind.png">resources/icons/rewind.png</file>
+        <file alias="newfile.png">resources/icons/newfile.png</file>
+        <file alias="folderopen.png">resources/icons/folderopen.png</file>
+    </qresource>
+    <qresource prefix="/images">
+        <file alias="loading_tile_256.png">resources/loading_tile_256.png</file>
     </qresource>
 </RCC>

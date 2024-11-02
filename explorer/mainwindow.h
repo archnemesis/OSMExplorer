@@ -8,6 +8,7 @@
 #include <SlippyMap/SlippyMapWidget.h>
 
 #include "Weather/NationalWeatherServiceInterface.h"
+#include "nmeaseriallocationdataprovider.h"
 
 class WeatherStationMarker;
 
@@ -32,6 +33,7 @@ class SettingsDialog;
 class SlippyMapLayerObjectPropertyPage;
 class TextLogViewerForm;
 class WeatherForecastWindow;
+class SlippyMapGpsMarker;
 
 namespace color_widgets {
     class ColorSelector;
@@ -42,6 +44,7 @@ namespace SlippyMap
     class SlippyMapWidgetMarker;
     class SlippyMapLayer;
     class SlippyMapLayerPolygon;
+    class SlippyMapLayerPath;
 };
 
 using namespace SlippyMap;
@@ -57,6 +60,7 @@ public:
 protected:
     bool closeWorkspace();
     void loadMarkers();
+    void loadLayers();
     void loadPluginLayers();
     void loadStartupSettings();
     void resizeEvent(QResizeEvent *event) override;
@@ -84,10 +88,6 @@ private:
     MapDataImportDialog *m_importDialog = nullptr;
     NationalWeatherServiceInterface *m_weatherService = nullptr;
     QAction *m_addMarkerAction = nullptr;
-    QAction *m_animationForwardAction;
-    QAction *m_animationPauseAction;
-    QAction *m_animationPlayAction;
-    QAction *m_animationReverseAction;
     QAction *m_centerMapAction = nullptr;
     QAction *m_clearLayerAction = nullptr;
     QAction *m_coordAction = nullptr;
@@ -107,7 +107,7 @@ private:
     QAction *m_renameLayerAction = nullptr;
     QAction *m_zoomInHereMapAction = nullptr;
     QAction *m_zoomOutHereMapAction = nullptr;
-    QHash<QString,SlippyMapWidgetMarker*> m_gpsMarkers;
+    QHash<QString,SlippyMapGpsMarker*> m_gpsMarkers;
     QLabel *m_statusBarGpsStatusLabel;
     QLabel *m_statusBarPositionLabel;
     QLabel *m_statusBarStatusLabel;
@@ -117,6 +117,7 @@ private:
     QList<LocationDataProvider*> m_gpsProviders;
     QList<QString> m_recentFileList;
     QList<SlippyMapWidgetLayer*> m_layers;
+    QList<QAction*> m_layerShowHideActions;
     QList<SlippyMapWidgetMarker*> m_loadedMarkers;
     QList<SlippyMapWidgetMarker*> m_weatherStationMarkers;
     QListWidgetItem *m_currentRouteListItem = nullptr;
@@ -133,6 +134,7 @@ private:
     QPushButton *m_toolBarLatLonButton;
     QPushButton *m_zoomInButton;
     QPushButton *m_zoomOutButton;
+    QSpinBox *m_lineWidth;
     QSpinBox *m_strokeWidth;
     QString m_workspaceFileName;
     QTimer *m_animationTimer = nullptr;
@@ -167,10 +169,12 @@ protected slots:
     void onSlippyMapContextMenuRequested(const QPoint& point);
     void onSlippyMapRectSelected(QRect rect);
     void onSlippyMapPolygonSelected(const QList<QPointF>& points);
+    void onSlippyMapPathSelected(const QList<QPointF>& points);
     void onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode);
     void onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object);
     void onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object);
     void onSlippyMapLayerObjectDoubleClicked(SlippyMapLayerObject *object);
+    void onSlippyMapLayerObjectUpdated(SlippyMapLayerObject *object);
     void onSlippyMapDragFinished();
     void onWeatherService_stationListReady(
             const QList<NationalWeatherServiceInterface::WeatherStation>& stations);
@@ -182,6 +186,10 @@ protected slots:
     void onActionFileCloseWorkspaceTriggered();
     void weatherNetworkAccessManager_onRequestFinished(QNetworkReply *reply);
     void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
+    void onGpsDataProviderSatellitesUpdated(
+            QString identifier,
+            const QList<NmeaSerialLocationDataProvider::SatelliteStatus>& satellites,
+            QHash<QString, QVariant> metadata);
     void onTvwMarkersContextMenuRequested(const QPoint& point);
     void onTvwMarkersClicked(const QModelIndex& index);
     void showActiveObjectPropertyPage();
@@ -246,9 +254,10 @@ private slots:
     void on_actionViewGpsLog_triggered();
     void on_tvwMarkers_activated(const QModelIndex &index);
     void on_tvwMarkers_clicked(const QModelIndex &index);
+    void on_actionDrawLine_triggered();
     void on_actionDrawRectangle_triggered();
     void on_actionDrawEllipse_triggered();
-    void on_actionImport_triggered();
+    void on_actionImport_GPX_triggered();
     void on_actionMarkerImport_triggered();
     void on_actionToolsOSMImport_triggered();
 

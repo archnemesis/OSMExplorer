@@ -18,6 +18,7 @@ class SettingsDialog : public QDialog
 public:
     explicit SettingsDialog(QList<ExplorerPluginInterface*> plugins = QList<ExplorerPluginInterface*>(), QWidget *parent = nullptr);
     ~SettingsDialog();
+    bool layersChanged();
 
 public slots:
     void loadDefaults();
@@ -40,6 +41,7 @@ private:
     Ui::SettingsDialog *ui;
     QList<LayerPropertiesDialog::LayerProperties> m_layers;
     QList<ExplorerPluginInterface*> m_plugins;
+    bool m_layersChanged = false;
 };
 
 #endif // SETTINGSDIALOG_H

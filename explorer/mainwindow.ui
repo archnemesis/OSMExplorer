@@ -93,7 +93,7 @@
          <item>
           <widget class="QPushButton" name="zoomInButton">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -105,12 +105,16 @@
             </size>
            </property>
            <property name="text">
-            <string>+</string>
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="resources.qrc">
+             <normaloff>:/icons/zoomin.png</normaloff>:/icons/zoomin.png</iconset>
            </property>
            <property name="iconSize">
             <size>
-             <width>48</width>
-             <height>48</height>
+             <width>32</width>
+             <height>32</height>
             </size>
            </property>
           </widget>
@@ -118,7 +122,7 @@
          <item>
           <widget class="QPushButton" name="zoomOutButton">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -130,12 +134,16 @@
             </size>
            </property>
            <property name="text">
-            <string>-</string>
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="resources.qrc">
+             <normaloff>:/icons/zoomout.png</normaloff>:/icons/zoomout.png</iconset>
            </property>
            <property name="iconSize">
             <size>
-             <width>48</width>
-             <height>48</height>
+             <width>32</width>
+             <height>32</height>
             </size>
            </property>
           </widget>
@@ -143,7 +151,7 @@
          <item>
           <widget class="QPushButton" name="currentLocationButton">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -155,12 +163,16 @@
             </size>
            </property>
            <property name="text">
-            <string>L</string>
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="resources.qrc">
+             <normaloff>:/icons/pushpin.png</normaloff>:/icons/pushpin.png</iconset>
            </property>
            <property name="iconSize">
             <size>
-             <width>48</width>
-             <height>48</height>
+             <width>32</width>
+             <height>32</height>
             </size>
            </property>
           </widget>
@@ -205,8 +217,8 @@
    </property>
    <property name="iconSize">
     <size>
-     <width>16</width>
-     <height>16</height>
+     <width>24</width>
+     <height>24</height>
     </size>
    </property>
    <attribute name="toolBarArea">
@@ -222,7 +234,7 @@
      <x>0</x>
      <y>0</y>
      <width>1094</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -247,6 +259,14 @@
      <addaction name="actionFile_Recent_ClearMenu"/>
      <addaction name="separator"/>
     </widget>
+    <widget class="QMenu" name="menuImport">
+     <property name="title">
+      <string>Import</string>
+     </property>
+     <addaction name="actionImport_GPX"/>
+     <addaction name="actionImport_GeoJSON"/>
+     <addaction name="actionImport_CSV"/>
+    </widget>
     <addaction name="actionFile_NewWorkspace"/>
     <addaction name="actionFile_OpenWorkspace"/>
     <addaction name="menuRecent"/>
@@ -255,8 +275,7 @@
     <addaction name="actionFile_SaveWorkspace"/>
     <addaction name="actionFile_SaveWorkspaceAs"/>
     <addaction name="separator"/>
-    <addaction name="actionFile_Print"/>
-    <addaction name="actionImport"/>
+    <addaction name="menuImport"/>
     <addaction name="actionFileExport"/>
     <addaction name="separator"/>
     <addaction name="menuFileGps"/>
@@ -328,6 +347,10 @@
     <addaction name="actionLayer_SortDescending"/>
     <addaction name="separator"/>
     <addaction name="menuLayer_TileLayers"/>
+    <addaction name="separator"/>
+    <addaction name="actionLayer_PreviousFrame"/>
+    <addaction name="actionLayer_NextFrame"/>
+    <addaction name="actionLayer_Play"/>
    </widget>
    <widget class="QMenu" name="menuWeather">
     <property name="title">
@@ -460,6 +483,9 @@
    <property name="text">
     <string>Exit</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
   </action>
   <action name="actionObject_NewMarker">
    <property name="icon">
@@ -536,6 +562,10 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/line.png</normaloff>:/icons/line.png</iconset>
+   </property>
    <property name="text">
     <string>Line</string>
    </property>
@@ -609,17 +639,16 @@
     <string>GPS Log</string>
    </property>
   </action>
-  <action name="actionImport">
-   <property name="text">
-    <string>Import...</string>
-   </property>
-  </action>
   <action name="actionToolsOSMImport">
    <property name="text">
     <string>OSM Import...</string>
    </property>
   </action>
   <action name="actionLayer_New">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/layers.png</normaloff>:/icons/layers.png</iconset>
+   </property>
    <property name="text">
     <string>New...</string>
    </property>
@@ -655,13 +684,27 @@
    </property>
   </action>
   <action name="actionFile_NewWorkspace">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/newfile.png</normaloff>:/icons/newfile.png</iconset>
+   </property>
    <property name="text">
     <string>New Workspace...</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
   </action>
   <action name="actionFile_OpenWorkspace">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/folderopen.png</normaloff>:/icons/folderopen.png</iconset>
+   </property>
    <property name="text">
     <string>Open Workspace...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
   <action name="actionFile_Recent_ClearMenu">
@@ -678,8 +721,15 @@
    </property>
   </action>
   <action name="actionFile_SaveWorkspace">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/save.png</normaloff>:/icons/save.png</iconset>
+   </property>
    <property name="text">
     <string>Save Workspace</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
   <action name="actionFile_SaveWorkspaceAs">
@@ -695,6 +745,54 @@
   <action name="actionShow_Alerts">
    <property name="text">
     <string>Show Alerts</string>
+   </property>
+  </action>
+  <action name="actionLayer_PreviousFrame">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/rewind.png</normaloff>:/icons/rewind.png</iconset>
+   </property>
+   <property name="text">
+    <string>Previous Frame</string>
+   </property>
+  </action>
+  <action name="actionLayer_NextFrame">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/fforward.png</normaloff>:/icons/fforward.png</iconset>
+   </property>
+   <property name="text">
+    <string>Next Frame</string>
+   </property>
+  </action>
+  <action name="actionLayer_Play">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/play.png</normaloff>:/icons/play.png</iconset>
+   </property>
+   <property name="text">
+    <string>Play</string>
+   </property>
+  </action>
+  <action name="actionImport_GPX">
+   <property name="text">
+    <string>GPX...</string>
+   </property>
+  </action>
+  <action name="actionImport_GeoJSON">
+   <property name="text">
+    <string>GeoJSON...</string>
+   </property>
+  </action>
+  <action name="actionImport_CSV">
+   <property name="text">
+    <string>CSV...</string>
    </property>
   </action>
  </widget>
