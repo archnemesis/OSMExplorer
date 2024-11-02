@@ -4,9 +4,6 @@
 [submodule "externals/Qt-Color-Widgets"]
 	path = externals/Qt-Color-Widgets
 	url = https://gitlab.com/mattbas/Qt-Color-Widgets.git
-[submodule "externals/NemaTode"]
-	path = externals/NemaTode
-	url = git@github.com:ckgt/NemaTode.git
 [submodule "externals/nmea"]
 	path = externals/nmea
 	url = git@github.com:pcdangio/nmea.git
