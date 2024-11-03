@@ -189,14 +189,6 @@ MainWindow::MainWindow(QWidget *parent) :
             this,
             &MainWindow::startPolygonSelection);
 
-    loadStartupSettings();
-    loadLayers();
-    setupMap();
-    setupWeather();
-    setupContextMenus();
-    refreshSettings();
-    setupToolbar();
-
     /*
      * New layer action
      */
@@ -226,10 +218,17 @@ MainWindow::MainWindow(QWidget *parent) :
             this,
             &MainWindow::onTvwMarkersClicked);
 
+    loadStartupSettings();
+    loadLayers();
+    setupMap();
+    setupWeather();
+    setupContextMenus();
+    refreshSettings();
+    setupToolbar();
+
     m_statusBarPositionLabel = new QLabel();
     m_statusBarPositionLabel->setFrameStyle(QFrame::Sunken);
     m_statusBarStatusLabel = new QLabel();
-
 
     m_statusBarGpsStatusLabel = new QLabel();
     m_statusBarGpsStatusLabel->setFrameStyle(QFrame::Sunken);
@@ -265,6 +264,16 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     loadMarkers();
+
+    /*
+     * Default layer setup
+     */
+    m_defaultMarkerLayer = new SlippyMapLayer();
+    m_defaultMarkerLayer->setName(tr("Layer1"));
+    m_layerManager->addLayer(m_defaultMarkerLayer);
+    m_layerManager->setDefaultLayer(m_defaultMarkerLayer);
+
+    setWorkspaceDirty(false);
 }
 
 MainWindow::~MainWindow()
@@ -542,14 +551,6 @@ void MainWindow::setupMap()
     ui->slippyMap->setLayerManager(m_layerManager);
     ui->tvwMarkers->setModel(m_layerManager);
     ui->tvwMarkers->setContextMenuPolicy(Qt::CustomContextMenu);
-
-    /*
-     * Default layer setup
-     */
-    m_defaultMarkerLayer = new SlippyMapLayer();
-    m_defaultMarkerLayer->setName(tr("Layer1"));
-    m_layerManager->addLayer(m_defaultMarkerLayer);
-    m_layerManager->setDefaultLayer(m_defaultMarkerLayer);
 
     /*
      * GPS Marker Layer
@@ -1277,6 +1278,8 @@ void MainWindow::onActionFileOpenWorkspaceTriggered()
     QString fileName = QFileDialog::getOpenFileName(
             this,
             tr("Open Workspace"));
+
+    if (fileName.isEmpty()) return;
 
     QFile file(fileName);
 
