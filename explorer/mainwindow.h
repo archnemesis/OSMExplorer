@@ -9,6 +9,7 @@
 
 #include "Weather/NationalWeatherServiceInterface.h"
 #include "nmeaseriallocationdataprovider.h"
+#include "Application/HistoryManager.h"
 
 class WeatherStationMarker;
 
@@ -73,6 +74,8 @@ protected:
     void setupWeather();
     void showPropertyPage(SlippyMapLayerObject *object);
     void updateRecentFileList();
+    void createUndoAddObject(const QString& description, SlippyMapLayer *layer, SlippyMapLayerObject *object);
+    void createUndoModifyObject(const QString& description, SlippyMapLayerObject *object);
     void closeEvent(QCloseEvent *event) override;
 
 private:
@@ -145,6 +148,7 @@ private:
     SlippyMapLayer* m_weatherLayer;
     SlippyMapLayerManager *m_layerManager = nullptr;
     SlippyMapLayerObject *m_selectedObject = nullptr;
+    SlippyMapLayerObject *m_selectedObjectCopy = nullptr;
     SlippyMapLayerObjectPropertyPage *m_selectedObjectPropertyPage = nullptr;
     SlippyMapLayerPolygon *m_forecastZonePolygon;
     SlippyMapWidget::LineSet *m_currentRouteLineSet = nullptr;
@@ -175,6 +179,7 @@ protected slots:
     void onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object);
     void onSlippyMapLayerObjectDoubleClicked(SlippyMapLayerObject *object);
     void onSlippyMapLayerObjectUpdated(SlippyMapLayerObject *object);
+    void onSlippyMapLayerObjectWasDragged(SlippyMapLayerObject *object);
     void onSlippyMapDragFinished();
     void onWeatherService_stationListReady(
             const QList<NationalWeatherServiceInterface::WeatherStation>& stations);
@@ -204,6 +209,10 @@ protected slots:
     void onEditShapeActionTriggered();
     void startPolygonSelection();
     void onAnimationTimerTimeout();
+    void undo();
+    void redo();
+    void undoEventAdded(HistoryManager::HistoryEvent event);
+    void redoHistoryCleared();
 
     /**
      * @brief Save window size after finish moving.

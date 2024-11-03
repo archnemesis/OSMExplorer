@@ -5,7 +5,7 @@
 #include <QSerialPort>
 #include <QTimer>
 #include <QList>
-
+#include <QDateTime>
 
 
 class NmeaSerialLocationDataProvider : public LocationDataProvider
@@ -51,6 +51,40 @@ public:
         double m_elevation;
         double m_azimuth;
         int m_snr;
+    };
+
+    class PositionData {
+    public:
+        enum FixType {
+            FixNone,
+            Fix2D,
+            Fix3D
+        };
+
+        PositionData() {}
+        void setGpsTime(const QDateTime& time) { m_time = time; }
+        const QDateTime& gpsTime() const { return m_time; }
+        void setSatellites(const QList<SatelliteStatus>& satellites) { m_satellites = satellites; }
+        const QList<SatelliteStatus>& satellites() const { return m_satellites; }
+        double latitude() const { return m_latitude; }
+        double longitude() const { return m_longitude; }
+        void setLatitude(double latitude) { m_latitude = latitude; }
+        void setLongitude(double longitude) { m_longitude = longitude; }
+        double altitude() const { return m_altitude; }
+        void setAltitude(double altitude) { m_altitude = altitude; }
+
+    private:
+        QDateTime m_time;
+        FixType m_fixType;
+        double m_latitude;
+        double m_longitude;
+        double m_altitude;
+        double m_hdop;
+        double m_vdop;
+        double m_pdop;
+        double m_geoidSeparation;
+        int m_numSatellites;
+        QList<SatelliteStatus> m_satellites;
     };
 
 signals:

@@ -15,13 +15,18 @@
 #include "gpx/gpxwaypoint.h"
 #include "gpx/gpxtracksegment.h"
 
-SlippyMapLayerTrack::SlippyMapLayerTrack(const GPXTrack& track) :
-    m_trackLineWidth(5),
-    m_trackLineStrokeWidth(1),
-    m_trackLineColor(Qt::green),
-    m_trackLineStrokeColor(Qt::darkGreen),
-    m_waypointRadius(5),
-    m_waypointColor(Qt::darkYellow)
+SlippyMapLayerTrack::SlippyMapLayerTrack(QObject *parent) : SlippyMapLayerObject(parent),
+                                                            m_trackLineWidth(5),
+                                                            m_trackLineStrokeWidth(1),
+                                                            m_trackLineColor(Qt::green),
+                                                            m_trackLineStrokeColor(Qt::darkGreen),
+                                                            m_waypointRadius(5),
+                                                            m_waypointColor(Qt::darkYellow)
+{
+
+}
+
+SlippyMapLayerTrack::SlippyMapLayerTrack(const GPXTrack& track) : SlippyMapLayerTrack()
 {
     m_track = track;
     initStyle();
@@ -33,7 +38,34 @@ SlippyMapLayerTrack::SlippyMapLayerTrack(const GPXTrack& track) :
     }
 }
 
-SlippyMapLayerTrack::~SlippyMapLayerTrack() {
+SlippyMapLayerTrack::SlippyMapLayerTrack(const SlippyMapLayerTrack &other) : SlippyMapLayerTrack()
+{
+    setLabel(other.label());
+    setDescription(other.description());
+    setTrackLineWidth(other.trackLineWidth());
+    setTrackLineColor(other.trackLineColor());
+    setTrackLineStrokeWidth(other.trackLineStrokeWidth());
+    setTrackLineStrokeColor(other.trackLineStrokeColor());
+    setWaypointRadius(other.waypointRadius());
+    setWaypointColor(other.waypointColor());
+}
+
+void SlippyMapLayerTrack::copy(SlippyMapLayerObject *other)
+{
+    auto *track = dynamic_cast<SlippyMapLayerTrack*>(other);
+    setLabel(track->label());
+    setDescription(track->description());
+    setTrackLineWidth(track->trackLineWidth());
+    setTrackLineColor(track->trackLineColor());
+    setTrackLineStrokeWidth(track->trackLineStrokeWidth());
+    setTrackLineStrokeColor(track->trackLineStrokeColor());
+    setWaypointRadius(track->waypointRadius());
+    setWaypointColor(track->waypointColor());
+}
+
+SlippyMapLayerTrack *SlippyMapLayerTrack::clone() const
+{
+    return new SlippyMapLayerTrack(*this);
 }
 
 void SlippyMapLayerTrack::draw(QPainter *painter, const QTransform &transform, SlippyMapLayerObject::ObjectState state)
@@ -80,14 +112,52 @@ bool SlippyMapLayerTrack::isIntersectedBy(const QRectF& rect) const
 bool SlippyMapLayerTrack::contains(const QPointF& point, int zoom) const
 {
     double deg_per_pixel = (360.0 / pow(2.0, zoom)) / 256.0;
-    double deg_radius = deg_per_pixel * 10;
+    double deg_lineWidth = deg_per_pixel * m_trackLineStrokeWidth;
 
-    for (int i = 0; i < m_points.length(); i++) {
+    for (int i = 0; i < m_points.length() - 1; i++) {
+        QPointF p1 = m_points.at(i);
+        QPointF p2 = m_points.at(i+1);
+
+        //
+        // the point should lie within the bounding rect of the line
+        //
+        QRectF bbox = {
+                p1.x(),
+                p1.y(),
+                p2.x() - p1.x(),
+                p2.y() - p1.y()};
+
+        if (!bbox.contains(point)) continue;
+
+        //
+        // vertical line, so if point.x is within +/- deg_lineWidth of
+        // the line, then it's a hit
+        //
+        if ((p2.x() - p1.x()) == 0) {
+            if ((p1.x() - (deg_lineWidth / 2)) < point.x() && point.x() < (p1.x() + (deg_lineWidth / 2))) {
+                return true;
+            }
+        }
+            //
+            // same for horizontal line
+            //
+        else if ((p2.y() - p1.y()) == 0) {
+            if ((p1.y() - (deg_lineWidth / 2)) < point.y() && point.y() < (p1.y() + (deg_lineWidth / 2))) {
+                return true;
+            }
+        }
+
+        double slope = (p2.y() - p1.y()) / (p2.x() - p1.x());
+        double intercept = p1.y() - slope * p1.x();
+
+        double intersect_y = (slope * point.x()) + intercept;
+        double intersect_x = (intersect_y - intercept) / slope;
+
         QRectF deg_rect(
-                    m_points.at(i).x() - deg_radius,
-                    m_points.at(i).y() - deg_radius,
-                    deg_radius * 2,
-                    deg_radius * 2);
+                intersect_x - (deg_lineWidth),
+                intersect_y - (deg_lineWidth),
+                deg_lineWidth * 2,
+                deg_lineWidth * 2);
 
         if (deg_rect.contains(point)) {
             return true;

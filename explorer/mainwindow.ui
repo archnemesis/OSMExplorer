@@ -360,7 +360,15 @@
     <addaction name="actionShow_Alerts"/>
     <addaction name="separator"/>
    </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>&amp;Edit</string>
+    </property>
+    <addaction name="actionEdit_Undo"/>
+    <addaction name="actionEdit_Redo"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
    <addaction name="menuLayer"/>
    <addaction name="menuMarker"/>
    <addaction name="menuWeather"/>
@@ -793,6 +801,22 @@
   <action name="actionImport_CSV">
    <property name="text">
     <string>CSV...</string>
+   </property>
+  </action>
+  <action name="actionEdit_Undo">
+   <property name="text">
+    <string>&amp;Undo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
+   </property>
+  </action>
+  <action name="actionEdit_Redo">
+   <property name="text">
+    <string>&amp;Redo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Z</string>
    </property>
   </action>
  </widget>

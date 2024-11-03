@@ -14,8 +14,12 @@ class SlippyMapLayerTrack : public SlippyMapLayerObject
 {
     Q_OBJECT
 public:
+    explicit Q_INVOKABLE SlippyMapLayerTrack(QObject *parent = nullptr);
     explicit SlippyMapLayerTrack(const GPXTrack& track);
-    ~SlippyMapLayerTrack() override;
+    Q_INVOKABLE SlippyMapLayerTrack(const SlippyMapLayerTrack& other);
+
+    virtual SlippyMapLayerTrack* clone() const;
+    virtual void copy(SlippyMapLayerObject *other);
     QDataStream& serialize(QDataStream& stream) const override;
     QList<SlippyMapLayerObjectPropertyPage*> propertyPages() const;
     bool contains(const QPointF& point, int zoom) const override;

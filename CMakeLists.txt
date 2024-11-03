@@ -99,6 +99,8 @@ set(PROJECT_SOURCES
         explorer/Map/SlippyMapGpsMarkerPropertyPage.h
         explorer/Weather/SlippyMapWeatherStationMarker.cpp
         explorer/Weather/SlippyMapWeatherStationMarker.h
+        explorer/Application/HistoryManager.cpp
+        explorer/Application/HistoryManager.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

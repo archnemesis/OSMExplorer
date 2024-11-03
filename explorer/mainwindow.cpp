@@ -38,6 +38,7 @@
 #include "Map/SlippyMapLayerTrack.h"
 #include "Weather/WeatherForecastWindow.h"
 #include "Application/ExplorerApplication.h"
+#include "Application/HistoryManager.h"
 
 #include "defaults.h"
 #include "directionlistitemwidget.h"
@@ -135,6 +136,23 @@ MainWindow::MainWindow(QWidget *parent) :
                 // TODO: remove the weather markers
             }
         });
+
+    connect(ExplorerApplication::historyManager(),
+            &HistoryManager::undoEventAdded,
+            this,
+            &MainWindow::undoEventAdded);
+
+    ui->actionEdit_Undo->setEnabled(false);
+    connect(ui->actionEdit_Undo,
+            &QAction::triggered,
+            this,
+            &MainWindow::undo);
+
+    ui->actionEdit_Redo->setEnabled(false);
+    connect(ui->actionEdit_Redo,
+            &QAction::triggered,
+            this,
+            &MainWindow::redo);
 
     /*
      * Drawing
@@ -410,7 +428,7 @@ void MainWindow::setupContextMenus()
 
     m_deleteObjectAction = new QAction();
     m_deleteObjectAction->setText(tr("Delete..."));
-    connect(m_markerDeleteAction,
+    connect(m_deleteObjectAction,
             &QAction::triggered,
             this,
             &MainWindow::deleteActiveObject);
@@ -530,6 +548,7 @@ void MainWindow::setupMap()
     connect(ui->slippyMap, &SlippyMapWidget::objectActivated, this, &MainWindow::onSlippyMapLayerObjectActivated);
     connect(ui->slippyMap, &SlippyMapWidget::objectDeactivated, this, &MainWindow::onSlippyMapLayerObjectDeactivated);
     connect(ui->slippyMap, &SlippyMapWidget::objectDoubleClicked, this, &MainWindow::onSlippyMapLayerObjectDoubleClicked);
+    connect(ui->slippyMap, &SlippyMapWidget::objectWasDragged, this, &MainWindow::onSlippyMapLayerObjectWasDragged);
     connect(ui->slippyMap, &SlippyMapWidget::dragFinished, this, &MainWindow::onSlippyMapDragFinished);
 
     connect(ui->zoomInButton,
@@ -875,6 +894,11 @@ void MainWindow::onSlippyMapSearchTextChanged(const QString &text)
 void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
 {
     m_contextMenuLocation = point;
+    QPointF menuPosition = QPointF(
+            ui->slippyMap->widgetX2long(point.x()),
+            ui->slippyMap->widgetY2lat(point.y())
+            );
+
     m_coordAction->setText(SlippyMapWidget::latLonToString(
                                ui->slippyMap->widgetY2lat(point.y()),
                                ui->slippyMap->widgetX2long(point.x())));
@@ -889,15 +913,7 @@ void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
     for (SlippyMapLayer *layer : m_layerManager->layers()) {
         for (SlippyMapLayerObject *object : layer->objects()) {
             if (viewport.contains(object->position())) {
-                int markerX = ui->slippyMap->long2widgetX(object->position().x());
-                int markerY = ui->slippyMap->lat2widgety(object->position().y());
-
-                QRect clickbox(
-                    markerX - 5,
-                    markerY - 5,
-                    10, 10);
-
-                if (clickbox.contains(m_contextMenuLocation)) {
+                if (object->contains(menuPosition, ui->slippyMap->zoomLevel())) {
                     ui->slippyMap->setActiveObject(object);
                     m_coordAction->setText(object->label());
                     m_addMarkerAction->setVisible(false);
@@ -909,11 +925,7 @@ void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
         }
     }
 
-    QPointF geoPoint;
-    geoPoint.setX(ui->slippyMap->widgetX2long(point.x()));
-    geoPoint.setY(ui->slippyMap->widgetY2lat(point.y()));
-
-    m_contextMenuPoint = geoPoint;
+    m_contextMenuPoint = menuPosition;
     m_contextMenu->exec(ui->slippyMap->mapToGlobal(point));
 }
 
@@ -943,6 +955,11 @@ void MainWindow::onSlippyMapRectSelected(QRect rect)
     poly->setStrokeColor(m_strokeColorSelector->color());
     poly->setStrokeWidth(m_strokeWidth->value());
     m_layerManager->addLayerObject(poly);
+
+    createUndoAddObject(
+            tr("New Rectangle"),
+            m_layerManager->activeLayer(),
+            poly);
 }
 
 void MainWindow::onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode)
@@ -1022,6 +1039,8 @@ void MainWindow::onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object)
     ui->tabShapeEditor->setVisible(true);
     ui->lblNoShapeSelected->setVisible(false);
 
+    delete m_selectedObjectCopy;
+    m_selectedObjectCopy = object->clone();
     m_selectedObject = object;
 }
 
@@ -1062,10 +1081,16 @@ void MainWindow::showPropertyPage(SlippyMapLayerObject *object)
             &QPushButton::clicked,
             [this, object, propertyPages, dialog]() {
                 if (object->isEditable()) {
+                    createUndoModifyObject(
+                            tr("Edit ") + " " + object->label(),
+                            object);
+
                     for (auto *propertyPage: propertyPages)
                         propertyPage->save();
+
                     setWorkspaceDirty(true);
                 }
+
                 dialog->accept();
             });
 
@@ -1430,6 +1455,11 @@ void MainWindow::createMarkerAtPosition(const QPointF& position)
 
     m_layerManager->addLayerObject(target, marker);
     setWorkspaceDirty(true);
+
+    createUndoAddObject(
+            tr("New Marker"),
+            target,
+            marker);
 }
 
 void MainWindow::onDeleteMarkerActionTriggered()
@@ -1721,7 +1751,18 @@ void MainWindow::on_actionImport_GPX_triggered()
 
                 layerTrack->setLabel(trackName);
                 layerTrack->setDescription(parser.metadata().description());
+                layerTrack->setTrackLineColor(m_fillColorSelector->color());
+                layerTrack->setTrackLineStrokeColor(m_strokeColorSelector->color());
+                layerTrack->setTrackLineWidth(m_lineWidth->value());
+                layerTrack->setTrackLineStrokeWidth(m_strokeWidth->value());
+                layerTrack->setWaypointColor(m_fillColorSelector->color().lighter());
+                layerTrack->setWaypointRadius(m_lineWidth->value());
                 m_layerManager->addLayerObject(layerTrack);
+
+                createUndoAddObject(
+                        tr("Import Track"),
+                        m_layerManager->activeLayer(),
+                        layerTrack);
             }
         }
     }
@@ -1950,6 +1991,11 @@ void MainWindow::onSlippyMapPolygonSelected(const QList<QPointF>& points)
     polygon->setStrokeWidth(m_strokeWidth->value());
     polygon->setFillColor(m_fillColorSelector->color());
     m_layerManager->addLayerObject(polygon);
+
+    createUndoAddObject(
+            tr("New Polygon"),
+            m_layerManager->activeLayer(),
+            polygon);
 }
 
 void MainWindow::startPolygonSelection()
@@ -1970,6 +2016,11 @@ void MainWindow::onSlippyMapPathSelected(const QList<QPointF> &points)
     path->setStrokeWidth(m_strokeWidth->value());
     path->setLineWidth(m_lineWidth->value());
     m_layerManager->addLayerObject(path);
+
+    createUndoAddObject(
+            tr("New Path"),
+            m_layerManager->activeLayer(),
+            path);
 }
 
 void MainWindow::onAnimationTimerTimeout()
@@ -1988,4 +2039,140 @@ void MainWindow::onSlippyMapLayerObjectUpdated(SlippyMapLayerObject *object)
 void MainWindow::on_actionDrawLine_triggered()
 {
     ui->slippyMap->setDrawMode(SlippyMapWidget::PathDrawing);
+}
+
+void MainWindow::undo()
+{
+    auto *hist = ExplorerApplication::historyManager();
+    HistoryManager::HistoryEvent event = hist->undoEvent();
+
+    switch (event.action) {
+        case HistoryManager::AddObject: {
+            SlippyMapLayer *layer = event.layer;
+            SlippyMapLayerObject *object = event.original;
+            m_layerManager->removeLayerObject(layer, object);
+            break;
+        }
+        case HistoryManager::DeleteObject: {
+            SlippyMapLayer *layer = event.layer;
+            SlippyMapLayerObject *object = event.original;
+            m_layerManager->addLayerObject(layer, object);
+            break;
+        }
+        case HistoryManager::ModifyObject: {
+            // the clone contains the original contents
+            SlippyMapLayerObject *temp = event.original->clone();
+            SlippyMapLayerObject *object = event.original;
+            SlippyMapLayerObject *clone = event.copy;
+
+            // we need to replace the original with the copy
+            event.original->copy(event.copy);
+
+            // now put the "new" contents into copy for redo later
+            event.copy->copy(temp);
+            delete temp;
+            break;
+        }
+    }
+
+    ui->actionEdit_Redo->setEnabled(true);
+    ui->actionEdit_Redo->setText(tr("Redo") + " " + hist->currentRedoDescription());
+    ui->actionEdit_Undo->setEnabled(hist->undoCount() > 0);
+    if (hist->undoCount() > 0)
+        ui->actionEdit_Undo->setText(tr("Undo") + " " + hist->currentUndoDescription());
+}
+
+void MainWindow::redo()
+{
+    auto *hist = ExplorerApplication::historyManager();
+
+    if (hist->redoCount() > 0) {
+        HistoryManager::HistoryEvent event = hist->redoEvent();
+
+        switch (event.action) {
+            case HistoryManager::DeleteObject: {
+                SlippyMapLayer *layer = event.layer;
+                SlippyMapLayerObject *object = event.original;
+                m_layerManager->removeLayerObject(layer, object);
+                break;
+            }
+            case HistoryManager::AddObject: {
+                SlippyMapLayer *layer = event.layer;
+                SlippyMapLayerObject *object = event.original;
+                m_layerManager->addLayerObject(layer, object);
+                break;
+            }
+            case HistoryManager::ModifyObject: {
+                // the clone contains the original contents
+                SlippyMapLayerObject *temp = event.original->clone();
+                SlippyMapLayerObject *object = event.original;
+                SlippyMapLayerObject *clone = event.copy;
+
+                // we need to replace the original with the copy
+                event.original->copy(event.copy);
+
+                // now put the "new" contents into copy for undo later
+                event.copy->copy(temp);
+                delete temp;
+                break;
+            }
+        }
+    }
+
+    ui->actionEdit_Redo->setEnabled(hist->redoCount() > 0);
+    if (hist->redoCount() > 0)
+        ui->actionEdit_Redo->setText(tr("Redo") + " " + hist->currentRedoDescription());
+    ui->actionEdit_Undo->setEnabled(true);
+    if (hist->undoCount() > 0)
+        ui->actionEdit_Undo->setText(tr("Undo") + " " + hist->currentUndoDescription());
+}
+
+void MainWindow::createUndoAddObject(const QString &description, SlippyMapLayer *layer, SlippyMapLayerObject *object)
+{
+    HistoryManager::HistoryEvent event;
+    event.action = HistoryManager::AddObject;
+    event.layer = layer;
+    event.original = object;
+    event.copy = nullptr;
+    event.description = description;
+    ExplorerApplication::historyManager()->addEvent(event);
+    ui->actionEdit_Undo->setEnabled(true);
+    ui->actionEdit_Undo->setText(tr("Undo") + " " + description);
+}
+
+void MainWindow::undoEventAdded(HistoryManager::HistoryEvent event)
+{
+    auto *hist = ExplorerApplication::historyManager();
+    ui->actionEdit_Redo->setEnabled(hist->redoCount() > 0);
+    if (hist->redoCount() > 0)
+        ui->actionEdit_Redo->setText(tr("Redo") + " " + hist->currentRedoDescription());
+    ui->actionEdit_Undo->setEnabled(hist->undoCount() > 0);
+    if (hist->undoCount() > 0)
+        ui->actionEdit_Undo->setText(tr("Undo") + " " + hist->currentUndoDescription());
+}
+
+void MainWindow::redoHistoryCleared()
+{
+    ui->actionEdit_Redo->setEnabled(false);
+    ui->actionEdit_Redo->setText(tr("Redo"));
+}
+
+void MainWindow::createUndoModifyObject(const QString &description, SlippyMapLayerObject *object)
+{
+    HistoryManager::HistoryEvent event;
+    event.description = description;
+    event.action = HistoryManager::ModifyObject;
+    event.original = object;
+    // create a copy of the original object to restore later
+    // if requested by undo
+    event.copy = m_selectedObjectCopy;
+    ExplorerApplication::historyManager()->addEvent(event);
+    m_selectedObjectCopy = nullptr;
+}
+
+void MainWindow::onSlippyMapLayerObjectWasDragged(SlippyMapLayerObject *object)
+{
+    createUndoModifyObject(
+            tr("Move %1").arg(object->label()),
+            object);
 }

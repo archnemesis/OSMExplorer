@@ -4,6 +4,7 @@
 
 #include "ExplorerApplication.h"
 #include "PluginManager.h"
+#include "HistoryManager.h"
 #include <SlippyMap/SlippyMapLayerManager.h>
 
 ExplorerApplication::ExplorerApplication(int &argc, char **argv) :
@@ -11,6 +12,7 @@ ExplorerApplication::ExplorerApplication(int &argc, char **argv) :
     m_pluginManager = new PluginManager();
     m_pluginManager->loadPlugins();
     m_layerManager = new SlippyMap::SlippyMapLayerManager();
+    m_historyManager = new HistoryManager();
 }
 
 ExplorerApplication * ExplorerApplication::instance() {
@@ -26,4 +28,10 @@ SlippyMap::SlippyMapLayerManager *ExplorerApplication::layerManager()
 {
     auto *app = static_cast<ExplorerApplication*>(QApplication::instance());
     return app->m_layerManager;
+}
+
+HistoryManager *ExplorerApplication::historyManager()
+{
+    auto *app = static_cast<ExplorerApplication*>(QApplication::instance());
+    return app->m_historyManager;
 }
