@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>OSMExplorer</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="resources.qrc">
+    <normaloff>:/images/icon-128.png</normaloff>:/images/icon-128.png</iconset>
+  </property>
   <property name="styleSheet">
    <string notr="true"/>
   </property>
@@ -79,6 +83,34 @@
            <width>0</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QHeaderView::section {
+	font-weight: bold;
+	background-color: palette(highlight);
+	color: palette(bright-text);
+	border-width: 0px;
+	padding: 10px;
+	border-top-left-radius: 10px;
+	border-top-right-radius: 10px;
+}
+
+QTreeView {
+	background-color: white;
+	border-radius: 10px;
+	border-width: 0px;
+	padding: 0px;
+	margin: 0px;
+}
+
+QTreeView::item {
+	padding: 5px 10px 5px 10px;
+}
+
+QTreeView &gt; QFrame {
+	background-color: #00000000;
+	border-radius: 0px;
+}</string>
          </property>
          <property name="alternatingRowColors">
           <bool>true</bool>
@@ -366,6 +398,14 @@
     </property>
     <addaction name="actionEdit_Undo"/>
     <addaction name="actionEdit_Redo"/>
+    <addaction name="separator"/>
+    <addaction name="actionEdit_Cut"/>
+    <addaction name="actionEdit_Copy"/>
+    <addaction name="actionEdit_Paste"/>
+    <addaction name="actionEdit_Delete"/>
+    <addaction name="separator"/>
+    <addaction name="actionEdit_Properties"/>
+    <addaction name="actionEdit_Rename"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -804,6 +844,9 @@
    </property>
   </action>
   <action name="actionEdit_Undo">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>&amp;Undo</string>
    </property>
@@ -812,11 +855,77 @@
    </property>
   </action>
   <action name="actionEdit_Redo">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>&amp;Redo</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+Z</string>
+   </property>
+  </action>
+  <action name="actionEdit_Cut">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Cut</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+X</string>
+   </property>
+  </action>
+  <action name="actionEdit_Copy">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Copy</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
+  </action>
+  <action name="actionEdit_Paste">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Paste</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+V</string>
+   </property>
+  </action>
+  <action name="actionEdit_Delete">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Delete</string>
+   </property>
+   <property name="shortcut">
+    <string>Del</string>
+   </property>
+  </action>
+  <action name="actionEdit_Properties">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Properties...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+D</string>
+   </property>
+  </action>
+  <action name="actionEdit_Rename">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Rename...</string>
    </property>
   </action>
  </widget>

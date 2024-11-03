@@ -30,12 +30,13 @@ void HistoryManager::addEvent(const HistoryManager::HistoryEvent &event)
             // the user undid an add object, but the object still
             // exists in memory, but we delete it because we're deleting
             // the future
-            if (futureEvent.action == AddObject) {
+            if (futureEvent.action == AddObject)
                 delete futureEvent.original;
-            }
-            else if (futureEvent.action == ModifyObject) {
+            else if (futureEvent.action == ModifyObject)
                 delete futureEvent.copy;
-            }
+            else if (futureEvent.action == AddLayer)
+                delete futureEvent.layer;
+
         }
 
         m_historyStack.remove(m_historyIndex + 1, m_historyStack.count() - (m_historyIndex + 1));

@@ -43,7 +43,7 @@ void PluginManager::loadPlugins() {
 
     for (const auto& pluginPath : pluginPaths) {
 #else
-    QString pluginPath = "/usr/lib";
+    QString pluginPath = "plugins";
 #endif
     pluginsDir.cd(pluginPath);
 

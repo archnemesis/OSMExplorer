@@ -137,10 +137,17 @@ MainWindow::MainWindow(QWidget *parent) :
             }
         });
 
-    connect(ExplorerApplication::historyManager(),
+    m_historyManager = ExplorerApplication::historyManager();
+
+    connect(m_historyManager,
             &HistoryManager::undoEventAdded,
             this,
             &MainWindow::undoEventAdded);
+
+    connect(m_historyManager,
+            &HistoryManager::redoHistoryCleared,
+            this,
+            &MainWindow::redoHistoryCleared);
 
     ui->actionEdit_Undo->setEnabled(false);
     connect(ui->actionEdit_Undo,
@@ -153,6 +160,26 @@ MainWindow::MainWindow(QWidget *parent) :
             &QAction::triggered,
             this,
             &MainWindow::redo);
+
+    connect(ui->actionEdit_Cut,
+            &QAction::triggered,
+            this,
+            &MainWindow::cutActiveObject);
+
+    connect(ui->actionEdit_Copy,
+            &QAction::triggered,
+            this,
+            &MainWindow::copyActiveObject);
+
+    connect(ui->actionEdit_Paste,
+            &QAction::triggered,
+            this,
+            &MainWindow::pasteObject);
+
+    connect(ui->actionEdit_Delete,
+            &QAction::triggered,
+            this,
+            &MainWindow::deleteActiveObject);
 
     /*
      * Drawing
@@ -1042,6 +1069,12 @@ void MainWindow::onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object)
     delete m_selectedObjectCopy;
     m_selectedObjectCopy = object->clone();
     m_selectedObject = object;
+
+    ui->actionEdit_Copy->setEnabled(true);
+    ui->actionEdit_Cut->setEnabled(true);
+    ui->actionEdit_Delete->setEnabled(true);
+    ui->actionEdit_Rename->setEnabled(true);
+    ui->actionEdit_Properties->setEnabled(true);
 }
 
 void MainWindow::onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object)
@@ -1053,7 +1086,19 @@ void MainWindow::onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object)
         ui->tabShapeEditor->setVisible(false);
         ui->lblNoShapeSelected->setVisible(true);
         m_selectedObject = nullptr;
+        ui->actionEdit_Copy->setEnabled(false);
+        ui->actionEdit_Cut->setEnabled(false);
+        ui->actionEdit_Delete->setEnabled(false);
+        ui->actionEdit_Rename->setEnabled(false);
+        ui->actionEdit_Properties->setEnabled(false);
     }
+}
+
+void MainWindow::onSlippyMapLayerObjectWasDragged(SlippyMapLayerObject *object)
+{
+    createUndoModifyObject(
+            tr("Move %1").arg(object->label()),
+            object);
 }
 
 void MainWindow::showPropertyPage(SlippyMapLayerObject *object)
@@ -1200,6 +1245,7 @@ void MainWindow::saveWorkspace(QString fileName)
             out << layer->objects().count();
 
             for (auto *object : layer->objects()) {
+                //out << QMetaType::type(object->metaObject()->className());
                 out << QString(object->metaObject()->className());
                 object->serialize(out);
             }
@@ -1863,6 +1909,7 @@ void MainWindow::createNewLayer()
         auto *newLayer = new SlippyMapLayer();
         newLayer->setName(layerName);
         m_layerManager->addLayer(newLayer);
+        createUndoAddLayer(tr("New Layer"), newLayer);
     }
 }
 
@@ -1918,6 +1965,12 @@ void MainWindow::deleteActiveObject()
         m_layerManager->removeLayerObject(
                 m_layerManager->activeLayer(),
                 m_selectedObject);
+        createUndoDeleteObject(
+                tr("Delete %1").arg(m_selectedObject->label()),
+                m_layerManager->activeLayer(),
+                m_selectedObject);
+        m_selectedObject = nullptr;
+
     }
 }
 
@@ -2043,51 +2096,63 @@ void MainWindow::on_actionDrawLine_triggered()
 
 void MainWindow::undo()
 {
-    auto *hist = ExplorerApplication::historyManager();
-    HistoryManager::HistoryEvent event = hist->undoEvent();
+    if (m_historyManager->undoCount() > 0) {
+        HistoryManager::HistoryEvent event = m_historyManager->undoEvent();
 
-    switch (event.action) {
-        case HistoryManager::AddObject: {
-            SlippyMapLayer *layer = event.layer;
-            SlippyMapLayerObject *object = event.original;
-            m_layerManager->removeLayerObject(layer, object);
-            break;
-        }
-        case HistoryManager::DeleteObject: {
-            SlippyMapLayer *layer = event.layer;
-            SlippyMapLayerObject *object = event.original;
-            m_layerManager->addLayerObject(layer, object);
-            break;
-        }
-        case HistoryManager::ModifyObject: {
-            // the clone contains the original contents
-            SlippyMapLayerObject *temp = event.original->clone();
-            SlippyMapLayerObject *object = event.original;
-            SlippyMapLayerObject *clone = event.copy;
+        switch (event.action) {
+            case HistoryManager::AddObject: {
+                SlippyMapLayer *layer = event.layer;
+                SlippyMapLayerObject *object = event.original;
+                m_layerManager->removeLayerObject(layer, object);
+                break;
+            }
+            case HistoryManager::DeleteObject: {
+                SlippyMapLayer *layer = event.layer;
+                SlippyMapLayerObject *object = event.original;
+                m_layerManager->addLayerObject(layer, object);
+                break;
+            }
+            case HistoryManager::ModifyObject: {
+                // the clone contains the original contents
+                SlippyMapLayerObject *temp = event.original->clone();
+                SlippyMapLayerObject *object = event.original;
+                SlippyMapLayerObject *clone = event.copy;
 
-            // we need to replace the original with the copy
-            event.original->copy(event.copy);
+                // we need to replace the original with the copy
+                event.original->copy(event.copy);
 
-            // now put the "new" contents into copy for redo later
-            event.copy->copy(temp);
-            delete temp;
-            break;
+                // now put the "new" contents into copy for redo later
+                event.copy->copy(temp);
+                delete temp;
+                break;
+            }
+            case HistoryManager::AddLayer: {
+                SlippyMapLayer *layer = event.layer;
+                m_layerManager->takeLayer(layer);
+                break;
+            }
+            case HistoryManager::ModifyLayer: {
+                break;
+            }
+            case HistoryManager::DeleteLayer: {
+                break;
+            }
         }
+
+        setWorkspaceDirty(true);
     }
 
     ui->actionEdit_Redo->setEnabled(true);
-    ui->actionEdit_Redo->setText(tr("Redo") + " " + hist->currentRedoDescription());
-    ui->actionEdit_Undo->setEnabled(hist->undoCount() > 0);
-    if (hist->undoCount() > 0)
-        ui->actionEdit_Undo->setText(tr("Undo") + " " + hist->currentUndoDescription());
+    ui->actionEdit_Redo->setText(tr("Redo") + " " + m_historyManager->currentRedoDescription());
+    ui->actionEdit_Undo->setEnabled(m_historyManager->undoCount() > 0);
+    if (m_historyManager->undoCount() > 0)
+        ui->actionEdit_Undo->setText(tr("Undo") + " " + m_historyManager->currentUndoDescription());
 }
 
 void MainWindow::redo()
 {
-    auto *hist = ExplorerApplication::historyManager();
-
-    if (hist->redoCount() > 0) {
-        HistoryManager::HistoryEvent event = hist->redoEvent();
+    if (m_historyManager->redoCount() > 0) {
+        HistoryManager::HistoryEvent event = m_historyManager->redoEvent();
 
         switch (event.action) {
             case HistoryManager::DeleteObject: {
@@ -2116,15 +2181,22 @@ void MainWindow::redo()
                 delete temp;
                 break;
             }
+            case HistoryManager::AddLayer: {
+                SlippyMapLayer *layer = event.layer;
+                m_layerManager->addLayer(layer);
+                break;
+            }
         }
+
+        setWorkspaceDirty(true);
     }
 
-    ui->actionEdit_Redo->setEnabled(hist->redoCount() > 0);
-    if (hist->redoCount() > 0)
-        ui->actionEdit_Redo->setText(tr("Redo") + " " + hist->currentRedoDescription());
+    ui->actionEdit_Redo->setEnabled(m_historyManager->redoCount() > 0);
+    if (m_historyManager->redoCount() > 0)
+        ui->actionEdit_Redo->setText(tr("Redo") + " " + m_historyManager->currentRedoDescription());
     ui->actionEdit_Undo->setEnabled(true);
-    if (hist->undoCount() > 0)
-        ui->actionEdit_Undo->setText(tr("Undo") + " " + hist->currentUndoDescription());
+    if (m_historyManager->undoCount() > 0)
+        ui->actionEdit_Undo->setText(tr("Undo") + " " + m_historyManager->currentUndoDescription());
 }
 
 void MainWindow::createUndoAddObject(const QString &description, SlippyMapLayer *layer, SlippyMapLayerObject *object)
@@ -2135,14 +2207,50 @@ void MainWindow::createUndoAddObject(const QString &description, SlippyMapLayer 
     event.original = object;
     event.copy = nullptr;
     event.description = description;
-    ExplorerApplication::historyManager()->addEvent(event);
+    m_historyManager->addEvent(event);
     ui->actionEdit_Undo->setEnabled(true);
     ui->actionEdit_Undo->setText(tr("Undo") + " " + description);
+    setWorkspaceDirty(true);
+}
+
+void MainWindow::createUndoModifyObject(const QString &description, SlippyMapLayerObject *object)
+{
+    HistoryManager::HistoryEvent event;
+    event.description = description;
+    event.action = HistoryManager::ModifyObject;
+    event.original = object;
+    // create a copy of the original object to restore later
+    // if requested by undo
+    event.copy = m_selectedObjectCopy;
+    m_historyManager->addEvent(event);
+    m_selectedObjectCopy = nullptr;
+    setWorkspaceDirty(true);
+}
+
+void MainWindow::createUndoDeleteObject(const QString &description, SlippyMapLayer *layer, SlippyMapLayerObject *object)
+{
+    HistoryManager::HistoryEvent event;
+    event.description = description;
+    event.action = HistoryManager::DeleteObject;
+    event.layer = layer;
+    event.original = object;
+    m_historyManager->addEvent(event);
+    setWorkspaceDirty(true);
+}
+
+void MainWindow::createUndoAddLayer(const QString &description, SlippyMapLayer *layer)
+{
+    HistoryManager::HistoryEvent event;
+    event.description = description;
+    event.action = HistoryManager::AddLayer;
+    event.layer = layer;
+    m_historyManager->addEvent(event);
+    setWorkspaceDirty(true);
 }
 
 void MainWindow::undoEventAdded(HistoryManager::HistoryEvent event)
 {
-    auto *hist = ExplorerApplication::historyManager();
+    auto *hist = m_historyManager;
     ui->actionEdit_Redo->setEnabled(hist->redoCount() > 0);
     if (hist->redoCount() > 0)
         ui->actionEdit_Redo->setText(tr("Redo") + " " + hist->currentRedoDescription());
@@ -2157,22 +2265,75 @@ void MainWindow::redoHistoryCleared()
     ui->actionEdit_Redo->setText(tr("Redo"));
 }
 
-void MainWindow::createUndoModifyObject(const QString &description, SlippyMapLayerObject *object)
+void MainWindow::cutActiveObject()
 {
-    HistoryManager::HistoryEvent event;
-    event.description = description;
-    event.action = HistoryManager::ModifyObject;
-    event.original = object;
-    // create a copy of the original object to restore later
-    // if requested by undo
-    event.copy = m_selectedObjectCopy;
-    ExplorerApplication::historyManager()->addEvent(event);
-    m_selectedObjectCopy = nullptr;
+    if (m_selectedObject == nullptr) return;
+
+    // create clipboard entry
+    m_clipBoard.type = Clipboard::Object;
+    m_clipBoard.action = Clipboard::Cut;
+    m_clipBoard.layer = m_layerManager->activeLayer();
+    m_clipBoard.object = m_selectedObject;
+
+    // activate paste menu entry
+    ui->actionEdit_Paste->setEnabled(true);
+
+    // create a delete object undo item
+    createUndoDeleteObject(
+            tr("Cut"),
+            m_layerManager->activeLayer(),
+            m_selectedObject);
+
+    // remove the item from the layer
+    m_layerManager->removeLayerObject(m_layerManager->activeLayer(), m_selectedObject);
+    m_selectedObject = nullptr;
 }
 
-void MainWindow::onSlippyMapLayerObjectWasDragged(SlippyMapLayerObject *object)
+void MainWindow::copyActiveObject()
 {
-    createUndoModifyObject(
-            tr("Move %1").arg(object->label()),
-            object);
+    if (m_selectedObject == nullptr) return;
+
+    // check for and delete last copied item
+    if (m_clipBoard.action == Clipboard::Copy || m_clipBoard.action == Clipboard::Cut) {
+        // don't delete the item we are copying!
+        if (m_selectedObject != m_clipBoard.object)
+            delete m_clipBoard.object;
+    }
+
+    // create clipboard entry
+    m_clipBoard.type = Clipboard::Object;
+    m_clipBoard.action = Clipboard::Copy;
+    m_clipBoard.layer = m_layerManager->activeLayer();
+    m_clipBoard.object = m_selectedObject->clone();
+
+    // activate paste menu entry
+    ui->actionEdit_Paste->setEnabled(true);
 }
+
+void MainWindow::pasteObject()
+{
+    switch (m_clipBoard.type) {
+        case Clipboard::Object: {
+            auto *layer = m_clipBoard.layer;
+            auto *object = m_clipBoard.object;
+
+            // paste it onto the active layer, if there is one.
+            // otherwise go to the layer it came from?
+            if (m_layerManager->activeLayer() != nullptr)
+                layer = m_layerManager->activeLayer();
+
+            // clone the object because you don't want to paste
+            // the same object more than once
+            m_layerManager->addLayerObject(layer, object->clone());
+
+            createUndoAddObject(
+                    tr("Paste"),
+                    layer,
+                    object);
+            break;
+        }
+        default:
+            break;
+    }
+}
+

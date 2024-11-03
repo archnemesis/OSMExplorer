@@ -28,6 +28,8 @@ public:
     const GPXTrack& track();
     const QPointF position() const override;
     const QSizeF size() const override;
+    const QVector<QPointF>& points() const;
+    void setPoints(const QVector<QPointF>& points);
     void draw(QPainter *painter, const QTransform &transform, ObjectState state) override;
     void setPosition(const QPointF& position) override;
     void unserialize(QDataStream& stream) override;

@@ -35,6 +35,7 @@ class SlippyMapLayerObjectPropertyPage;
 class TextLogViewerForm;
 class WeatherForecastWindow;
 class SlippyMapGpsMarker;
+class HistoryManager;
 
 namespace color_widgets {
     class ColorSelector;
@@ -76,6 +77,8 @@ protected:
     void updateRecentFileList();
     void createUndoAddObject(const QString& description, SlippyMapLayer *layer, SlippyMapLayerObject *object);
     void createUndoModifyObject(const QString& description, SlippyMapLayerObject *object);
+    void createUndoDeleteObject(const QString& description, SlippyMapLayer *layer, SlippyMapLayerObject *object);
+    void createUndoAddLayer(const QString& description, SlippyMapLayer *layer);
     void closeEvent(QCloseEvent *event) override;
 
 private:
@@ -85,9 +88,31 @@ private:
         Paused
     };
 
+    class Clipboard {
+    public:
+        enum EntryType {
+            NoEntry,
+            Layer,
+            Object
+        };
+
+        enum ActionType {
+            NoAction,
+            Cut,
+            Copy
+        };
+
+        EntryType type = NoEntry;
+        ActionType action = NoAction;
+        SlippyMapLayer *layer = nullptr;
+        SlippyMapLayerObject *object = nullptr;
+    };
+
     Ui::MainWindow *ui;
     AnimationState m_animationState = Forward;
+    Clipboard m_clipBoard;
     DirectionListItemWidget *m_currentRouteListItemWidget = nullptr;
+    HistoryManager *m_historyManager;
     MapDataImportDialog *m_importDialog = nullptr;
     NationalWeatherServiceInterface *m_weatherService = nullptr;
     QAction *m_addMarkerAction = nullptr;
@@ -213,6 +238,9 @@ protected slots:
     void redo();
     void undoEventAdded(HistoryManager::HistoryEvent event);
     void redoHistoryCleared();
+    void cutActiveObject();
+    void copyActiveObject();
+    void pasteObject();
 
     /**
      * @brief Save window size after finish moving.
