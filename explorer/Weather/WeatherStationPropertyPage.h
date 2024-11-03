@@ -5,7 +5,7 @@
 #ifndef WEATHERSTATIONPROPERTYPAGE_H
 #define WEATHERSTATIONPROPERTYPAGE_H
 
-#include "PropertyPage/SlippyMapLayerObjectPropertyPage.h"
+#include <SlippyMap/SlippyMapLayerObjectPropertyPage.h>
 #include "NationalWeatherServiceInterface.h"
 #include "WeatherStationMarker.h"
 

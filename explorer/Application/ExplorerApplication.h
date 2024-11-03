@@ -8,7 +8,11 @@
 #include <QApplication>
 
 class PluginManager;
+class HistoryManager;
 
+namespace SlippyMap {
+    class SlippyMapLayerManager;
+}
 
 class ExplorerApplication : public QApplication {
     Q_OBJECT
@@ -17,9 +21,13 @@ public:
 
     static ExplorerApplication *instance();
     static PluginManager *pluginManager();
+    static HistoryManager *historyManager();
+    static SlippyMap::SlippyMapLayerManager *layerManager();
 
 private:
     PluginManager *m_pluginManager;
+    HistoryManager *m_historyManager;
+    SlippyMap::SlippyMapLayerManager *m_layerManager;
 };
 
 

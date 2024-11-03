@@ -6,13 +6,15 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QHBoxLayout>
+#include <QFormLayout>
+#include <QLabel>
 
 #include "gpx/gpxtracksegment.h"
 #include "gpx/gpxwaypoint.h"
 
-SlippyMapLayerTrackPropertyPage::SlippyMapLayerTrackPropertyPage(SlippyMapLayerTrack *track):
-    SlippyMapLayerObjectPropertyPage(track),
-    m_track(track) {
+SlippyMapLayerTrackPropertyPage::SlippyMapLayerTrackPropertyPage(SlippyMapLayerObject *object):
+    SlippyMapLayerObjectPropertyPage(object) {
+    m_track = qobject_cast<SlippyMapLayerTrack*>(object);
     setupUi();
     setWindowTitle(m_track->label());
 }
@@ -27,7 +29,11 @@ QString SlippyMapLayerTrackPropertyPage::tabTitle()
     return m_track->label();
 }
 
-void SlippyMapLayerTrackPropertyPage::setupUi() {
+void SlippyMapLayerTrackPropertyPage::setupUi()
+{
+    auto *layout = new QFormLayout();
+    layout->addRow(tr("Date"), new QLabel(tr("Date")));;
+
     auto *tableWidget = new QTableWidget();
     tableWidget->setColumnCount(4);
 
@@ -57,4 +63,13 @@ void SlippyMapLayerTrackPropertyPage::setupUi() {
     auto *hLayout = new QHBoxLayout();
     hLayout->addWidget(tableWidget);
     setLayout(hLayout);
+}
+
+void SlippyMapLayerTrackPropertyPage::updateUi()
+{
+}
+
+void SlippyMapLayerTrackPropertyPage::save()
+{
+
 }

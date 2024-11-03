@@ -192,6 +192,7 @@ void SettingsDialog::on_btnLayerAdd_clicked()
     if (properties.isValid) {
         ui->lstLayerList->addItem(properties.name);
         m_layers.append(properties);
+        m_layersChanged = true;
     }
 }
 
@@ -202,6 +203,7 @@ void SettingsDialog::on_btnLayerDelete_clicked()
         ui->lstLayerList->takeItem(row);
         m_layers.removeAt(row);
     }
+    m_layersChanged = true;
 }
 
 void SettingsDialog::on_btnLayerConfigure_clicked()
@@ -214,6 +216,7 @@ void SettingsDialog::on_btnLayerConfigure_clicked()
     if (properties.isValid) {
         m_layers.replace(ui->lstLayerList->currentRow(), properties);
         ui->lstLayerList->currentItem()->setText(properties.name);
+        m_layersChanged = true;
     }
 }
 
@@ -227,4 +230,9 @@ void SettingsDialog::on_lstLayerList_itemDoubleClicked(QListWidgetItem *item)
 {
     (void)item;
     on_btnLayerConfigure_clicked();
+}
+
+bool SettingsDialog::layersChanged()
+{
+    return m_layersChanged;
 }

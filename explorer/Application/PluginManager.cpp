@@ -43,7 +43,7 @@ void PluginManager::loadPlugins() {
 
     for (const auto& pluginPath : pluginPaths) {
 #else
-    QString pluginPath = "/usr/lib";
+    QString pluginPath = "plugins";
 #endif
     pluginsDir.cd(pluginPath);
 
@@ -89,4 +89,16 @@ QList<SlippyMap::SlippyMapLayer *> PluginManager::getLayers() const {
     }
 
     return layers;
+}
+
+QList<SlippyMapLayerObjectPropertyPage *> PluginManager::getPropertyPages() const
+{
+    QList<SlippyMapLayerObjectPropertyPage*> propertyPages;
+    for (auto *plugin : m_plugins) {
+        for (auto *propertyPage : plugin->propertyPages()) {
+            propertyPages.append(propertyPage);
+        }
+    }
+
+    return propertyPages;
 }

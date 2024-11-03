@@ -1,4 +1,5 @@
 #include "nmeaseriallocationdataprovider.h"
+#include "nmea/message/gsv.hpp"
 
 #include <iostream>
 #include <cmath>
@@ -10,8 +11,13 @@
 #include <QHash>
 #include <QString>
 #include <QVariant>
+#include <QDateTime>
+
+#include <nmea/sentence.hpp>
+#include <nmea/message/gga.hpp>
 
 using namespace std;
+using namespace nmea;
 
 NmeaSerialLocationDataProvider::NmeaSerialLocationDataProvider(QObject *parent) :
     LocationDataProvider(parent)
@@ -27,7 +33,20 @@ NmeaSerialLocationDataProvider::NmeaSerialLocationDataProvider(QObject *parent) 
                 this,
                 &NmeaSerialLocationDataProvider::onSerialPortErrorOccurred);
     }
-    m_satellites.resize(16);
+
+//    m_nmeaParser = new NMEAParser();
+//    m_gpsService = new GPSService(*m_nmeaParser);
+//    m_gpsService->onUpdate += [this]() {
+//        if (m_gpsService->fix.locked()) {
+//            QHash<QString,QVariant> metadata;
+//            metadata["gps_label"] = m_labelText;
+//
+//            emit positionUpdated(
+//                    portName(),
+//                    QPointF(m_gpsService->fix.longitude, m_gpsService->fix.latitude),
+//                    metadata);
+//        }
+//    };
 }
 
 void NmeaSerialLocationDataProvider::setLabelText(QString labelText)
@@ -133,92 +152,46 @@ void NmeaSerialLocationDataProvider::onSerialPortReadyRead()
 {
     while (m_serialPort->canReadLine()) {
         QByteArray data = m_serialPort->readLine();
-        QString line = QString::fromLocal8Bit(data).trimmed();
-        emit lineReceived(line.trimmed());
-        QStringRef lineRef(&line);
-        QVector<QStringRef> parts = lineRef.split(",");
+        sentence nmea_sentence(data.toStdString());
 
-        if (parts.count() > 1) {
-            QStringRef lineType = parts[0];
-            QStringRef checksum = parts[parts.length()-1].split("*")[1];
-            unsigned int chkint_rx = checksum.toUInt(nullptr, 16);
-            unsigned int chkint_calc = static_cast<unsigned int>(line.at(1).toLatin1());
-
-            for (int i = 2; i < line.length() - 3; i++) {
-                chkint_calc = chkint_calc ^ static_cast<unsigned int>(line.at(i).toLatin1());
-            }
-
-            qDebug() << "Received Checksum:" << chkint_rx << "; Calculated:" << chkint_calc;
-
-            if (chkint_rx != chkint_calc) {
-                qWarning() << "Checksum mismatch:" << line;
-                continue;
-            }
-
-            if (lineType == "$GPGGA" && parts.count() == 15) {
-                QStringRef time = parts[1];
-                int hour = time.mid(0, 2).toInt();
-                int mins = time.mid(2, 2).toInt();
-                double secs = time.mid(4, (time.length() - 4)).toDouble();
-
-                qDebug() << "Got time:" << hour << mins << secs;
-
-                bool ok;
-
-                double lat = parts[2].toDouble(&ok);
-                if (!ok) {
-                    qDebug() << "Invalid latitude:" << parts[2];
-                    continue;
-                }
-
-                double lon = parts[4].toDouble(&ok);
-                if (!ok) {
-                    qDebug() << "Invalid longitude:" << parts[4];
-                    continue;
-                }
-
-                double lat_deg = floor(lat / 100.0);
-                double lat_min = lat - (lat_deg * 100);
-                lat_deg += (lat_min / 60.0);
-
-                double lon_deg = floor(lon / 100.0);
-                double lon_min = lon - (lon_deg * 100);
-                lon_deg += (lon_min / 60.0);
-
-                QStringRef latc = parts[3];
-                if (parts[3] == "S") {
-                    lat_deg = -1 * lat_deg;
-                }
-
-                QStringRef lonc = parts[5];
-                if (parts[5] == "W") {
-                    lon_deg = -1 * lon_deg;
-                }
-
+        if (nmea_sentence.type() == "GGA") {
+            gga nmea_gga(nmea_sentence);
+            if (nmea_gga.latitude.exists() && nmea_gga.longitude.exists()) {
                 QHash<QString,QVariant> metadata;
                 metadata["gps_label"] = m_labelText;
 
                 emit positionUpdated(
-                            portName(),
-                            QPointF(lon_deg, lat_deg),
-                            metadata);
+                        portName(),
+                        QPointF(nmea_gga.longitude.get(), nmea_gga.latitude.get()),
+                        metadata);
             }
-            else if (lineType == "$GPGSV" && parts.count() == 18) {
-                int num_msgs = parts[1].toInt();
-                int msg_seq = parts[2].toInt();
-                int num_svs = parts[3].toInt();
+            if (nmea_gga.utc.exists()) {
+                double utc = nmea_gga.utc.get();
+                QDateTime time = QDateTime::fromTime_t((unsigned int)utc);
+            }
+        }
+        else if (nmea_sentence.type() == "GSV") {
+            gsv nmea_gsv(nmea_sentence);
 
-                for (int i = 0; i < 4; i++) {
-                    int prn = parts[(i * 4) + 4].toInt();
-                    double elevation = parts[(i * 4) + 5].toInt();
-                    double azimuth = parts[(i * 4) + 6].toInt();
-                    int snr = parts[(i * 4) + 7].toInt();
+            if (nmea_gsv.satellite_count.exists()) {
+                m_satellites.clear();
+                for (int i = 0; i < nmea_gsv.satellites.size(); i++) {
+                    SatelliteStatus sat;
 
-                    m_satellites[(i * 4) + 0].setPrn(prn);
-                    m_satellites[(i * 4) + 0].setElevation(elevation);
-                    m_satellites[(i * 4) + 0].setAzimuth(azimuth);
-                    m_satellites[(i * 4) + 0].setSnr(snr);
+                    if (nmea_gsv.satellites.at(i).azimuth.exists())
+                        sat.setAzimuth(nmea_gsv.satellites.at(i).azimuth.get());
+                    if (nmea_gsv.satellites.at(i).elevation.exists())
+                        sat.setElevation(nmea_gsv.satellites.at(i).elevation.get());
+                    if (nmea_gsv.satellites.at(i).snr.exists())
+                        sat.setSnr(nmea_gsv.satellites.at(i).snr.get());
+                    if (nmea_gsv.satellites.at(i).prn.exists())
+                        sat.setPrn(nmea_gsv.satellites.at(i).prn.get());
+                    m_satellites.append(sat);
                 }
+
+                QHash<QString,QVariant> metadata;
+                metadata["gps_label"] = m_labelText;
+                emit satellitesUpdated(portName(), m_satellites, metadata);
             }
         }
     }

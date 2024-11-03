@@ -4,7 +4,9 @@
 #include "locationdataprovider.h"
 #include <QSerialPort>
 #include <QTimer>
-#include <QVector>
+#include <QList>
+#include <QDateTime>
+
 
 class NmeaSerialLocationDataProvider : public LocationDataProvider
 {
@@ -51,10 +53,45 @@ public:
         int m_snr;
     };
 
-    QVector<SatelliteStatus> m_satellites;
+    class PositionData {
+    public:
+        enum FixType {
+            FixNone,
+            Fix2D,
+            Fix3D
+        };
+
+        PositionData() {}
+        void setGpsTime(const QDateTime& time) { m_time = time; }
+        const QDateTime& gpsTime() const { return m_time; }
+        void setSatellites(const QList<SatelliteStatus>& satellites) { m_satellites = satellites; }
+        const QList<SatelliteStatus>& satellites() const { return m_satellites; }
+        double latitude() const { return m_latitude; }
+        double longitude() const { return m_longitude; }
+        void setLatitude(double latitude) { m_latitude = latitude; }
+        void setLongitude(double longitude) { m_longitude = longitude; }
+        double altitude() const { return m_altitude; }
+        void setAltitude(double altitude) { m_altitude = altitude; }
+
+    private:
+        QDateTime m_time;
+        FixType m_fixType;
+        double m_latitude;
+        double m_longitude;
+        double m_altitude;
+        double m_hdop;
+        double m_vdop;
+        double m_pdop;
+        double m_geoidSeparation;
+        int m_numSatellites;
+        QList<SatelliteStatus> m_satellites;
+    };
 
 signals:
     void lineReceived(const QString& line);
+    void satellitesUpdated(QString portName,
+                           const QList<SatelliteStatus>& satellites,
+                           QHash<QString, QVariant> metadata);
 
 protected slots:
     void onSerialPortReadyRead();
@@ -70,6 +107,7 @@ protected:
     QSerialPort::StopBits m_stopBits;
     QSerialPort *m_serialPort = nullptr;
     QTimer m_readTimer;
+    QList<SatelliteStatus> m_satellites;
 };
 
 #endif // NMEASERIALLOCATIONDATAPROVIDER_H

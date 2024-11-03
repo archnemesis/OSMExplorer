@@ -42,17 +42,17 @@ QString RainViewerExplorerPlugin::homepage() const
 
 QList<QAction *> RainViewerExplorerPlugin::mapContextMenuActionList()
 {
-    return QList<QAction *>();
+    return {};
 }
 
 QList<QMenu *> RainViewerExplorerPlugin::mainMenuList()
 {
-    return QList<QMenu *>();
+    return {};
 }
 
 QList<QDockWidget *> RainViewerExplorerPlugin::dockWidgetList()
 {
-    return QList<QDockWidget *>();
+    return {};
 }
 
 QDialog *RainViewerExplorerPlugin::configurationDialog(QWidget *parent)
@@ -64,7 +64,7 @@ QDialog *RainViewerExplorerPlugin::configurationDialog(QWidget *parent)
 
 QList<SlippyMapLayer *> RainViewerExplorerPlugin::layers()
 {
-    return QList<SlippyMapLayer *>();
+    return {};
 }
 
 QList<SlippyMapWidgetLayer*> RainViewerExplorerPlugin::tileLayers() {
@@ -72,13 +72,13 @@ QList<SlippyMapWidgetLayer*> RainViewerExplorerPlugin::tileLayers() {
         m_radarLayer = new RainViewerSlippyMapTileLayer();
         m_radarLayer->update();
 
-        m_radarFrameTimer = new QTimer();
-        connect(m_radarFrameTimer,
-            &QTimer::timeout,
-            [this]() {
-                m_radarLayer->nextFrame();
-        });
-        m_radarFrameTimer->start(1000);
+//        m_radarFrameTimer = new QTimer();
+//        connect(m_radarFrameTimer,
+//            &QTimer::timeout,
+//            [this]() {
+//                m_radarLayer->nextFrame();
+//        });
+//        m_radarFrameTimer->start(1000);
     }
 
     QList<SlippyMapWidgetLayer*> list;
@@ -89,6 +89,11 @@ QList<SlippyMapWidgetLayer*> RainViewerExplorerPlugin::tileLayers() {
 void RainViewerExplorerPlugin::loadConfiguration()
 {
 
+}
+
+QList<SlippyMapLayerObjectPropertyPage *> RainViewerExplorerPlugin::propertyPages()
+{
+    return {};
 }
 
 

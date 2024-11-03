@@ -106,6 +106,7 @@ void NationalWeatherServiceInterface::networkManager_onRequestFinished(QNetworkR
 
     if (reply->error() != QNetworkReply::NoError) {
         qWarning() << "Weather request failed:" << reply->errorString();
+        emit requestError(reply->errorString());
         reply->deleteLater();
         return;
     }
@@ -120,6 +121,7 @@ void NationalWeatherServiceInterface::networkManager_onRequestFinished(QNetworkR
     case Forecast: {
         if (!root.contains("properties")) {
             qCritical() << "Properties element missing in response";
+            emit requestError(tr("Invalid response from API"));
             break;
         }
 
@@ -146,6 +148,7 @@ void NationalWeatherServiceInterface::networkManager_onRequestFinished(QNetworkR
     case Forecast3: {
         if (!root.contains("properties")) {
             qCritical() << "Properties element missing in response";
+            emit requestError(tr("Invalid response from API"));
             break;
         }
 
@@ -196,6 +199,7 @@ void NationalWeatherServiceInterface::networkManager_onRequestFinished(QNetworkR
     case StationList: {
         if (!root.contains("properties")) {
             qCritical() << "Properties element missing in response";
+            emit requestError(tr("Invalid response from API"));
             break;
         }
 
@@ -211,6 +215,7 @@ void NationalWeatherServiceInterface::networkManager_onRequestFinished(QNetworkR
 
         if (relativeLocationGeometryCoords.count() < 2) {
             qCritical() << "Invalid coordinates";
+            emit requestError(tr("Invalid response from API"));
             break;
         }
 
@@ -301,4 +306,9 @@ void NationalWeatherServiceInterface::networkManager_onRequestFinished(QNetworkR
 const NationalWeatherServiceInterface::Forecast12Hr &NationalWeatherServiceInterface::forecast()
 {
     return m_forecast;
+}
+
+void NationalWeatherServiceInterface::handleError(QString message)
+{
+    emit requestError(message);
 }

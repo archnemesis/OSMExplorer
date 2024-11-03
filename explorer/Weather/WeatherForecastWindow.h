@@ -14,6 +14,7 @@ class QTableWidget;
 class QTabWidget;
 class QVBoxLayout;
 class QMessageBox;
+class QTimer;
 
 namespace QtCharts {
     class QChartView;
@@ -26,17 +27,27 @@ class WeatherForecastWindow : public QWidget
 public:
     explicit WeatherForecastWindow(const QPointF& location);
 
+protected:
+    void resizeEvent(QResizeEvent *event) override;
+
 protected slots:
     void onNationalWeatherService_forecastReady(
             const NationalWeatherServiceInterface::Forecast12Hr& forecast);
     void onNationalWeatherService_hourlyForecastReady(
             const NationalWeatherServiceInterface::Forecast12Hr& forecast);
+    void onNationalWeatherService_requestError(
+            QString errorMessage
+            );
+    void onWindowResizeTimer_timeout();
 
 private:
     void setupUi();
+    void saveWindowSize();
+    void loadSettings();
 
     QPointF m_location;
     QString m_stationId;
+    QTimer *m_windowResizeTimer;
     NationalWeatherServiceInterface *m_nationalWeatherService;
     QTableWidget *m_forecastTable;
     QTabWidget *m_tabWidget;

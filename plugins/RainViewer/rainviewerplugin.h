@@ -14,6 +14,7 @@ using namespace SlippyMap;
 class QDialog;
 class QTimer;
 class RainViewerSlippyMapTileLayer;
+class SlippyMapLayerObjectPropertyPage;
 
 class RainViewerExplorerPlugin : public QObject, public ExplorerPluginInterface
 {
@@ -33,6 +34,7 @@ public:
     QDialog *configurationDialog(QWidget *parent = nullptr);
     QList<SlippyMapLayer*> layers();
     QList<SlippyMapWidgetLayer*> tileLayers();
+    QList<SlippyMapLayerObjectPropertyPage*> propertyPages();
     void loadConfiguration();
 
 private:

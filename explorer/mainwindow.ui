@@ -6,12 +6,16 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>939</width>
+    <width>1094</width>
     <height>712</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>OSMExplorer</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="resources.qrc">
+    <normaloff>:/images/icon-128.png</normaloff>:/images/icon-128.png</iconset>
   </property>
   <property name="styleSheet">
    <string notr="true"/>
@@ -20,7 +24,7 @@
    <bool>false</bool>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QVBoxLayout" name="verticalLayout">
+   <layout class="QHBoxLayout" name="horizontalLayout_4">
     <property name="spacing">
      <number>0</number>
     </property>
@@ -44,6 +48,196 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <property name="spacing">
+        <number>10</number>
+       </property>
+       <property name="leftMargin">
+        <number>20</number>
+       </property>
+       <property name="topMargin">
+        <number>20</number>
+       </property>
+       <property name="rightMargin">
+        <number>20</number>
+       </property>
+       <property name="bottomMargin">
+        <number>20</number>
+       </property>
+       <item>
+        <widget class="SlippyMapTreeView" name="tvwMarkers">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>0</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QHeaderView::section {
+	font-weight: bold;
+	background-color: palette(highlight);
+	color: palette(bright-text);
+	border-width: 0px;
+	padding: 10px;
+	border-top-left-radius: 10px;
+	border-top-right-radius: 10px;
+}
+
+QTreeView {
+	background-color: white;
+	border-radius: 10px;
+	border-width: 0px;
+	padding: 0px;
+	margin: 0px;
+}
+
+QTreeView::item {
+	padding: 5px 10px 5px 10px;
+}
+
+QTreeView &gt; QFrame {
+	background-color: #00000000;
+	border-radius: 0px;
+}</string>
+         </property>
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_7">
+         <property name="spacing">
+          <number>10</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="zoomInButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="resources.qrc">
+             <normaloff>:/icons/zoomin.png</normaloff>:/icons/zoomin.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>32</width>
+             <height>32</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="zoomOutButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="resources.qrc">
+             <normaloff>:/icons/zoomout.png</normaloff>:/icons/zoomout.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>32</width>
+             <height>32</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="currentLocationButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="resources.qrc">
+             <normaloff>:/icons/pushpin.png</normaloff>:/icons/pushpin.png</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>32</width>
+             <height>32</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>482</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
      </widget>
     </item>
    </layout>
@@ -55,8 +249,8 @@
    </property>
    <property name="iconSize">
     <size>
-     <width>32</width>
-     <height>32</height>
+     <width>24</width>
+     <height>24</height>
     </size>
    </property>
    <attribute name="toolBarArea">
@@ -71,7 +265,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>939</width>
+     <width>1094</width>
      <height>22</height>
     </rect>
    </property>
@@ -97,12 +291,23 @@
      <addaction name="actionFile_Recent_ClearMenu"/>
      <addaction name="separator"/>
     </widget>
+    <widget class="QMenu" name="menuImport">
+     <property name="title">
+      <string>Import</string>
+     </property>
+     <addaction name="actionImport_GPX"/>
+     <addaction name="actionImport_GeoJSON"/>
+     <addaction name="actionImport_CSV"/>
+    </widget>
     <addaction name="actionFile_NewWorkspace"/>
     <addaction name="actionFile_OpenWorkspace"/>
     <addaction name="menuRecent"/>
+    <addaction name="actionFile_CloseWorkspace"/>
     <addaction name="separator"/>
-    <addaction name="actionFile_Print"/>
-    <addaction name="actionImport"/>
+    <addaction name="actionFile_SaveWorkspace"/>
+    <addaction name="actionFile_SaveWorkspaceAs"/>
+    <addaction name="separator"/>
+    <addaction name="menuImport"/>
     <addaction name="actionFileExport"/>
     <addaction name="separator"/>
     <addaction name="menuFileGps"/>
@@ -111,14 +316,13 @@
    </widget>
    <widget class="QMenu" name="menuMarker">
     <property name="title">
-     <string>Marker</string>
+     <string>Object</string>
     </property>
-    <addaction name="actionNewMarker"/>
-    <addaction name="actionNewMarkerCurrentLocation"/>
-    <addaction name="actionMarkerManage"/>
+    <addaction name="actionObject_NewMarker"/>
+    <addaction name="actionObject_NewMarkerAtCurrent"/>
     <addaction name="separator"/>
-    <addaction name="actionMarkerProperties"/>
-    <addaction name="actionMarkerDelete"/>
+    <addaction name="actionObject_Properties"/>
+    <addaction name="actionObject_Delete"/>
     <addaction name="separator"/>
     <addaction name="actionMarkerExport"/>
     <addaction name="actionMarkerImport"/>
@@ -175,220 +379,43 @@
     <addaction name="actionLayer_SortDescending"/>
     <addaction name="separator"/>
     <addaction name="menuLayer_TileLayers"/>
+    <addaction name="separator"/>
+    <addaction name="actionLayer_PreviousFrame"/>
+    <addaction name="actionLayer_NextFrame"/>
+    <addaction name="actionLayer_Play"/>
    </widget>
    <widget class="QMenu" name="menuWeather">
     <property name="title">
      <string>Weather</string>
     </property>
     <addaction name="actionWeather_ShowWFOGrid"/>
+    <addaction name="actionShow_Alerts"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>&amp;Edit</string>
+    </property>
+    <addaction name="actionEdit_Undo"/>
+    <addaction name="actionEdit_Redo"/>
+    <addaction name="separator"/>
+    <addaction name="actionEdit_Cut"/>
+    <addaction name="actionEdit_Copy"/>
+    <addaction name="actionEdit_Paste"/>
+    <addaction name="actionEdit_Delete"/>
+    <addaction name="separator"/>
+    <addaction name="actionEdit_Properties"/>
+    <addaction name="actionEdit_Rename"/>
    </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
    <addaction name="menuLayer"/>
+   <addaction name="menuMarker"/>
    <addaction name="menuWeather"/>
    <addaction name="menuDraw"/>
-   <addaction name="menuMarker"/>
    <addaction name="menuView"/>
    <addaction name="menuTools"/>
    <addaction name="menuHelp"/>
-  </widget>
-  <widget class="QDockWidget" name="dockWidget">
-   <property name="windowTitle">
-    <string>Places</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>1</number>
-   </attribute>
-   <widget class="QWidget" name="dockWidgetContents">
-    <layout class="QVBoxLayout" name="verticalLayout_2">
-     <item>
-      <widget class="QTreeView" name="tvwMarkers">
-       <property name="alternatingRowColors">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QGroupBox" name="groupBox">
-       <property name="title">
-        <string>Marker Info</string>
-       </property>
-       <layout class="QFormLayout" name="formLayout">
-        <item row="0" column="0" colspan="2">
-         <widget class="QLabel" name="lblMarkerName">
-          <property name="text">
-           <string>Name</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0" colspan="2">
-         <widget class="QLabel" name="lblMarkerInformation">
-          <property name="text">
-           <string>Information</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-  </widget>
-  <widget class="QDockWidget" name="dockWidget_2">
-   <property name="styleSheet">
-    <string notr="true"/>
-   </property>
-   <property name="features">
-    <set>QDockWidget::AllDockWidgetFeatures</set>
-   </property>
-   <property name="windowTitle">
-    <string>Directions</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>2</number>
-   </attribute>
-   <widget class="QWidget" name="dockWidgetContents_2">
-    <layout class="QVBoxLayout" name="verticalLayout_4">
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
-       <item>
-        <widget class="QComboBox" name="comboBox">
-         <item>
-          <property name="text">
-           <string>Driving (Car)</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Driving (Heavy Vehicle)</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Walking</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Cycling</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushButton">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="toolTip">
-          <string>Route Settings...</string>
-         </property>
-         <property name="statusTip">
-          <string>Change route settings</string>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset>
-           <normaloff>:/icons/settings</normaloff>:/icons/settings</iconset>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <item>
-        <widget class="QPushButton" name="btnDirectionsSwap">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="styleSheet">
-          <string notr="true"/>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="resources.qrc">
-           <normaloff>:/icons/swap.png</normaloff>:/icons/swap.png</iconset>
-         </property>
-         <property name="iconSize">
-          <size>
-           <width>32</width>
-           <height>32</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
-         <item>
-          <widget class="QLineEdit" name="lneDirectionsStart">
-           <property name="placeholderText">
-            <string>Start</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLineEdit" name="lneDirectionsFinish">
-           <property name="placeholderText">
-            <string>Finish</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="QPushButton" name="btnDirectionsGo">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Maximum" vsizetype="Minimum">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="resources.qrc">
-           <normaloff>:/icons/map.png</normaloff>:/icons/map.png</iconset>
-         </property>
-         <property name="iconSize">
-          <size>
-           <width>32</width>
-           <height>32</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Trip Time: 0 minutes</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>Distance: 0 meters</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QListWidget" name="lstDirections"/>
-     </item>
-    </layout>
-   </widget>
   </widget>
   <widget class="QDockWidget" name="dockWidget_3">
    <property name="windowTitle">
@@ -504,29 +531,32 @@
    <property name="text">
     <string>Exit</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
   </action>
-  <action name="actionNewMarker">
+  <action name="actionObject_NewMarker">
    <property name="icon">
     <iconset resource="resources.qrc">
      <normaloff>:/icons/pushpin.png</normaloff>:/icons/pushpin.png</iconset>
    </property>
    <property name="text">
-    <string>New...</string>
+    <string>New marker...</string>
    </property>
   </action>
-  <action name="actionNewMarkerCurrentLocation">
+  <action name="actionObject_NewMarkerAtCurrent">
    <property name="text">
-    <string>New at current location</string>
+    <string>New marker at current location</string>
    </property>
   </action>
-  <action name="actionMarkerProperties">
+  <action name="actionObject_Properties">
    <property name="text">
     <string>Properties...</string>
    </property>
   </action>
-  <action name="actionMarkerDelete">
+  <action name="actionObject_Delete">
    <property name="text">
-    <string>Delete</string>
+    <string>Delete...</string>
    </property>
   </action>
   <action name="actionMarkerExport">
@@ -579,6 +609,10 @@
   <action name="actionDrawLine">
    <property name="checkable">
     <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/line.png</normaloff>:/icons/line.png</iconset>
    </property>
    <property name="text">
     <string>Line</string>
@@ -653,17 +687,16 @@
     <string>GPS Log</string>
    </property>
   </action>
-  <action name="actionImport">
-   <property name="text">
-    <string>Import...</string>
-   </property>
-  </action>
   <action name="actionToolsOSMImport">
    <property name="text">
     <string>OSM Import...</string>
    </property>
   </action>
   <action name="actionLayer_New">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/layers.png</normaloff>:/icons/layers.png</iconset>
+   </property>
    <property name="text">
     <string>New...</string>
    </property>
@@ -699,13 +732,27 @@
    </property>
   </action>
   <action name="actionFile_NewWorkspace">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/newfile.png</normaloff>:/icons/newfile.png</iconset>
+   </property>
    <property name="text">
     <string>New Workspace...</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
   </action>
   <action name="actionFile_OpenWorkspace">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/folderopen.png</normaloff>:/icons/folderopen.png</iconset>
+   </property>
    <property name="text">
     <string>Open Workspace...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
   <action name="actionFile_Recent_ClearMenu">
@@ -718,7 +765,167 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show WFO Grid</string>
+    <string>Show Weather Stations</string>
+   </property>
+  </action>
+  <action name="actionFile_SaveWorkspace">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/save.png</normaloff>:/icons/save.png</iconset>
+   </property>
+   <property name="text">
+    <string>Save Workspace</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionFile_SaveWorkspaceAs">
+   <property name="text">
+    <string>Save Workspace As...</string>
+   </property>
+  </action>
+  <action name="actionFile_CloseWorkspace">
+   <property name="text">
+    <string>Close Workspace</string>
+   </property>
+  </action>
+  <action name="actionShow_Alerts">
+   <property name="text">
+    <string>Show Alerts</string>
+   </property>
+  </action>
+  <action name="actionLayer_PreviousFrame">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/rewind.png</normaloff>:/icons/rewind.png</iconset>
+   </property>
+   <property name="text">
+    <string>Previous Frame</string>
+   </property>
+  </action>
+  <action name="actionLayer_NextFrame">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/fforward.png</normaloff>:/icons/fforward.png</iconset>
+   </property>
+   <property name="text">
+    <string>Next Frame</string>
+   </property>
+  </action>
+  <action name="actionLayer_Play">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/play.png</normaloff>:/icons/play.png</iconset>
+   </property>
+   <property name="text">
+    <string>Play</string>
+   </property>
+  </action>
+  <action name="actionImport_GPX">
+   <property name="text">
+    <string>GPX...</string>
+   </property>
+  </action>
+  <action name="actionImport_GeoJSON">
+   <property name="text">
+    <string>GeoJSON...</string>
+   </property>
+  </action>
+  <action name="actionImport_CSV">
+   <property name="text">
+    <string>CSV...</string>
+   </property>
+  </action>
+  <action name="actionEdit_Undo">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Undo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
+   </property>
+  </action>
+  <action name="actionEdit_Redo">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Redo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Z</string>
+   </property>
+  </action>
+  <action name="actionEdit_Cut">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Cut</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+X</string>
+   </property>
+  </action>
+  <action name="actionEdit_Copy">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Copy</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
+  </action>
+  <action name="actionEdit_Paste">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Paste</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+V</string>
+   </property>
+  </action>
+  <action name="actionEdit_Delete">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Delete</string>
+   </property>
+   <property name="shortcut">
+    <string>Del</string>
+   </property>
+  </action>
+  <action name="actionEdit_Properties">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Properties...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+D</string>
+   </property>
+  </action>
+  <action name="actionEdit_Rename">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Rename...</string>
    </property>
   </action>
  </widget>
@@ -729,6 +936,11 @@
    <extends>QWidget</extends>
    <header location="global">SlippyMap/SlippyMapWidget.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SlippyMapTreeView</class>
+   <extends>QTreeView</extends>
+   <header location="global">Map/SlippyMapTreeView.h</header>
   </customwidget>
  </customwidgets>
  <resources>

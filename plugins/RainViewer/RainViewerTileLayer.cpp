@@ -12,7 +12,7 @@
 #include <QJsonArray>
 
 RainViewerSlippyMapTileLayer::RainViewerSlippyMapTileLayer(QObject *parent)
-        : SlippyMapWidgetLayer(parent)
+        : SlippyMapAnimatedLayer(parent)
         , m_ready(false)
         , m_currentFrame(0)
 {

@@ -12,6 +12,7 @@ using namespace SlippyMap;
 class QMenu;
 class QAction;
 class QDockWidget;
+class SlippyMapLayerObjectPropertyPage;
 
 class ExplorerPluginInterface
 {
@@ -83,7 +84,12 @@ public:
      * @brief Return tile layers available on the map.
      * @return
      */
-     virtual QList<SlippyMapWidgetLayer*> tileLayers() = 0;
+    virtual QList<SlippyMapWidgetLayer*> tileLayers() = 0;
+
+    /**
+     * @brief Additional property page tabs for map objects.
+     */
+    virtual QList<SlippyMapLayerObjectPropertyPage*> propertyPages() = 0;
 };
 
 #define ExplorerPluginInterface_iid "com.robingingras.osmexplorer.ExplorerPluginInterface"
