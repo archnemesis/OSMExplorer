@@ -47,6 +47,7 @@
 #include "Application/HistoryManager.h"
 #include "Application/DatabaseManager.h"
 #include "Dialog/DatabaseConnectionDialog.h"
+#include "Database/DatabaseObjectPropertyPage.h"
 
 #include "defaults.h"
 #include "config.h"
@@ -1164,6 +1165,9 @@ void MainWindow::showPropertyPage(SlippyMapLayerObject *object)
     for (auto *propertyPage : object->propertyPages())
         propertyPages.append(propertyPage);
 
+    if (m_databaseMode)
+        propertyPages.append(new DatabaseObjectPropertyPage(object));
+
     for (auto *propertyPage : ExplorerApplication::pluginManager()->getPropertyPages())
         propertyPages.append(propertyPage);
 
@@ -1995,13 +1999,15 @@ void MainWindow::deleteSelectedLayer()
         if (layer->isEditable()) {
             int result = QMessageBox::question(
                     this,
-                    tr("Clear Layer"),
+                    tr("Delete Layer"),
                     tr("Do you want to delete the layer '%1'?").arg(layer->name()),
                     QMessageBox::StandardButtons(QMessageBox::Yes | QMessageBox::No));
 
             if (result == QMessageBox::Yes) {
                 m_layerManager->takeLayer(layer);
-                delete layer;
+                createUndoDeleteLayer(
+                        tr("Delete Layer"),
+                        layer);
             }
         }
     }
@@ -2016,11 +2022,13 @@ void MainWindow::clearSelectedLayer()
             int result = QMessageBox::question(
                     this,
                     tr("Clear Layer"),
-                    tr("Do you want to remove all objects from the layer '%1'?").arg(layer->name()),
+                    tr("Do you want to remove all objects from the layer '%1'? This action cannot be undone.").arg(layer->name()),
                     QMessageBox::StandardButtons(QMessageBox::Yes | QMessageBox::No));
 
-            if (result == QMessageBox::Yes)
+            if (result == QMessageBox::Yes) {
                 m_layerManager->removeLayerObjects(layer);
+                m_historyManager->clearUndoHistory();
+            }
         }
     }
 }
@@ -2043,6 +2051,13 @@ void MainWindow::deleteActiveObject()
                 tr("Delete %1").arg(m_selectedObject->label()),
                 m_layerManager->activeLayer(),
                 m_selectedObject);
+
+        // append to the delete list to be sent to db on next sync
+        // unless it doesn't have an id yet
+        if (m_databaseMode && !m_selectedObject->id().toString().isEmpty()) {
+            m_databaseObjectDeleteList.append(m_selectedObject);
+        }
+
         m_selectedObject = nullptr;
 
     }
@@ -2102,7 +2117,9 @@ void MainWindow::deleteActiveLayer()
 
         if (result == QMessageBox::Yes) {
             m_layerManager->takeLayer(layer);
-            delete layer;
+            createUndoDeleteLayer(
+                    tr("Delete Layer"),
+                    layer);
         }
     }
 }
@@ -2178,12 +2195,25 @@ void MainWindow::undo()
                 SlippyMapLayer *layer = event.layer;
                 SlippyMapLayerObject *object = event.original;
                 m_layerManager->removeLayerObject(layer, object);
+
+                // the user may have created, then saved, then
+                // wanted to undo, so now it may have an id and need
+                // to be deleted off the db
+                if (m_databaseMode && !object->id().toString().isEmpty())
+                    m_databaseObjectDeleteList.append(object);
+
                 break;
             }
             case HistoryManager::DeleteObject: {
                 SlippyMapLayer *layer = event.layer;
                 SlippyMapLayerObject *object = event.original;
                 m_layerManager->addLayerObject(layer, object);
+
+                // user undid the delete, so we can take it off
+                // of the delete list if it's still there
+                if (m_databaseMode && m_databaseObjectDeleteList.contains(object)) {
+                    m_databaseObjectDeleteList.removeOne(object);
+                }
                 break;
             }
             case HistoryManager::ModifyObject: {
@@ -2203,12 +2233,24 @@ void MainWindow::undo()
             case HistoryManager::AddLayer: {
                 SlippyMapLayer *layer = event.layer;
                 m_layerManager->takeLayer(layer);
+
+                // user could have added a layer, saved and then
+                // deleted it, so delete from server
+                if (m_databaseMode && !layer->id().toString().isEmpty())
+                    m_databaseLayerDeleteList.append(layer);
                 break;
             }
             case HistoryManager::ModifyLayer: {
                 break;
             }
             case HistoryManager::DeleteLayer: {
+                SlippyMapLayer *layer = event.layer;
+                m_layerManager->addLayer(layer);
+
+                // remove it from delete list
+                if (m_databaseMode && m_databaseLayerDeleteList.contains(layer))
+                    m_databaseLayerDeleteList.removeOne(layer);
+
                 break;
             }
         }
@@ -2233,12 +2275,23 @@ void MainWindow::redo()
                 SlippyMapLayer *layer = event.layer;
                 SlippyMapLayerObject *object = event.original;
                 m_layerManager->removeLayerObject(layer, object);
+
+                // put it back on the delete list (unless it
+                // doesn't have an id yet
+                if (m_databaseMode && !object->id().toString().isEmpty())
+                    m_databaseObjectDeleteList.append(object);
+
                 break;
             }
             case HistoryManager::AddObject: {
                 SlippyMapLayer *layer = event.layer;
                 SlippyMapLayerObject *object = event.original;
                 m_layerManager->addLayerObject(layer, object);
+
+                // remove it from the delete list
+                if (m_databaseMode && m_databaseObjectDeleteList.contains(object))
+                    m_databaseObjectDeleteList.removeOne(object);
+
                 break;
             }
             case HistoryManager::ModifyObject: {
@@ -2258,6 +2311,22 @@ void MainWindow::redo()
             case HistoryManager::AddLayer: {
                 SlippyMapLayer *layer = event.layer;
                 m_layerManager->addLayer(layer);
+
+                // remove it from delete list
+                if (m_databaseMode && m_databaseLayerDeleteList.contains(layer))
+                    m_databaseLayerDeleteList.removeOne(layer);
+
+                break;
+            }
+            case HistoryManager::DeleteLayer: {
+                SlippyMapLayer *layer = event.layer;
+                m_layerManager->takeLayer(layer);
+
+                // put it back on the delete list (unless it
+                // doesn't have an id yet
+                if (m_databaseMode && !layer->id().toString().isEmpty())
+                    m_databaseLayerDeleteList.append(layer);
+
                 break;
             }
         }
@@ -2317,6 +2386,16 @@ void MainWindow::createUndoAddLayer(const QString &description, SlippyMapLayer *
     HistoryManager::HistoryEvent event;
     event.description = description;
     event.action = HistoryManager::AddLayer;
+    event.layer = layer;
+    m_historyManager->addEvent(event);
+    setWorkspaceDirty(true);
+}
+
+void MainWindow::createUndoDeleteLayer(const QString &description, SlippyMapLayer *layer)
+{
+    HistoryManager::HistoryEvent event;
+    event.description = description;
+    event.action = HistoryManager::DeleteLayer;
     event.layer = layer;
     m_historyManager->addEvent(event);
     setWorkspaceDirty(true);
@@ -2566,15 +2645,41 @@ void MainWindow::saveWorkspaceToDatabase()
 
     if (result != QMessageBox::Yes) return;
 
+    for (auto *layer: m_databaseLayerDeleteList) {
+        qDebug() << "Deleting layer" << layer->id() << layer->name();
+
+        QString queryString(
+                "DELETE FROM "
+                DATABASE_SCHEMA_NAME "." DATABASE_LAYERS_TABLE " "
+                "WHERE \"id\" = ?;");
+
+        QSqlQuery deleteQuery;
+        deleteQuery.prepare(queryString);
+        deleteQuery.addBindValue(layer->id());
+
+        if (!deleteQuery.exec()) {
+            qCritical() << "Delete error:" << deleteQuery.lastError().text();
+            qCritical() << "Executed query:" << deleteQuery.lastQuery();
+            QMessageBox::critical(
+                    this,
+                    tr("Database Error"),
+                    tr("Unable to delete layer: %1").arg(deleteQuery.lastError().text()));
+            return;
+        }
+    }
+
     for (auto *layer: m_layerManager->layers()) {
         if (layer->isEditable()) {
             if (!layer->isSynced()) {
+                qDebug() << "Updating layer" << layer->id() << layer->name();
+
                 if (layer->id().isNull()) {
                     layer->setId(QVariant(QUuid::createUuid().toString()));
                 }
 
                 QString layerInsertString(
-                            "INSERT INTO osmexplorer.layers "
+                            "INSERT INTO "
+                            DATABASE_SCHEMA_NAME "." DATABASE_LAYERS_TABLE " "
                             "(\"id\", \"created\", \"name\", \"description\", \"order\") "
                             "VALUES "
                             "(:id, CURRENT_TIMESTAMP, :name, :description, :order) "
@@ -2605,8 +2710,40 @@ void MainWindow::saveWorkspaceToDatabase()
                 layer->setSynced(true);
             }
 
+            //
+            // objects that were deleted need to be deleted
+            // on the server
+            //
+            for (auto *object: m_databaseObjectDeleteList) {
+                qDebug() << "Deleting object" << object->id() << object->label();
+
+                QString queryString(
+                    "DELETE FROM "
+                        DATABASE_SCHEMA_NAME "." DATABASE_OBJECTS_TABLE " "
+                        "WHERE \"id\" = ?;");
+
+                QSqlQuery deleteQuery;
+                deleteQuery.prepare(queryString);
+                deleteQuery.addBindValue(object->id());
+
+                if (!deleteQuery.exec()) {
+                    qCritical() << "Delete error:" << deleteQuery.lastError().text();
+                    qCritical() << "Executed query:" << deleteQuery.lastQuery();
+                    QMessageBox::critical(
+                            this,
+                            tr("Database Error"),
+                            tr("Unable to delete object: %1").arg(deleteQuery.lastError().text()));
+                    return;
+                }
+
+                // object will be deleted by history manager
+                m_databaseObjectDeleteList.removeOne(object);
+            }
+
             for (auto *object: layer->objects()) {
                 if (!object->isSynced()) {
+                    qDebug() << "Updating object" << object->id() << object->label();
+
                     QString queryString(
                             "INSERT INTO " DATABASE_SCHEMA_NAME "." DATABASE_OBJECTS_TABLE " "
                             "(\"id\", \"layer_id\", \"type\", \"created\", \"label\", \"description\", \"geom\", \"data\") "
@@ -2664,4 +2801,3 @@ void MainWindow::saveWorkspaceToDatabase()
 
     setWorkspaceDirty(false);
 }
-

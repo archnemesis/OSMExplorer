@@ -38,6 +38,11 @@ public:
     void addEvent(const QString& description, SlippyMapLayerObject *object);
 
     /**
+     * Clears the undo history.
+     */
+    void clearUndoHistory();
+
+    /**
      * Return the description text of the current undo item.
      * @return
      */

@@ -99,3 +99,17 @@ QString HistoryManager::currentRedoDescription()
 
     return m_historyStack.at(m_historyIndex + 1).description;
 }
+
+void HistoryManager::clearUndoHistory()
+{
+    for (const auto& event: m_historyStack) {
+        switch (event.action) {
+            // delete entries carry the object that was deleted
+            // in case the user decides to undo it, so remove them
+            // for good
+
+            case HistoryManager::DeleteObject:
+                break;
+        }
+    }
+}

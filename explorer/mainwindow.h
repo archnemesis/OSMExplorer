@@ -80,6 +80,7 @@ protected:
     void createUndoModifyObject(const QString& description, SlippyMapLayerObject *object);
     void createUndoDeleteObject(const QString& description, SlippyMapLayer *layer, SlippyMapLayerObject *object);
     void createUndoAddLayer(const QString& description, SlippyMapLayer *layer);
+    void createUndoDeleteLayer(const QString &description, SlippyMapLayer *layer);
     void closeEvent(QCloseEvent *event) override;
 
 private:
@@ -147,6 +148,8 @@ private:
     QList<QString> m_recentFileList;
     QList<SlippyMapWidgetLayer*> m_layers;
     QList<QAction*> m_layerShowHideActions;
+    QList<SlippyMapLayer*> m_databaseLayerDeleteList;
+    QList<SlippyMapLayerObject*> m_databaseObjectDeleteList;
     QList<SlippyMapWidgetMarker*> m_loadedMarkers;
     QList<SlippyMapWidgetMarker*> m_weatherStationMarkers;
     QListWidgetItem *m_currentRouteListItem = nullptr;

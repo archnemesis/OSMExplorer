@@ -19,6 +19,8 @@
         <file alias="rewind.png">resources/icons/rewind.png</file>
         <file alias="newfile.png">resources/icons/newfile.png</file>
         <file alias="folderopen.png">resources/icons/folderopen.png</file>
+        <file alias="arrowright.png">resources/icons/arrowright.png</file>
+        <file alias="arrowdown.png">resources/icons/arrowdown.png</file>
     </qresource>
     <qresource prefix="/images">
         <file alias="loading_tile_256.png">resources/loading_tile_256.png</file>

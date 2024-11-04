@@ -114,6 +114,8 @@ set(PROJECT_SOURCES
         explorer/Dialog/databaseconnectiondialog.ui
         explorer/Application/DatabaseManager.cpp
         explorer/Application/DatabaseManager.h
+        explorer/Database/DatabaseObjectPropertyPage.cpp
+        explorer/Database/DatabaseObjectPropertyPage.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
