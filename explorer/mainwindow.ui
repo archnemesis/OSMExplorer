@@ -48,13 +48,6 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
-      <property name="styleSheet">
-       <string notr="true">QPushButton {
-	border-radius: 10px;
-	background-color: palette(base);
-	padding: 10px;
-}</string>
-      </property>
       <layout class="QHBoxLayout" name="horizontalLayout_3">
        <property name="spacing">
         <number>10</number>
@@ -100,7 +93,6 @@
 	padding: 10px;
 	border-top-left-radius: 10px;
 	border-top-right-radius: 10px;
-	font-size: 12pt;
 }
 
 QTreeView {
@@ -143,9 +135,6 @@ QTreeView &gt; QFrame {
              <width>0</width>
              <height>0</height>
             </size>
-           </property>
-           <property name="styleSheet">
-            <string notr="true"/>
            </property>
            <property name="text">
             <string/>
@@ -277,7 +266,7 @@ QTreeView &gt; QFrame {
      <x>0</x>
      <y>0</y>
      <width>1094</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -314,6 +303,8 @@ QTreeView &gt; QFrame {
     <addaction name="actionFile_OpenWorkspace"/>
     <addaction name="menuRecent"/>
     <addaction name="actionFile_CloseWorkspace"/>
+    <addaction name="separator"/>
+    <addaction name="actionFile_ConnectToDatabase"/>
     <addaction name="separator"/>
     <addaction name="actionFile_SaveWorkspace"/>
     <addaction name="actionFile_SaveWorkspaceAs"/>
@@ -937,6 +928,11 @@ QTreeView &gt; QFrame {
    </property>
    <property name="text">
     <string>Rename...</string>
+   </property>
+  </action>
+  <action name="actionFile_ConnectToDatabase">
+   <property name="text">
+    <string>Connect to Database...</string>
    </property>
   </action>
  </widget>

@@ -5,6 +5,7 @@
 #include "ExplorerApplication.h"
 #include "PluginManager.h"
 #include "HistoryManager.h"
+#include "DatabaseManager.h"
 #include <SlippyMap/SlippyMapLayerManager.h>
 
 ExplorerApplication::ExplorerApplication(int &argc, char **argv) :
@@ -13,25 +14,32 @@ ExplorerApplication::ExplorerApplication(int &argc, char **argv) :
     m_pluginManager->loadPlugins();
     m_layerManager = new SlippyMap::SlippyMapLayerManager();
     m_historyManager = new HistoryManager();
+    m_databaseManager = new DatabaseManager();
 }
 
 ExplorerApplication * ExplorerApplication::instance() {
-    return static_cast<ExplorerApplication*>(QApplication::instance());
+    return dynamic_cast<ExplorerApplication*>(QApplication::instance());
 }
 
 PluginManager * ExplorerApplication::pluginManager() {
-    auto *app = static_cast<ExplorerApplication*>(QApplication::instance());
+    auto *app = dynamic_cast<ExplorerApplication*>(QApplication::instance());
     return app->m_pluginManager;
 }
 
 SlippyMap::SlippyMapLayerManager *ExplorerApplication::layerManager()
 {
-    auto *app = static_cast<ExplorerApplication*>(QApplication::instance());
+    auto *app = dynamic_cast<ExplorerApplication*>(QApplication::instance());
     return app->m_layerManager;
 }
 
 HistoryManager *ExplorerApplication::historyManager()
 {
-    auto *app = static_cast<ExplorerApplication*>(QApplication::instance());
+    auto *app = dynamic_cast<ExplorerApplication*>(QApplication::instance());
     return app->m_historyManager;
+}
+
+DatabaseManager *ExplorerApplication::databaseManager()
+{
+    auto *app = dynamic_cast<ExplorerApplication*>(QApplication::instance());
+    return app->m_databaseManager;
 }

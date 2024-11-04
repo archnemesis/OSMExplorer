@@ -20,8 +20,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     set(WIN32_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/explorer/osmexplorer.rc)
 endif()
 
-find_package(QT NAMES Qt5 REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort Charts)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort Charts)
+find_package(QT NAMES Qt5 REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort Charts Sql)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedia Core SerialPort Charts Sql)
 
 add_subdirectory(SlippyMap EXCLUDE_FROM_ALL)
 add_subdirectory(LocationServices EXCLUDE_FROM_ALL)
@@ -109,6 +109,11 @@ set(PROJECT_SOURCES
         explorer/Weather/SlippyMapWeatherStationMarker.h
         explorer/Application/HistoryManager.cpp
         explorer/Application/HistoryManager.h
+        explorer/Dialog/databaseconnectiondialog.cpp
+        explorer/Dialog/databaseconnectiondialog.h
+        explorer/Dialog/databaseconnectiondialog.ui
+        explorer/Application/DatabaseManager.cpp
+        explorer/Application/DatabaseManager.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -132,6 +137,7 @@ target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::Network)
 target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::Multimedia)
 target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::SerialPort)
 target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::Charts)
+target_link_libraries(osmexplorer PRIVATE Qt${QT_VERSION_MAJOR}::Sql)
 target_link_libraries(osmexplorer PRIVATE SlippyMap)
 target_link_libraries(osmexplorer PRIVATE LocationServices)
 target_link_libraries(osmexplorer PRIVATE QtColorWidgets)
@@ -142,6 +148,7 @@ target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/SlippyMap/inc
 target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/SlippyMap/externals/Qt-Color-Widgets/include)
 target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/LocationServices)
 target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/externals/nmea/include)
+target_include_directories(osmexplorer PRIVATE "C:/boost_1_82_0")
 
 set_target_properties(osmexplorer PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER osmexplorer.robingingras.com

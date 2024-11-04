@@ -9,6 +9,7 @@
 
 class PluginManager;
 class HistoryManager;
+class DatabaseManager;
 
 namespace SlippyMap {
     class SlippyMapLayerManager;
@@ -22,11 +23,13 @@ public:
     static ExplorerApplication *instance();
     static PluginManager *pluginManager();
     static HistoryManager *historyManager();
+    static DatabaseManager *databaseManager();
     static SlippyMap::SlippyMapLayerManager *layerManager();
 
 private:
     PluginManager *m_pluginManager;
     HistoryManager *m_historyManager;
+    DatabaseManager *m_databaseManager;
     SlippyMap::SlippyMapLayerManager *m_layerManager;
 };
 

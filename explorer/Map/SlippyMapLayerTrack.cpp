@@ -10,10 +10,20 @@
 #include <QPointF>
 #include <QBrush>
 #include <QPolygonF>
+#include <QJsonObject>
+
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/linestring.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
 
 #include "SlippyMapLayerTrackStylePropertyPage.h"
 #include "gpx/gpxwaypoint.h"
 #include "gpx/gpxtracksegment.h"
+
+using namespace boost::geometry;
+
+typedef model::d2::point_xy<double> point_t;
+typedef model::linestring<point_t> linestring_t;
 
 SlippyMapLayerTrack::SlippyMapLayerTrack(QObject *parent) : SlippyMapLayerObject(parent),
                                                             m_trackLineWidth(5),
@@ -42,10 +52,10 @@ QDataStream &SlippyMapLayerTrack::serialize(QDataStream &stream) const
 {
     stream << label();
     stream << description();
-    stream << trackLineWidth();
-    stream << trackLineColor();
-    stream << trackLineStrokeWidth();
-    stream << trackLineStrokeColor();
+    stream << lineWidth();
+    stream << lineColor();
+    stream << strokeWidth();
+    stream << strokeColor();
     stream << waypointRadius();
     stream << waypointColor();
     stream << points();
@@ -54,6 +64,7 @@ QDataStream &SlippyMapLayerTrack::serialize(QDataStream &stream) const
 
 void SlippyMapLayerTrack::unserialize(QDataStream &stream)
 {
+    QVariant id;
     QString label;
     QString description;
     int trackLineWidth;
@@ -64,6 +75,7 @@ void SlippyMapLayerTrack::unserialize(QDataStream &stream)
     QColor waypointColor;
     QVector<QPointF> points;
 
+    stream >> id;
     stream >> label;
     stream >> description;
     stream >> trackLineWidth;
@@ -74,12 +86,13 @@ void SlippyMapLayerTrack::unserialize(QDataStream &stream)
     stream >> waypointColor;
     stream >> points;
 
+    setId(id);
     setLabel(label);
     setDescription(description);
-    setTrackLineWidth(trackLineWidth);
-    setTrackLineColor(trackLineColor);
-    setTrackLineStrokeWidth(trackLineStrokeWidth);
-    setTrackLineStrokeColor(trackLineStrokeColor);
+    setLineWidth(trackLineWidth);
+    setLineColor(trackLineColor);
+    setStrokeWidth(trackLineStrokeWidth);
+    setStrokeColor(trackLineStrokeColor);
     setWaypointRadius(waypointRadius);
     setWaypointColor(waypointColor);
     setPoints(points);
@@ -88,12 +101,13 @@ void SlippyMapLayerTrack::unserialize(QDataStream &stream)
 
 SlippyMapLayerTrack::SlippyMapLayerTrack(const SlippyMapLayerTrack &other) : SlippyMapLayerTrack()
 {
+    setId(other.id());
     setLabel(other.label());
     setDescription(other.description());
-    setTrackLineWidth(other.trackLineWidth());
-    setTrackLineColor(other.trackLineColor());
-    setTrackLineStrokeWidth(other.trackLineStrokeWidth());
-    setTrackLineStrokeColor(other.trackLineStrokeColor());
+    setLineWidth(other.lineWidth());
+    setLineColor(other.lineColor());
+    setStrokeWidth(other.strokeWidth());
+    setStrokeColor(other.strokeColor());
     setWaypointRadius(other.waypointRadius());
     setWaypointColor(other.waypointColor());
     setPoints(other.points());
@@ -102,15 +116,65 @@ SlippyMapLayerTrack::SlippyMapLayerTrack(const SlippyMapLayerTrack &other) : Sli
 void SlippyMapLayerTrack::copy(SlippyMapLayerObject *other)
 {
     auto *track = dynamic_cast<SlippyMapLayerTrack*>(other);
+    setId(track->id());
     setLabel(track->label());
     setDescription(track->description());
-    setTrackLineWidth(track->trackLineWidth());
-    setTrackLineColor(track->trackLineColor());
-    setTrackLineStrokeWidth(track->trackLineStrokeWidth());
-    setTrackLineStrokeColor(track->trackLineStrokeColor());
+    setLineWidth(track->lineWidth());
+    setLineColor(track->lineColor());
+    setStrokeWidth(track->strokeWidth());
+    setStrokeColor(track->strokeColor());
     setWaypointRadius(track->waypointRadius());
     setWaypointColor(track->waypointColor());
     setPoints(track->points());
+}
+
+void SlippyMapLayerTrack::hydrateFromDatabase(const QJsonObject &json, const QString &geometry)
+{
+    int lineWidth = json["lineWidth"].toInt();
+    int strokeWidth = json["strokeWidth"].toInt();
+    int waypointRadius = json["waypointRadius"].toInt();
+    setLineWidth(lineWidth);
+    setStrokeWidth(strokeWidth);
+    setWaypointRadius(waypointRadius);
+
+    QColor lineColor(json["lineColor"].toString());
+    QColor strokeColor(json["strokeColor"].toString());
+    QColor waypointColor(json["waypointColor"].toString());
+    setLineColor(lineColor);
+    setStrokeColor(strokeColor);
+    setWaypointColor(waypointColor);
+
+    auto linestring = from_wkt<linestring_t>(geometry.toStdString());
+
+    m_points.clear();
+    for (auto it = boost::begin(linestring); it != boost::end(linestring); it++) {
+        double x = get<0>(*it);
+        double y = get<0>(*it);
+        QPointF point(x, y);
+        m_points.append(point);
+    }
+
+    emit updated();
+}
+
+void SlippyMapLayerTrack::saveToDatabase(QJsonObject &json, QString &geometry)
+{
+    json["lineWidth"] = lineWidth();
+    json["lineColor"] = lineColor().name(QColor::HexArgb);
+    json["strokeWidth"] = strokeWidth();
+    json["strokeColor"] = strokeColor().name(QColor::HexArgb);
+    json["waypointRadius"] = waypointRadius();
+    json["waypointColor"] = waypointColor().name(QColor::HexArgb);
+
+    QStringList pointStrings;
+    for (const auto& point: m_points) {
+        pointStrings.append(QString("%1 %2")
+                                    .arg(point.x(), 0, 'f', 7)
+                                    .arg(point.y(), 0, 'f', 7));
+    }
+
+    geometry = QString("LINESTRING(%1)")
+            .arg(pointStrings.join(", "));
 }
 
 SlippyMapLayerTrack *SlippyMapLayerTrack::clone() const
@@ -259,28 +323,28 @@ void SlippyMapLayerTrack::initStyle()
     m_strokePen.setCapStyle(Qt::RoundCap);
 }
 
-void SlippyMapLayerTrack::setTrackLineWidth(int width)
+void SlippyMapLayerTrack::setLineWidth(int width)
 {
     m_trackLineWidth = width;
     initStyle();
     emit updated();
 }
 
-void SlippyMapLayerTrack::setTrackLineColor(const QColor &color)
+void SlippyMapLayerTrack::setLineColor(const QColor &color)
 {
     m_trackLineColor = color;
     initStyle();
     emit updated();
 }
 
-void SlippyMapLayerTrack::setTrackLineStrokeWidth(int width)
+void SlippyMapLayerTrack::setStrokeWidth(int width)
 {
     m_trackLineStrokeWidth = width;
     initStyle();
     emit updated();
 }
 
-void SlippyMapLayerTrack::setTrackLineStrokeColor(const QColor &color)
+void SlippyMapLayerTrack::setStrokeColor(const QColor &color)
 {
     m_trackLineStrokeColor = color;
     initStyle();
@@ -301,22 +365,22 @@ void SlippyMapLayerTrack::setWaypointRadius(int radius)
     emit updated();
 }
 
-int SlippyMapLayerTrack::trackLineWidth() const
+int SlippyMapLayerTrack::lineWidth() const
 {
     return m_trackLineWidth;
 }
 
-const QColor & SlippyMapLayerTrack::trackLineColor() const
+const QColor & SlippyMapLayerTrack::lineColor() const
 {
     return m_trackLineColor;
 }
 
-int SlippyMapLayerTrack::trackLineStrokeWidth() const
+int SlippyMapLayerTrack::strokeWidth() const
 {
     return m_trackLineStrokeWidth;
 }
 
-const QColor & SlippyMapLayerTrack::trackLineStrokeColor() const
+const QColor & SlippyMapLayerTrack::strokeColor() const
 {
     return m_trackLineStrokeColor;
 }

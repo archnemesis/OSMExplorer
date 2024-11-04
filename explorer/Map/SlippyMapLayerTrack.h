@@ -20,6 +20,8 @@ public:
 
     virtual SlippyMapLayerTrack* clone() const;
     virtual void copy(SlippyMapLayerObject *other);
+    void hydrateFromDatabase(const QJsonObject& json, const QString& geometry) override;
+    void saveToDatabase(QJsonObject& json, QString& geometry) override;
     QDataStream& serialize(QDataStream& stream) const override;
     QList<SlippyMapLayerObjectPropertyPage*> propertyPages() const;
     bool contains(const QPointF& point, int zoom) const override;
@@ -33,16 +35,16 @@ public:
     void draw(QPainter *painter, const QTransform &transform, ObjectState state) override;
     void setPosition(const QPointF& position) override;
     void unserialize(QDataStream& stream) override;
-    void setTrackLineWidth(int width);
-    void setTrackLineColor(const QColor& color);
-    void setTrackLineStrokeWidth(int width);
-    void setTrackLineStrokeColor(const QColor& color);
+    void setLineWidth(int width);
+    void setLineColor(const QColor& color);
+    void setStrokeWidth(int width);
+    void setStrokeColor(const QColor& color);
     void setWaypointColor(const QColor& color);
     void setWaypointRadius(int radius);
-    int trackLineWidth() const;
-    const QColor& trackLineColor() const;
-    int trackLineStrokeWidth() const;
-    const QColor& trackLineStrokeColor() const;
+    int lineWidth() const;
+    const QColor& lineColor() const;
+    int strokeWidth() const;
+    const QColor& strokeColor() const;
     const QColor& waypointColor() const;
     int waypointRadius() const;
 

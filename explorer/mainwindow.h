@@ -67,6 +67,7 @@ protected:
     void loadStartupSettings();
     void resizeEvent(QResizeEvent *event) override;
     void saveLayers();
+    void saveWorkspaceToDatabase();
     void saveWorkspace(QString fileName);
     void setWorkspaceDirty(bool dirty);
     void setupContextMenus();
@@ -170,7 +171,8 @@ private:
     SettingsDialog *m_settingsDialog = nullptr;
     SlippyMapLayer *m_defaultMarkerLayer = nullptr;
     SlippyMapLayer *m_gpsMarkerLayer = nullptr;
-    SlippyMapLayer* m_weatherLayer;
+    SlippyMapLayer *m_weatherLayer;
+    SlippyMapLayer *m_databaseLayer;
     SlippyMapLayerManager *m_layerManager = nullptr;
     SlippyMapLayerObject *m_selectedObject = nullptr;
     SlippyMapLayerObject *m_selectedObjectCopy = nullptr;
@@ -180,6 +182,7 @@ private:
     TextLogViewerForm *m_nmeaLog = nullptr;
     WeatherForecastWindow *m_weatherForecastWindow = nullptr;
     WeatherStationMarker *m_weatherStationMarker;
+    bool m_databaseMode = false;
     bool m_workspaceDirty = true;
     color_widgets::ColorSelector *m_fillColorSelector;
     color_widgets::ColorSelector *m_strokeColorSelector;
@@ -241,6 +244,8 @@ protected slots:
     void cutActiveObject();
     void copyActiveObject();
     void pasteObject();
+    void connectToDatabase();
+    void loadViewportData();
 
     /**
      * @brief Save window size after finish moving.

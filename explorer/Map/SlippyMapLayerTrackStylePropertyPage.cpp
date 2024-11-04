@@ -22,10 +22,10 @@ QString SlippyMapLayerTrackStylePropertyPage::tabTitle()
 
 void SlippyMapLayerTrackStylePropertyPage::save()
 {
-    m_track->setTrackLineColor(m_lineColorSelector->color());
-    m_track->setTrackLineWidth(m_lineWidth->value());
-    m_track->setTrackLineStrokeColor(m_lineStrokeColorSelector->color());
-    m_track->setTrackLineStrokeWidth(m_lineStrokeWidth->value());
+    m_track->setLineColor(m_lineColorSelector->color());
+    m_track->setLineWidth(m_lineWidth->value());
+    m_track->setStrokeColor(m_lineStrokeColorSelector->color());
+    m_track->setStrokeWidth(m_lineStrokeWidth->value());
     m_track->setWaypointColor(m_waypointColorSelector->color());
     m_track->setWaypointRadius(m_waypointRadius->value());
 }
@@ -40,12 +40,12 @@ void SlippyMapLayerTrackStylePropertyPage::setupUi()
     m_lineWidth = new QSpinBox();
     m_lineStrokeWidth = new QSpinBox();
 
-    m_lineColorSelector->setColor(m_track->trackLineColor());
-    m_lineStrokeColorSelector->setColor(m_track->trackLineStrokeColor());
+    m_lineColorSelector->setColor(m_track->lineColor());
+    m_lineStrokeColorSelector->setColor(m_track->strokeColor());
     m_waypointColorSelector->setColor(m_track->waypointColor());
     m_waypointRadius->setValue(m_track->waypointRadius());
-    m_lineWidth->setValue(m_track->trackLineWidth());
-    m_lineStrokeWidth->setValue(m_track->trackLineStrokeWidth());
+    m_lineWidth->setValue(m_track->lineWidth());
+    m_lineStrokeWidth->setValue(m_track->strokeWidth());
 
     auto *formLayout = new QFormLayout();
     formLayout->addRow(tr("Line Color"), m_lineColorSelector);
@@ -64,10 +64,10 @@ void SlippyMapLayerTrackStylePropertyPage::setupUi()
 
 void SlippyMapLayerTrackStylePropertyPage::updateUi()
 {
-    m_lineColorSelector->setColor(m_track->trackLineColor());
-    m_lineStrokeColorSelector->setColor(m_track->trackLineStrokeColor());
+    m_lineColorSelector->setColor(m_track->lineColor());
+    m_lineStrokeColorSelector->setColor(m_track->strokeColor());
     m_waypointColorSelector->setColor(m_track->waypointColor());
     m_waypointRadius->setValue(m_track->waypointRadius());
-    m_lineWidth->setValue(m_track->trackLineWidth());
-    m_lineStrokeWidth->setValue(m_track->trackLineStrokeWidth());
+    m_lineWidth->setValue(m_track->lineWidth());
+    m_lineStrokeWidth->setValue(m_track->strokeWidth());
 }

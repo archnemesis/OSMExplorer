@@ -2,10 +2,11 @@
 #include "ui_mainwindow.h"
 
 #include <QAction>
-#include <QInputDialog>
 #include <QFile>
 #include <QFileDialog>
+#include <QGraphicsDropShadowEffect>
 #include <QGuiApplication>
+#include <QInputDialog>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QLabel>
@@ -18,12 +19,17 @@
 #include <QPluginLoader>
 #include <QSettings>
 #include <QSpinBox>
+#include <QSqlError>
+#include <QSqlQuery>
 #include <QStandardPaths>
 #include <QTimer>
-#include <QUrl>
 #include <QVector>
 
 #include <QtColorWidgets/ColorSelector>
+
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
 
 #include <SlippyMap/SlippyMapWidget.h>
 #include <SlippyMap/SlippyMapLayer.h>
@@ -39,6 +45,8 @@
 #include "Weather/WeatherForecastWindow.h"
 #include "Application/ExplorerApplication.h"
 #include "Application/HistoryManager.h"
+#include "Application/DatabaseManager.h"
+#include "Dialog/DatabaseConnectionDialog.h"
 
 #include "defaults.h"
 #include "directionlistitemwidget.h"
@@ -63,10 +71,12 @@
 
 #ifdef QT_DEBUG
 #include <QDebug>
+
 #endif
 
 using namespace SlippyMap;
 using namespace color_widgets;
+using namespace boost::geometry;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -77,6 +87,39 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     setWindowTitle(tr("OSMExplorer") + " - Untitled.osm");
     loadPluginLayers();
+
+    {
+        auto *dropShadow = new QGraphicsDropShadowEffect();
+        dropShadow->setBlurRadius(30);
+        dropShadow->setOffset(3);
+        dropShadow->setColor(QColor("#66000000"));
+        ui->tvwMarkers->setGraphicsEffect(dropShadow);
+    }
+
+    {
+        auto *dropShadow = new QGraphicsDropShadowEffect();
+        dropShadow->setBlurRadius(30);
+        dropShadow->setOffset(3);
+        dropShadow->setColor(QColor("#66000000"));
+        ui->zoomInButton->setGraphicsEffect(dropShadow);
+    }
+
+    {
+        auto *dropShadow = new QGraphicsDropShadowEffect();
+        dropShadow->setBlurRadius(30);
+        dropShadow->setOffset(3);
+        dropShadow->setColor(QColor("#66000000"));
+        ui->zoomOutButton->setGraphicsEffect(dropShadow);
+    }
+
+    {
+        auto *dropShadow = new QGraphicsDropShadowEffect();
+        dropShadow->setBlurRadius(30);
+        dropShadow->setOffset(3);
+        dropShadow->setColor(QColor("#66000000"));
+        ui->currentLocationButton->setGraphicsEffect(dropShadow);
+    }
+
 
     ui->tabShapeEditor->setVisible(false);
     m_defaultPalette = qApp->palette();
@@ -182,6 +225,14 @@ MainWindow::MainWindow(QWidget *parent) :
             &MainWindow::deleteActiveObject);
 
     /*
+     * Database Connection Stuff
+     */
+    connect(ui->actionFile_ConnectToDatabase,
+            &QAction::triggered,
+            this,
+            &MainWindow::connectToDatabase);
+
+    /*
      * Drawing
      */
     connect(ui->actionDrawPolygon,
@@ -234,6 +285,7 @@ MainWindow::MainWindow(QWidget *parent) :
     m_statusBarGpsStatusLabel->setFrameStyle(QFrame::Sunken);
     m_statusBarGpsStatusLabel->setText("GPS Position: 0.000 N 0.000 E");
 
+    statusBar()->addPermanentWidget(m_statusBarStatusLabel, 1);
     statusBar()->addPermanentWidget(m_statusBarGpsStatusLabel);
     statusBar()->addPermanentWidget(m_statusBarPositionLabel);
 
@@ -1097,6 +1149,7 @@ void MainWindow::onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object)
 
 void MainWindow::onSlippyMapLayerObjectWasDragged(SlippyMapLayerObject *object)
 {
+    object->setSynced(false);
     createUndoModifyObject(
             tr("Move %1").arg(object->label()),
             object);
@@ -1134,6 +1187,7 @@ void MainWindow::showPropertyPage(SlippyMapLayerObject *object)
                     for (auto *propertyPage: propertyPages)
                         propertyPage->save();
 
+                    object->setSynced(false);
                     setWorkspaceDirty(true);
                 }
 
@@ -1180,6 +1234,8 @@ void MainWindow::onSlippyMapDragFinished()
                         ui->slippyMap->longitude(),
                         ui->slippyMap->latitude()));
     }
+
+    loadViewportData();
 }
 
 void MainWindow::onWeatherService_stationListReady(
@@ -1248,6 +1304,7 @@ void MainWindow::saveWorkspace(QString fileName)
             for (auto *object : layer->objects()) {
                 //out << QMetaType::type(object->metaObject()->className());
                 out << QString(object->metaObject()->className());
+                qDebug() << "Saving object type:" << QString(object->metaObject()->className());
                 object->serialize(out);
             }
         }
@@ -1800,10 +1857,10 @@ void MainWindow::on_actionImport_GPX_triggered()
 
                 layerTrack->setLabel(trackName);
                 layerTrack->setDescription(parser.metadata().description());
-                layerTrack->setTrackLineColor(m_fillColorSelector->color());
-                layerTrack->setTrackLineStrokeColor(m_strokeColorSelector->color());
-                layerTrack->setTrackLineWidth(m_lineWidth->value());
-                layerTrack->setTrackLineStrokeWidth(m_strokeWidth->value());
+                layerTrack->setLineColor(m_fillColorSelector->color());
+                layerTrack->setStrokeColor(m_strokeColorSelector->color());
+                layerTrack->setLineWidth(m_lineWidth->value());
+                layerTrack->setStrokeWidth(m_strokeWidth->value());
                 layerTrack->setWaypointColor(m_fillColorSelector->color().lighter());
                 layerTrack->setWaypointRadius(m_lineWidth->value());
                 m_layerManager->addLayerObject(layerTrack);
@@ -1895,6 +1952,9 @@ void MainWindow::closeEvent(QCloseEvent *event)
             return;
         }
     }
+
+    QSqlDatabase::database().close();
+
     event->accept();
 }
 
@@ -2337,6 +2397,194 @@ void MainWindow::pasteObject()
         }
         default:
             break;
+    }
+}
+
+void MainWindow::connectToDatabase()
+{
+    DatabaseConnectionDialog dlg(this);
+    int status = dlg.exec();
+
+    if (status == QDialog::Accepted) {
+        QString connectionName = dlg.connectionName();
+        QString address = dlg.databaseAddress();
+        int port = dlg.databasePort();
+        QString username = dlg.databaseUsername();
+        QString password = dlg.databasePassword();
+        QString database = dlg.databaseName();
+
+        auto *db = ExplorerApplication::databaseManager();
+        db->setHostAddress(address);
+        db->setHostPort(port);
+        db->setUsername(username);
+        db->setPassword(password);
+        db->setDatabaseName(database);
+
+        if (db->connectDatabase()) {
+            m_databaseMode = true;
+            m_statusBarStatusLabel->setText(tr("Connected to %1").arg(connectionName));
+        }
+        else {
+            QMessageBox::critical(
+                    this,
+                    tr("Connection Error"),
+                    tr("Unable to connect to database server."));
+        }
+    }
+}
+
+void MainWindow::loadViewportData()
+{
+    if (!m_databaseMode) return;
+
+    auto boundingBox = ui->slippyMap->boundingBoxLatLon();
+
+    QSqlQuery layerQueryStr;
+    layerQueryStr.prepare(QString(
+            "SELECT\n"
+            "\"id\", \"name\", \"description\", \"order\"\n"
+            "FROM\n"
+            "osmexplorer.layers;"));
+    auto layerQuery = QSqlQuery(layerQueryStr);
+    layerQuery.exec();
+
+    if (layerQuery.lastError().type() != QSqlError::NoError) {
+        qCritical() << "Query failed:" << layerQuery.lastError().text();
+        return;
+    }
+
+    while (layerQuery.next()) {
+        QString layerId = layerQuery.value(0).toString();
+        QString layerName = layerQuery.value(1).toString();
+        QString layerDesc = layerQuery.value(2).toString();
+        int order = layerQuery.value(3).toInt();
+
+        SlippyMapLayer *layer = nullptr;
+        for (auto l: m_layerManager->layers()) {
+            qDebug() << "Matching" << l->id().toString() << "with" << layerId;
+            if (layerId.compare(l->id().toString()) == 0) {
+                layer = l;
+            }
+        }
+
+        if (layer == nullptr) {
+            layer = new SlippyMapLayer();
+            layer->setId(layerId);
+            layer->setEditable(false);
+            m_layerManager->addLayer(layer);
+        }
+
+        layer->setName(layerName);
+        layer->setDescription(layerDesc);
+
+        auto queryString = QString(
+                "SELECT id, label, description, ST_AsEWKT(geom), type, to_json(data) FROM osmexplorer.objects "
+                "WHERE geom && ST_MakeEnvelope(?, ?, ?, ?, 4326)");
+
+        QSqlQuery objectQuery;
+        objectQuery.prepare(queryString);
+        objectQuery.addBindValue(boundingBox.x());
+        objectQuery.addBindValue(boundingBox.y());
+        objectQuery.addBindValue(boundingBox.x() + boundingBox.width());
+        objectQuery.addBindValue(boundingBox.y() + boundingBox.height());
+        objectQuery.exec();
+
+        while (objectQuery.next()) {
+            QString wkt = objectQuery.value(3).toString().replace("SRID=4326;", "");
+            std::string point_str = wkt.toStdString();
+
+            qDebug() << "WKT:" << wkt;
+
+            using point_type = model::d2::point_xy<double>;
+            auto const point_value = from_wkt<point_type>(point_str);
+            QPointF point(point_value.x(), point_value.y());
+            qDebug() << "Got point:" << point;
+
+            QVariant id = objectQuery.value(0).toString();
+            QString label = objectQuery.value(1).toString();
+            QString description = objectQuery.value(2).toString();
+            QString className = objectQuery.value(4).toString().append("*");
+            QString data = objectQuery.value(5).toString();
+
+            QJsonDocument document = QJsonDocument::fromJson(data.toUtf8());
+            QJsonObject root = document.object();
+
+            for (auto *object: layer->objects()) {
+                if (object->id().compare(id) == 0) {
+                    // update with new data
+                    object->setLabel(label);
+                    object->setDescription(description);
+                    object->hydrateFromDatabase(root, wkt);
+                    goto continue2;
+                }
+            }
+
+            // get the type information from qt meta
+            int typeId = QMetaType::type(className.toLocal8Bit());
+            const QMetaObject *metaObject = QMetaType::metaObjectForType(typeId);
+
+            // create a new object and cast to layer object
+            QObject *o = metaObject->newInstance();
+            auto *object = qobject_cast<SlippyMapLayerObject *>(o);
+
+            object->setId(id);
+            object->setLabel(label);
+            object->setDescription(description);
+            object->hydrateFromDatabase(root, wkt);
+
+            m_layerManager->addLayerObject(layer, object);
+continue2:;
+        }
+
+        ui->statusBar->showMessage(tr("Loaded layer %1 (%2 objects)")
+            .arg(layer->name())
+            .arg(layer->objects().count()), 3000);
+    }
+}
+
+void MainWindow::saveWorkspaceToDatabase()
+{
+    if (!m_databaseMode) return;
+
+    for (auto *layer: m_layerManager->layers()) {
+        if (layer->isEditable()) {
+            if (!layer->isSynced()) {
+                // todo: save changes to database
+            }
+
+            for (auto *object: layer->objects()) {
+                if (!object->isSynced()) {
+                    QString queryString(
+                            "INSERT INTO osmexplorer.objects "
+                            "(id, layer_id, type, label, description, geom, data) "
+                            "VALUES "
+                            "(:id, :layer_id, :type, :label, :description, :geom, :data) "
+                            "ON CONFLICT (id) DO UPDATE "
+                            "SET "
+                            "layer_id = EXCLUDED.layer_id, "
+                            "type = EXCLUDED.type, "
+                            "label = EXCLUDED.label, "
+                            "description = EXCLUDED.description, "
+                            "geom = EXCLUDED.geom, "
+                            "data = EXCLUDED.data;");
+
+                    if (object->id().toString().isEmpty()) {
+                        object->setId(QUuid::createUuid().toString());
+                    }
+
+                    QSqlQuery updateQuery;
+                    updateQuery.prepare(queryString);
+                    updateQuery.bindValue("id", object->id());
+                    updateQuery.bindValue("layer_id", layer->id());
+                    updateQuery.bindValue("type", QString(object->metaObject()->className()));
+                    updateQuery.bindValue("label", object->label());
+                    updateQuery.bindValue("description", object->description());
+
+                    QString geom;
+                    QJsonObject json;
+                }
+            }
+        }
     }
 }
 

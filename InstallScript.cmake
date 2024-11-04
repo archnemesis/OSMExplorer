@@ -1,0 +1,1 @@
+message(WARNING "This is a message")
