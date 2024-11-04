@@ -49,6 +49,7 @@
 #include "Dialog/DatabaseConnectionDialog.h"
 
 #include "defaults.h"
+#include "config.h"
 #include "directionlistitemwidget.h"
 #include "explorerplugininterface.h"
 #include "gpssourcedialog.h"
@@ -1269,6 +1270,11 @@ void MainWindow::onWeatherService_forecastReady(
 
 void MainWindow::saveWorkspace(QString fileName)
 {
+    if (m_databaseMode) {
+        saveWorkspaceToDatabase();
+        return;
+    }
+
     QFile file(fileName);
 
     if (!file.open(QIODevice::WriteOnly)) {
@@ -1315,6 +1321,11 @@ void MainWindow::saveWorkspace(QString fileName)
 
 void MainWindow::onActionFileSaveWorkspaceTriggered()
 {
+    if (m_databaseMode) {
+        saveWorkspaceToDatabase();
+        return;
+    }
+
     QString fileName = m_workspaceFileName;
     if (fileName.isEmpty()) {
         fileName = QFileDialog::getSaveFileName(
@@ -2423,6 +2434,8 @@ void MainWindow::connectToDatabase()
         if (db->connectDatabase()) {
             m_databaseMode = true;
             m_statusBarStatusLabel->setText(tr("Connected to %1").arg(connectionName));
+            closeWorkspace();
+            loadViewportData();
         }
         else {
             QMessageBox::critical(
@@ -2470,19 +2483,25 @@ void MainWindow::loadViewportData()
         if (layer == nullptr) {
             layer = new SlippyMapLayer();
             layer->setId(layerId);
-            layer->setEditable(false);
+            layer->setSynced(true); // so we get the first update
             m_layerManager->addLayer(layer);
         }
 
-        layer->setName(layerName);
-        layer->setDescription(layerDesc);
+        //
+        // don't overwrite local changes
+        //
+        if (layer->isSynced()) {
+            layer->setName(layerName);
+            layer->setDescription(layerDesc);
+        }
 
         auto queryString = QString(
                 "SELECT id, label, description, ST_AsEWKT(geom), type, to_json(data) FROM osmexplorer.objects "
-                "WHERE geom && ST_MakeEnvelope(?, ?, ?, ?, 4326)");
+                "WHERE layer_id = ? AND geom && ST_MakeEnvelope(?, ?, ?, ?, 4326)");
 
         QSqlQuery objectQuery;
         objectQuery.prepare(queryString);
+        objectQuery.addBindValue(layer->id().toString());
         objectQuery.addBindValue(boundingBox.x());
         objectQuery.addBindValue(boundingBox.y());
         objectQuery.addBindValue(boundingBox.x() + boundingBox.width());
@@ -2491,15 +2510,6 @@ void MainWindow::loadViewportData()
 
         while (objectQuery.next()) {
             QString wkt = objectQuery.value(3).toString().replace("SRID=4326;", "");
-            std::string point_str = wkt.toStdString();
-
-            qDebug() << "WKT:" << wkt;
-
-            using point_type = model::d2::point_xy<double>;
-            auto const point_value = from_wkt<point_type>(point_str);
-            QPointF point(point_value.x(), point_value.y());
-            qDebug() << "Got point:" << point;
-
             QVariant id = objectQuery.value(0).toString();
             QString label = objectQuery.value(1).toString();
             QString description = objectQuery.value(2).toString();
@@ -2511,10 +2521,12 @@ void MainWindow::loadViewportData()
 
             for (auto *object: layer->objects()) {
                 if (object->id().compare(id) == 0) {
-                    // update with new data
-                    object->setLabel(label);
-                    object->setDescription(description);
-                    object->hydrateFromDatabase(root, wkt);
+                    if (object->isSynced()) {
+                        // update with new data
+                        object->setLabel(label);
+                        object->setDescription(description);
+                        object->hydrateFromDatabase(root, wkt);
+                    }
                     goto continue2;
                 }
             }
@@ -2546,23 +2558,65 @@ void MainWindow::saveWorkspaceToDatabase()
 {
     if (!m_databaseMode) return;
 
+    int result = QMessageBox::question(
+        this,
+        tr("Sync Work"),
+        tr("Do you want to sync your changes to the database?"),
+        QMessageBox::Yes | QMessageBox::No);
+
+    if (result != QMessageBox::Yes) return;
+
     for (auto *layer: m_layerManager->layers()) {
         if (layer->isEditable()) {
             if (!layer->isSynced()) {
-                // todo: save changes to database
+                if (layer->id().isNull()) {
+                    layer->setId(QVariant(QUuid::createUuid().toString()));
+                }
+
+                QString layerInsertString(
+                            "INSERT INTO osmexplorer.layers "
+                            "(\"id\", \"created\", \"name\", \"description\", \"order\") "
+                            "VALUES "
+                            "(:id, CURRENT_TIMESTAMP, :name, :description, :order) "
+                            "ON CONFLICT (id) DO UPDATE "
+                            "SET "
+                            "\"name\" = EXCLUDED.name, "
+                            "\"description\" = EXCLUDED.description, "
+                            "\"order\" = EXCLUDED.order, "
+                            "\"updated\" = CURRENT_TIMESTAMP;");
+                QSqlQuery layerInsertQuery;
+                layerInsertQuery.prepare(layerInsertString);
+                layerInsertQuery.bindValue(":id", layer->id());
+                layerInsertQuery.bindValue(":name", layer->name());
+                layerInsertQuery.bindValue(":description", layer->description());
+                layerInsertQuery.bindValue(":order", layer->order());
+
+                if (!layerInsertQuery.exec()) {
+                    qCritical() << "Upsert error:" << layerInsertQuery.lastError().text();
+                    qCritical() << "Executed query:" << layerInsertQuery.lastQuery();
+
+                    QMessageBox::critical(
+                        this,
+                        tr("Database Error"),
+                        tr("Unable to save layer: %1").arg(layerInsertQuery.lastError().text()));
+                    return;
+                }
+
+                layer->setSynced(true);
             }
 
             for (auto *object: layer->objects()) {
                 if (!object->isSynced()) {
                     QString queryString(
-                            "INSERT INTO osmexplorer.objects "
-                            "(id, layer_id, type, label, description, geom, data) "
+                            "INSERT INTO " DATABASE_SCHEMA_NAME "." DATABASE_OBJECTS_TABLE " "
+                            "(\"id\", \"layer_id\", \"type\", \"created\", \"label\", \"description\", \"geom\", \"data\") "
                             "VALUES "
-                            "(:id, :layer_id, :type, :label, :description, :geom, :data) "
+                            "(:id, :layer_id, :type, CURRENT_TIMESTAMP, :label, :description, :geom, :data) "
                             "ON CONFLICT (id) DO UPDATE "
                             "SET "
                             "layer_id = EXCLUDED.layer_id, "
                             "type = EXCLUDED.type, "
+                            "updated = CURRENT_TIMESTAMP, "
                             "label = EXCLUDED.label, "
                             "description = EXCLUDED.description, "
                             "geom = EXCLUDED.geom, "
@@ -2572,19 +2626,42 @@ void MainWindow::saveWorkspaceToDatabase()
                         object->setId(QUuid::createUuid().toString());
                     }
 
-                    QSqlQuery updateQuery;
-                    updateQuery.prepare(queryString);
-                    updateQuery.bindValue("id", object->id());
-                    updateQuery.bindValue("layer_id", layer->id());
-                    updateQuery.bindValue("type", QString(object->metaObject()->className()));
-                    updateQuery.bindValue("label", object->label());
-                    updateQuery.bindValue("description", object->description());
-
                     QString geom;
                     QJsonObject json;
+
+                    object->saveToDatabase(json, geom);
+                    geom.prepend("SRID=4326;");
+
+                    qDebug() << "Geometry string:" << geom;
+
+                    QJsonDocument data(json);
+
+                    QSqlQuery updateQuery;
+                    updateQuery.prepare(queryString);
+                    updateQuery.bindValue(":id", object->id());
+                    updateQuery.bindValue(":layer_id", layer->id());
+                    updateQuery.bindValue(":type", QString(object->metaObject()->className()));
+                    updateQuery.bindValue(":label", object->label());
+                    updateQuery.bindValue(":description", object->description());
+                    updateQuery.bindValue(":geom", geom);
+                    updateQuery.bindValue(":data", QString::fromLatin1(data.toJson(QJsonDocument::Compact)));
+
+                    if (!updateQuery.exec()) {
+                        qCritical() << "Upsert error:" << updateQuery.lastError().text();
+                        qCritical() << "Executed query:" << updateQuery.lastQuery();
+                        QMessageBox::critical(
+                            this,
+                            tr("Database Error"),
+                            tr("Unable to save object: %1").arg(updateQuery.lastError().text()));
+                        return;
+                    }
+
+                    object->setSynced(true);
                 }
             }
         }
     }
+
+    setWorkspaceDirty(false);
 }
 
