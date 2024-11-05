@@ -117,6 +117,8 @@ set(PROJECT_SOURCES
         explorer/Database/DatabaseObjectPropertyPage.cpp
         explorer/Database/DatabaseObjectPropertyPage.h
         explorer/config.h
+        explorer/Network/ServerInterface.cpp
+        explorer/Network/ServerInterface.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

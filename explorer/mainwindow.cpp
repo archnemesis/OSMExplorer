@@ -321,6 +321,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     loadMarkers();
 
+    m_serverInterface = new ServerInterface(this);
+
+    connect(m_serverInterface,
+        &ServerInterface::layersRequestFinished,
+        this,
+        &MainWindow::onServerInterfaceLayersRequestFinished);
+
     /*
      * Default layer setup
      */
@@ -2538,13 +2545,15 @@ void MainWindow::loadViewportData()
     if (!m_databaseMode) return;
 
     auto boundingBox = ui->slippyMap->boundingBoxLatLon();
+    m_serverInterface->requestLayersForViewport(boundingBox);
+    return;
 
     QSqlQuery layerQueryStr;
     layerQueryStr.prepare(QString(
             "SELECT\n"
             "\"id\", \"name\", \"description\", \"order\"\n"
             "FROM\n"
-            "osmexplorer.layers;"));
+            DATABASE_SCHEMA_NAME "." DATABASE_LAYERS_TABLE));
     auto layerQuery = QSqlQuery(layerQueryStr);
     layerQuery.exec();
 
@@ -2583,7 +2592,8 @@ void MainWindow::loadViewportData()
         }
 
         auto queryString = QString(
-                "SELECT id, label, description, ST_AsEWKT(geom), type, to_json(data) FROM osmexplorer.objects "
+                "SELECT id, label, description, ST_AsEWKT(geom), type, to_json(data) FROM "
+                DATABASE_SCHEMA_NAME "." DATABASE_OBJECTS_TABLE
                 "WHERE layer_id = ? AND geom && ST_MakeEnvelope(?, ?, ?, ?, 4326)");
 
         QSqlQuery objectQuery;
@@ -2641,6 +2651,78 @@ continue2:;
         ui->statusBar->showMessage(tr("Loaded layer %1 (%2 objects)")
             .arg(layer->name())
             .arg(layer->objects().count()), 3000);
+    }
+}
+
+void MainWindow::onServerInterfaceLayersRequestFinished()
+{
+    const auto& layers = m_serverInterface->layers();
+    for (const auto& layerdata: layers) {
+        SlippyMapLayer::Ptr layer = nullptr;
+        for (auto l: m_layerManager->layers()) {
+            qDebug() << "Adding/updating layer" << layerdata.id;
+            if (layerdata.id.toString().compare(l->id().toString()) == 0) {
+                layer = l;
+            }
+        }
+
+        if (layer == nullptr) {
+            layer = SlippyMapLayer::Ptr::create();
+            layer->setId(layerdata.id);
+            layer->setSynced(true); // so we get the first update
+            m_layerManager->addLayer(layer);
+        }
+
+        //
+        // don't overwrite local changes
+        //
+        if (layer->isSynced()) {
+            layer->setName(layerdata.name);
+            layer->setDescription(layerdata.description);
+        }
+
+        for (const auto& objectdata: layerdata.objects) {
+            //replace("SRID=4326;", "");
+
+            QObject *o = nullptr;
+            SlippyMapLayerObject::Ptr object;
+            QString geom = objectdata.geom;
+            geom.replace("SRID=4326;", "");
+
+            QString className = objectdata.type;
+            className.append("*");
+            bool found = false;
+
+            for (const auto& object: layer->objects()) {
+                if (object->id().compare(objectdata.id.toString()) == 0) {
+                    if (object->isSynced()) {
+                        // update with new data
+                        object->setLabel(objectdata.label);
+                        object->setDescription(objectdata.description);
+                        object->hydrateFromDatabase(objectdata.data, geom);
+                    }
+                    found = true;
+                }
+            }
+
+            if (found) continue;
+
+            // get the type information from qt meta
+            int typeId = QMetaType::type(className.toLocal8Bit());
+            const QMetaObject *metaObject = QMetaType::metaObjectForType(typeId);
+
+            // create a new object and cast to layer object
+            o = metaObject->newInstance();
+            object = SlippyMapLayerObject::Ptr(qobject_cast<SlippyMapLayerObject *>(o));
+
+            object->setId(objectdata.id);
+            object->setLabel(objectdata.label);
+            object->setDescription(objectdata.description);
+            object->hydrateFromDatabase(objectdata.data, geom);
+
+            m_layerManager->addLayerObject(layer, object);
+            continue2:;
+        }
     }
 }
 

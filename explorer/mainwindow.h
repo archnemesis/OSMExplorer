@@ -12,6 +12,7 @@
 #include "nmeaseriallocationdataprovider.h"
 #include "Application/HistoryManager.h"
 #include "Map/SlippyMapGpsMarker.h"
+#include "Network/ServerInterface.h"
 
 class WeatherStationMarker;
 
@@ -152,7 +153,9 @@ private:
     QList<SlippyMapWidgetLayer*> m_layers;
     QList<QAction*> m_layerShowHideActions;
     QList<SlippyMapLayer::Ptr> m_databaseLayerDeleteList;
+    QList<SlippyMapLayer::Ptr> m_databaseLayerUpdateList;
     QList<SlippyMapLayerObject::Ptr> m_databaseObjectDeleteList;
+    QList<SlippyMapLayerObject::Ptr> m_databaseObjectUpdateList;
     QList<SlippyMapWidgetMarker::Ptr> m_loadedMarkers;
     QList<SlippyMapWidgetMarker::Ptr> m_weatherStationMarkers;
     QListWidgetItem *m_currentRouteListItem = nullptr;
@@ -174,13 +177,13 @@ private:
     QString m_workspaceFileName;
     QTimer *m_animationTimer = nullptr;
     QTimer *m_saveWindowSizeTimer = nullptr;
+    ServerInterface *m_serverInterface = nullptr;
     SettingsDialog *m_settingsDialog = nullptr;
     SlippyMapLayer::Ptr m_defaultMarkerLayer = nullptr;
     SlippyMapLayer::Ptr m_gpsMarkerLayer = nullptr;
     SlippyMapLayer::Ptr m_weatherLayer;
     SlippyMapLayer::Ptr m_databaseLayer;
     SlippyMapLayerManager *m_layerManager = nullptr;
-
     SlippyMapLayerObject::WeakPtr m_selectedObject;
     SlippyMapLayerObject::Ptr m_selectedObjectCopy = nullptr;
     SlippyMapLayerObjectPropertyPage *m_selectedObjectPropertyPage = nullptr;
@@ -253,6 +256,7 @@ protected slots:
     void pasteObject();
     void connectToDatabase();
     void loadViewportData();
+    void onServerInterfaceLayersRequestFinished();
 
     /**
      * @brief Save window size after finish moving.
