@@ -116,6 +116,7 @@ set(PROJECT_SOURCES
         explorer/Application/DatabaseManager.h
         explorer/Database/DatabaseObjectPropertyPage.cpp
         explorer/Database/DatabaseObjectPropertyPage.h
+        explorer/config.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -150,7 +151,7 @@ target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/SlippyMap/inc
 target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/SlippyMap/externals/Qt-Color-Widgets/include)
 target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/LocationServices)
 target_include_directories(osmexplorer PRIVATE ${CMAKE_SOURCE_DIR}/externals/nmea/include)
-target_include_directories(osmexplorer PRIVATE "C:/boost_1_82_0")
+target_include_directories(osmexplorer PRIVATE "C:/boost_1_86_0")
 
 set_target_properties(osmexplorer PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER osmexplorer.robingingras.com
