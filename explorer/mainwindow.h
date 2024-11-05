@@ -6,10 +6,12 @@
 #include <QPalette>
 
 #include <SlippyMap/SlippyMapWidget.h>
+#include <SlippyMap/SlippyMapWidgetMarker.h>
 
 #include "Weather/NationalWeatherServiceInterface.h"
 #include "nmeaseriallocationdataprovider.h"
 #include "Application/HistoryManager.h"
+#include "Map/SlippyMapGpsMarker.h"
 
 class WeatherStationMarker;
 
@@ -43,7 +45,6 @@ namespace color_widgets {
 
 namespace SlippyMap
 {
-    class SlippyMapWidgetMarker;
     class SlippyMapLayer;
     class SlippyMapLayerPolygon;
     class SlippyMapLayerPath;
@@ -74,13 +75,15 @@ protected:
     void setupMap();
     void setupToolbar();
     void setupWeather();
-    void showPropertyPage(SlippyMapLayerObject *object);
+    void showPropertyPage(const SlippyMapLayerObject::Ptr& object);
     void updateRecentFileList();
-    void createUndoAddObject(const QString& description, SlippyMapLayer *layer, SlippyMapLayerObject *object);
-    void createUndoModifyObject(const QString& description, SlippyMapLayerObject *object);
-    void createUndoDeleteObject(const QString& description, SlippyMapLayer *layer, SlippyMapLayerObject *object);
-    void createUndoAddLayer(const QString& description, SlippyMapLayer *layer);
-    void createUndoDeleteLayer(const QString &description, SlippyMapLayer *layer);
+    void createUndoAddObject(const QString& description, SlippyMapLayer::Ptr layer, const SlippyMapLayerObject::Ptr& object);
+    void createUndoModifyObject(const QString& description, const SlippyMapLayerObject::Ptr& object);
+    void createUndoDeleteObject(const QString &description,
+                                const SlippyMapLayer::Ptr& layer,
+                                const SlippyMapLayerObject::Ptr& object);
+    void createUndoAddLayer(const QString& description, SlippyMapLayer::Ptr layer);
+    void createUndoDeleteLayer(const QString &description, SlippyMapLayer::Ptr layer);
     void closeEvent(QCloseEvent *event) override;
 
 private:
@@ -106,8 +109,8 @@ private:
 
         EntryType type = NoEntry;
         ActionType action = NoAction;
-        SlippyMapLayer *layer = nullptr;
-        SlippyMapLayerObject *object = nullptr;
+        SlippyMapLayer::Ptr layer;
+        SlippyMapLayerObject::Ptr object;
     };
 
     Ui::MainWindow *ui;
@@ -137,7 +140,7 @@ private:
     QAction *m_renameLayerAction = nullptr;
     QAction *m_zoomInHereMapAction = nullptr;
     QAction *m_zoomOutHereMapAction = nullptr;
-    QHash<QString,SlippyMapGpsMarker*> m_gpsMarkers;
+    QHash<QString,SlippyMapGpsMarker::Ptr> m_gpsMarkers;
     QLabel *m_statusBarGpsStatusLabel;
     QLabel *m_statusBarPositionLabel;
     QLabel *m_statusBarStatusLabel;
@@ -148,10 +151,10 @@ private:
     QList<QString> m_recentFileList;
     QList<SlippyMapWidgetLayer*> m_layers;
     QList<QAction*> m_layerShowHideActions;
-    QList<SlippyMapLayer*> m_databaseLayerDeleteList;
-    QList<SlippyMapLayerObject*> m_databaseObjectDeleteList;
-    QList<SlippyMapWidgetMarker*> m_loadedMarkers;
-    QList<SlippyMapWidgetMarker*> m_weatherStationMarkers;
+    QList<SlippyMapLayer::Ptr> m_databaseLayerDeleteList;
+    QList<SlippyMapLayerObject::Ptr> m_databaseObjectDeleteList;
+    QList<SlippyMapWidgetMarker::Ptr> m_loadedMarkers;
+    QList<SlippyMapWidgetMarker::Ptr> m_weatherStationMarkers;
     QListWidgetItem *m_currentRouteListItem = nullptr;
     QMap<SlippyMapWidgetMarker*,QListWidgetItem*> m_markerListItemMap;
     QMenu *m_contextMenu = nullptr;
@@ -172,13 +175,14 @@ private:
     QTimer *m_animationTimer = nullptr;
     QTimer *m_saveWindowSizeTimer = nullptr;
     SettingsDialog *m_settingsDialog = nullptr;
-    SlippyMapLayer *m_defaultMarkerLayer = nullptr;
-    SlippyMapLayer *m_gpsMarkerLayer = nullptr;
-    SlippyMapLayer *m_weatherLayer;
-    SlippyMapLayer *m_databaseLayer;
+    SlippyMapLayer::Ptr m_defaultMarkerLayer = nullptr;
+    SlippyMapLayer::Ptr m_gpsMarkerLayer = nullptr;
+    SlippyMapLayer::Ptr m_weatherLayer;
+    SlippyMapLayer::Ptr m_databaseLayer;
     SlippyMapLayerManager *m_layerManager = nullptr;
-    SlippyMapLayerObject *m_selectedObject = nullptr;
-    SlippyMapLayerObject *m_selectedObjectCopy = nullptr;
+
+    SlippyMapLayerObject::WeakPtr m_selectedObject;
+    SlippyMapLayerObject::Ptr m_selectedObjectCopy = nullptr;
     SlippyMapLayerObjectPropertyPage *m_selectedObjectPropertyPage = nullptr;
     SlippyMapLayerPolygon *m_forecastZonePolygon;
     SlippyMapWidget::LineSet *m_currentRouteLineSet = nullptr;
@@ -206,11 +210,11 @@ protected slots:
     void onSlippyMapPolygonSelected(const QList<QPointF>& points);
     void onSlippyMapPathSelected(const QList<QPointF>& points);
     void onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode);
-    void onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object);
-    void onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object);
-    void onSlippyMapLayerObjectDoubleClicked(SlippyMapLayerObject *object);
-    void onSlippyMapLayerObjectUpdated(SlippyMapLayerObject *object);
-    void onSlippyMapLayerObjectWasDragged(SlippyMapLayerObject *object);
+    void onSlippyMapLayerObjectActivated(const SlippyMapLayerObject::Ptr& object);
+    void onSlippyMapLayerObjectDeactivated(const SlippyMapLayerObject::Ptr& object);
+    void onSlippyMapLayerObjectDoubleClicked(const SlippyMapLayerObject::Ptr& object);
+    void onSlippyMapLayerObjectUpdated(const SlippyMapLayerObject::Ptr& object);
+    void onSlippyMapLayerObjectWasDragged(const SlippyMapLayerObject::Ptr& object);
     void onSlippyMapDragFinished();
     void onWeatherService_stationListReady(
             const QList<NationalWeatherServiceInterface::WeatherStation>& stations);
@@ -229,7 +233,7 @@ protected slots:
     void onTvwMarkersContextMenuRequested(const QPoint& point);
     void onTvwMarkersClicked(const QModelIndex& index);
     void showActiveObjectPropertyPage();
-    void onPluginLayerObjectProviderMarkerAdded(SlippyMapLayerObject *object);
+    void onPluginLayerObjectProviderMarkerAdded(const SlippyMapLayerObject::Ptr& object);
     void createMarkerAtContextMenuPosition();
     void createMarkerAtCurrentPosition();
     void createMarkerAtPosition(const QPointF& position);

@@ -14,7 +14,7 @@ class DatabaseObjectPropertyPage : public SlippyMapLayerObjectPropertyPage
 {
     Q_OBJECT
 public:
-    explicit DatabaseObjectPropertyPage(SlippyMap::SlippyMapLayerObject *object);
+    explicit DatabaseObjectPropertyPage(SlippyMap::SlippyMapLayerObject::Ptr object);
     QString tabTitle() override;
     void setupUi() override;
     void save() override;

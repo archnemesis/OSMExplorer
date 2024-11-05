@@ -32,7 +32,7 @@ public:
     QList<QMenu*> mainMenuList();
     QList<QDockWidget*> dockWidgetList();
     QDialog *configurationDialog(QWidget *parent = nullptr);
-    QList<SlippyMapLayer*> layers();
+    QList<SlippyMapLayer::Ptr> layers();
     QList<SlippyMapWidgetLayer*> tileLayers();
     QList<SlippyMapLayerObjectPropertyPage*> propertyPages();
     void loadConfiguration();

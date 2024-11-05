@@ -18,7 +18,7 @@ class SlippyMapLayerTrack;
 class SlippyMapLayerTrackStylePropertyPage : public SlippyMapLayerObjectPropertyPage {
     Q_OBJECT
 public:
-    explicit SlippyMapLayerTrackStylePropertyPage(SlippyMapLayerObject *object);
+    explicit SlippyMapLayerTrackStylePropertyPage(SlippyMapLayerObject::Ptr object);
     QString tabTitle() override;
     void save() override;
     void setupUi() override;

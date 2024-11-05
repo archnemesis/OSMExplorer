@@ -28,14 +28,14 @@ public:
     struct HistoryEvent {
         QString description;
         HistoryAction action;
-        SlippyMapLayerObject *original;
-        SlippyMapLayerObject *copy;
-        SlippyMapLayer *layer;
+        SlippyMapLayerObject::Ptr original;
+        SlippyMapLayerObject::Ptr copy;
+        SlippyMapLayer::Ptr layer;
     };
 
     explicit HistoryManager(QObject *parent = nullptr);
     void addEvent(const HistoryEvent& event);
-    void addEvent(const QString& description, SlippyMapLayerObject *object);
+    void addEvent(const QString& description, SlippyMapLayerObject::Ptr object);
 
     /**
      * Clears the undo history.

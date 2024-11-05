@@ -58,9 +58,11 @@ void SlippyMapGpsMarker::draw(QPainter *painter, const QTransform &transform, Sl
             label);
 }
 
-QList<SlippyMapLayerObjectPropertyPage *> SlippyMapGpsMarker::propertyPages() const
+QList<SlippyMapLayerObjectPropertyPage *> SlippyMapGpsMarker::propertyPages(
+        SlippyMapLayerObject::Ptr object
+        ) const
 {
-    return {new SlippyMapGpsMarkerPropertyPage((SlippyMapLayerObject*)this)};
+    return {new SlippyMapGpsMarkerPropertyPage(object)};
 }
 
 void SlippyMapGpsMarker::setGpsTime(const QDateTime &time)

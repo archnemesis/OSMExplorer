@@ -78,7 +78,7 @@ public:
      * @brief Return layers to be shown on the map.
      * @return
      */
-    virtual QList<SlippyMapLayer*> layers() = 0;
+    virtual QList<SlippyMapLayer::Ptr> layers() = 0;
 
     /**
      * @brief Return tile layers available on the map.

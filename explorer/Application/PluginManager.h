@@ -6,13 +6,13 @@
 #define PLUGINMANAGER_H
 
 #include <QObject>
+#include <SlippyMap/SlippyMapLayer.h>
 
 class ExplorerPluginInterface;
 class SlippyMapLayerObjectPropertyPage;
 
 namespace SlippyMap {
     class SlippyMapWidgetLayer;
-    class SlippyMapLayer;
 }
 
 class PluginManager : public QObject {
@@ -22,7 +22,7 @@ public:
     void loadPlugins();
     const QList<ExplorerPluginInterface*> getPlugins() const;
     QList<SlippyMap::SlippyMapWidgetLayer*> getTileLayers() const;
-    QList<SlippyMap::SlippyMapLayer*> getLayers() const;
+    QList<SlippyMap::SlippyMapLayer::Ptr> getLayers() const;
     QList<SlippyMapLayerObjectPropertyPage*> getPropertyPages() const;
 
 protected:

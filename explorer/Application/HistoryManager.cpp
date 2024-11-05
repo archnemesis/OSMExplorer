@@ -21,24 +21,6 @@ void HistoryManager::addEvent(const HistoryManager::HistoryEvent &event)
     // last entry.
     //
     if ((m_historyIndex + 1) < m_historyStack.count()) {
-        //
-        // first we need to make sure that we clean up orphaned
-        // objects in the future
-        //
-        for (int i = (m_historyIndex + 1); i < m_historyStack.count(); i++) {
-            const HistoryEvent& futureEvent = m_historyStack.at(i);
-            // the user undid an add object, but the object still
-            // exists in memory, but we delete it because we're deleting
-            // the future
-            if (futureEvent.action == AddObject)
-                delete futureEvent.original;
-            else if (futureEvent.action == ModifyObject)
-                delete futureEvent.copy;
-            else if (futureEvent.action == AddLayer)
-                delete futureEvent.layer;
-
-        }
-
         m_historyStack.remove(m_historyIndex + 1, m_historyStack.count() - (m_historyIndex + 1));
         emit redoHistoryCleared();
     }
@@ -48,12 +30,12 @@ void HistoryManager::addEvent(const HistoryManager::HistoryEvent &event)
     emit undoEventAdded(event);
 }
 
-void HistoryManager::addEvent(const QString& description, SlippyMapLayerObject *object)
+void HistoryManager::addEvent(const QString& description, SlippyMapLayerObject::Ptr object)
 {
     HistoryEvent event;
     event.description = description;
     event.original = object;
-    event.copy = object->clone();
+    event.copy = SlippyMapLayerObject::Ptr(object->clone());
 
     addEvent(event);
 }

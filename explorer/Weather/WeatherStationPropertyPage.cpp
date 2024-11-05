@@ -10,7 +10,7 @@
 #include <QTableWidgetItem>
 #include <QTabWidget>
 
-WeatherStationPropertyPage::WeatherStationPropertyPage(WeatherStationMarker *object) :
+WeatherStationPropertyPage::WeatherStationPropertyPage(WeatherStationMarker::Ptr object) :
     SlippyMapLayerObjectPropertyPage(object) {
     setupUi();
 

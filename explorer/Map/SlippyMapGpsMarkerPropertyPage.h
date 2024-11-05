@@ -16,7 +16,7 @@ class SlippyMapGpsMarkerPropertyPage : public SlippyMapLayerObjectPropertyPage
 {
     Q_OBJECT
 public:
-    explicit SlippyMapGpsMarkerPropertyPage(SlippyMapLayerObject *object);
+    explicit SlippyMapGpsMarkerPropertyPage(const SlippyMapLayerObject::Ptr& object);
     virtual QString tabTitle();
     void setupUi() override;
     void save() override;

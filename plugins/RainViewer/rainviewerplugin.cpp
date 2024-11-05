@@ -62,7 +62,7 @@ QDialog *RainViewerExplorerPlugin::configurationDialog(QWidget *parent)
     return dialog;
 }
 
-QList<SlippyMapLayer *> RainViewerExplorerPlugin::layers()
+QList<SlippyMapLayer::Ptr> RainViewerExplorerPlugin::layers()
 {
     return {};
 }

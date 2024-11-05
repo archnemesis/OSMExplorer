@@ -15,9 +15,10 @@ using namespace SlippyMap;
 class SlippyMapGpsMarker : public SlippyMapWidgetMarker {
     Q_OBJECT
 public:
+    typedef QSharedPointer<SlippyMapGpsMarker> Ptr;
     explicit SlippyMapGpsMarker(const QPointF& position);
     void draw(QPainter *painter, const QTransform &transform, ObjectState state) override;
-    QList<SlippyMapLayerObjectPropertyPage*> propertyPages() const;
+    QList<SlippyMapLayerObjectPropertyPage*> propertyPages(SlippyMapLayerObject::Ptr object) const;
     void setGpsTime(const QDateTime& time);
     void setSatellites(const QList<NmeaSerialLocationDataProvider::SatelliteStatus>& satellites);
     const QList<NmeaSerialLocationDataProvider::SatelliteStatus>& satellites() const;

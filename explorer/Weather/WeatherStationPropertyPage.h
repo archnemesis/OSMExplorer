@@ -15,7 +15,7 @@ class QTabWidget;
 class WeatherStationPropertyPage : public SlippyMapLayerObjectPropertyPage {
     Q_OBJECT
 public:
-    explicit WeatherStationPropertyPage(WeatherStationMarker *object);
+    explicit WeatherStationPropertyPage(WeatherStationMarker::Ptr object);
     QString tabTitle() override;
 
 protected slots:

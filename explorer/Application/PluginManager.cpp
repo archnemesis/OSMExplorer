@@ -80,10 +80,10 @@ QList<SlippyMap::SlippyMapWidgetLayer *> PluginManager::getTileLayers() const {
     return layers;
 }
 
-QList<SlippyMap::SlippyMapLayer *> PluginManager::getLayers() const {
-    QList<SlippyMap::SlippyMapLayer *> layers;
+QList<SlippyMap::SlippyMapLayer::Ptr> PluginManager::getLayers() const {
+    QList<SlippyMap::SlippyMapLayer::Ptr> layers;
     for (auto *plugin : m_plugins) {
-        for (auto *pluginLayer : plugin->layers()) {
+        for (const auto& pluginLayer : plugin->layers()) {
             layers.append(pluginLayer);
         }
     }

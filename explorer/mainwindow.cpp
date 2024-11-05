@@ -132,14 +132,16 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->selectedObjectName,
         &QLineEdit::textEdited,
         [this](const QString& text) {
-        if (m_selectedObject) {
-            m_selectedObject->setLabel(text);
+        if (!m_selectedObject.isNull()) {
+            const auto& obj = m_selectedObject.toStrongRef();
+            obj->setLabel(text);
         }
     });
 
     connect(ui->selectedObjectDescription, &QPlainTextEdit::textChanged, [this]() {
-        if (m_selectedObject) {
-            m_selectedObject->setDescription(ui->selectedObjectDescription->toPlainText());
+        if (!m_selectedObject.isNull()) {
+            SlippyMapLayerObject::Ptr obj = m_selectedObject.toStrongRef();
+            obj->setDescription(ui->selectedObjectDescription->toPlainText());
         }
     });
 
@@ -322,7 +324,7 @@ MainWindow::MainWindow(QWidget *parent) :
     /*
      * Default layer setup
      */
-    m_defaultMarkerLayer = new SlippyMapLayer();
+    m_defaultMarkerLayer = SlippyMapLayer::Ptr::create();
     m_defaultMarkerLayer->setName(tr("Layer1"));
     m_layerManager->addLayer(m_defaultMarkerLayer);
     m_layerManager->setDefaultLayer(m_defaultMarkerLayer);
@@ -375,7 +377,7 @@ void MainWindow::loadPluginLayers()
     }
 
 
-    for (auto *layer : pluginManager->getLayers()) {
+    for (const auto& layer : pluginManager->getLayers()) {
         m_layerManager->addLayer(layer);
     }
 }
@@ -399,7 +401,7 @@ void MainWindow::setupWeather()
             this,
             &MainWindow::onWeatherService_stationListReady);
 
-    m_weatherLayer = new SlippyMapLayer();
+    m_weatherLayer = SlippyMapLayer::Ptr::create();
     m_weatherLayer->setName(tr("Weather"));
     m_weatherLayer->setVisible(true);
     m_weatherLayer->setEditable(false);
@@ -464,7 +466,7 @@ void MainWindow::setupContextMenus()
     connect(m_markerVisibilityAction, &QAction::toggled, [this](bool checked) {
         QModelIndex index = ui->tvwMarkers->currentIndex();
         Q_ASSERT(index.row() < m_layerManager->layers().count());
-        SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
+        SlippyMapLayer::Ptr layer = m_layerManager->layers().at(index.row());
         layer->setVisible(checked);
     });
 
@@ -478,14 +480,14 @@ void MainWindow::setupContextMenus()
                 QModelIndex index = ui->tvwMarkers->currentIndex();
                 if (!index.isValid() || index.parent().isValid()) return;
                 Q_ASSERT(index.row() < m_layerManager->layers().count());
-                SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
+                SlippyMapLayer::Ptr layer = m_layerManager->layers().at(index.row());
                 layer->setEditable(!checked);
             });
 
     connect(ui->tvwMarkers, &QTreeView::clicked, [this](const QModelIndex& index) {
         if (!index.isValid() || index.parent().isValid()) return;
         Q_ASSERT(index.row() < m_layerManager->layers().count());
-        SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
+        SlippyMapLayer::Ptr layer = m_layerManager->layers().at(index.row());
         m_markerVisibilityAction->setChecked(layer->isVisible());
         m_markerLockedAction->setChecked(!layer->isEditable());
     });
@@ -493,7 +495,7 @@ void MainWindow::setupContextMenus()
     connect(ui->tvwMarkers, &QTreeView::activated, [this](const QModelIndex& index) {
         if (!index.isValid() || index.parent().isValid()) return;
         Q_ASSERT(index.row() < m_layerManager->layers().count());
-        SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
+        SlippyMapLayer::Ptr layer = m_layerManager->layers().at(index.row());
         m_markerVisibilityAction->setChecked(layer->isVisible());
         m_markerLockedAction->setChecked(!layer->isEditable());
     });
@@ -609,7 +611,7 @@ void MainWindow::setupMap()
     /*
      * GPS Marker Layer
      */
-    m_gpsMarkerLayer = new SlippyMapLayer();
+    m_gpsMarkerLayer = SlippyMapLayer::Ptr::create();
     m_gpsMarkerLayer->setName(tr("GPS"));
     m_gpsMarkerLayer->setEditable(false);
     m_layerManager->addLayer(m_gpsMarkerLayer);
@@ -992,8 +994,8 @@ void MainWindow::onSlippyMapContextMenuRequested(const QPoint &point)
     m_deleteShapeAction->setVisible(false);
 
     QRectF viewport = ui->slippyMap->boundingBoxLatLon();
-    for (SlippyMapLayer *layer : m_layerManager->layers()) {
-        for (SlippyMapLayerObject *object : layer->objects()) {
+    for (SlippyMapLayer::Ptr layer : m_layerManager->layers()) {
+        for (const auto& object: layer->objects()) {
             if (viewport.contains(object->position())) {
                 if (object->contains(menuPosition, ui->slippyMap->zoomLevel())) {
                     ui->slippyMap->setActiveObject(object);
@@ -1030,7 +1032,7 @@ void MainWindow::onSlippyMapRectSelected(QRect rect)
     points[2] = QPointF(bottomRight);
     points[3] = QPointF(topleft.x(), bottomRight.y());
 
-    SlippyMapLayerPolygon *poly = new SlippyMapLayerPolygon(points);
+    auto poly = SlippyMapLayerPolygon::Ptr::create(points);
     poly->setLabel(tr("New Rect"));
     poly->setDescription(tr("New rectangle"));
     poly->setFillColor(m_fillColorSelector->color());
@@ -1082,12 +1084,12 @@ void MainWindow::onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode)
     }
 }
 
-void MainWindow::onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object)
+void MainWindow::onSlippyMapLayerObjectActivated(const SlippyMapLayerObject::Ptr& object)
 {
     auto *commonPropertyPage = new SlippyMapLayerObjectCommonPropertyPage(
         object, m_layerManager);
 
-    connect(object,
+    connect(object.get(),
         &SlippyMapLayerObject::updated,
         commonPropertyPage,
         &SlippyMapLayerObjectPropertyPage::updateUi);
@@ -1095,10 +1097,10 @@ void MainWindow::onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object)
     QList<SlippyMapLayerObjectPropertyPage*> propertyPages;
     propertyPages.append(commonPropertyPage);
 
-    for (auto *propertyPage : object->propertyPages()) {
+    for (auto *propertyPage : object->propertyPages(object)) {
         propertyPages.append(propertyPage);
 
-        connect(object,
+        connect(object.get(),
                 &SlippyMapLayerObject::updated,
                 propertyPage,
                 &SlippyMapLayerObjectPropertyPage::updateUi);
@@ -1107,7 +1109,7 @@ void MainWindow::onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object)
     for (auto *propertyPage : ExplorerApplication::pluginManager()->getPropertyPages()) {
         propertyPages.append(propertyPage);
 
-        connect(object,
+        connect(object.get(),
                 &SlippyMapLayerObject::updated,
                 propertyPage,
                 &SlippyMapLayerObjectPropertyPage::updateUi);
@@ -1121,8 +1123,7 @@ void MainWindow::onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object)
     ui->tabShapeEditor->setVisible(true);
     ui->lblNoShapeSelected->setVisible(false);
 
-    delete m_selectedObjectCopy;
-    m_selectedObjectCopy = object->clone();
+    m_selectedObjectCopy = SlippyMapLayerObject::Ptr(object->clone());
     m_selectedObject = object;
 
     ui->actionEdit_Copy->setEnabled(true);
@@ -1132,7 +1133,7 @@ void MainWindow::onSlippyMapLayerObjectActivated(SlippyMapLayerObject *object)
     ui->actionEdit_Properties->setEnabled(true);
 }
 
-void MainWindow::onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object)
+void MainWindow::onSlippyMapLayerObjectDeactivated(const SlippyMapLayerObject::Ptr& object)
 {
     (void)object;
 
@@ -1149,7 +1150,7 @@ void MainWindow::onSlippyMapLayerObjectDeactivated(SlippyMapLayerObject *object)
     }
 }
 
-void MainWindow::onSlippyMapLayerObjectWasDragged(SlippyMapLayerObject *object)
+void MainWindow::onSlippyMapLayerObjectWasDragged(const SlippyMapLayerObject::Ptr& object)
 {
     object->setSynced(false);
     createUndoModifyObject(
@@ -1157,12 +1158,12 @@ void MainWindow::onSlippyMapLayerObjectWasDragged(SlippyMapLayerObject *object)
             object);
 }
 
-void MainWindow::showPropertyPage(SlippyMapLayerObject *object)
+void MainWindow::showPropertyPage(const SlippyMapLayerObject::Ptr& object)
 {
     QList<SlippyMapLayerObjectPropertyPage*> propertyPages;
     propertyPages.append(new SlippyMapLayerObjectCommonPropertyPage(object, m_layerManager));
 
-    for (auto *propertyPage : object->propertyPages())
+    for (auto *propertyPage : object->propertyPages(object))
         propertyPages.append(propertyPage);
 
     if (m_databaseMode)
@@ -1226,7 +1227,7 @@ void MainWindow::showPropertyPage(SlippyMapLayerObject *object)
     delete dialog;
 }
 
-void MainWindow::onSlippyMapLayerObjectDoubleClicked(SlippyMapLayerObject* object) {
+void MainWindow::onSlippyMapLayerObjectDoubleClicked(const SlippyMapLayerObject::Ptr& object) {
     if (m_selectedObject == nullptr) return;
     showPropertyPage(object);
 }
@@ -1247,15 +1248,14 @@ void MainWindow::onWeatherService_stationListReady(
         const QList<NationalWeatherServiceInterface::WeatherStation>& stations
         )
 {
-    for (auto *marker : m_weatherStationMarkers) {
+    for (const auto& marker: m_weatherStationMarkers) {
         m_layerManager->removeLayerObject(m_weatherLayer, marker);
-        delete marker;
     }
 
     m_weatherStationMarkers.clear();
 
     for (const auto& station : m_weatherService->stations()) {
-        auto *marker = new WeatherStationMarker(station.stationId);
+        auto marker = WeatherStationMarker::Ptr::create(station.stationId);
         marker->setEditable(false);
         marker->setLabel(station.stationId);
         marker->setMovable(false);
@@ -1292,7 +1292,7 @@ void MainWindow::saveWorkspace(QString fileName)
     m_workspaceFileName = fileName;
 
     int layerCount = 0;
-    for (auto *layer: m_layerManager->layers()) {
+    for (const auto& layer: m_layerManager->layers()) {
         if (layer->isEditable())
             layerCount++;
     }
@@ -1303,7 +1303,7 @@ void MainWindow::saveWorkspace(QString fileName)
     out << QString("layers");
     out << layerCount;
 
-    for (auto *layer : m_layerManager->layers()) {
+    for (const auto& layer : m_layerManager->layers()) {
         if (layer->isEditable()) {
             out << layer->name();
             out << layer->description();
@@ -1311,7 +1311,7 @@ void MainWindow::saveWorkspace(QString fileName)
             out << layer->isEditable();
             out << layer->objects().count();
 
-            for (auto *object : layer->objects()) {
+            for (const auto& object: layer->objects()) {
                 //out << QMetaType::type(object->metaObject()->className());
                 out << QString(object->metaObject()->className());
                 qDebug() << "Saving object type:" << QString(object->metaObject()->className());
@@ -1389,7 +1389,7 @@ void MainWindow::onActionFileOpenWorkspaceTriggered()
             in >> layerEditable;
             in >> objectCount;
 
-            auto *layer = new SlippyMapLayer();
+            auto layer = SlippyMapLayer::Ptr::create();
             layer->setName(layerName);
             layer->setDescription(layerDescription);
             layer->setVisible(layerVisible);
@@ -1407,7 +1407,8 @@ void MainWindow::onActionFileOpenWorkspaceTriggered()
 
                 // create a new object and cast to layer object
                 QObject *o = metaObject->newInstance();
-                auto *object = qobject_cast<SlippyMapLayerObject *>(o);
+                auto object = SlippyMapLayerObject::Ptr(
+                        qobject_cast<SlippyMapLayerObject *>(o));
 
                 // unserialize and add to layer
                 object->unserialize(in);
@@ -1442,7 +1443,7 @@ void MainWindow::weatherNetworkAccessManager_onRequestFinished(QNetworkReply* re
     double latitude = relativeLocationGeometryCoords[1].toDouble();
     double longitude = relativeLocationGeometryCoords[0].toDouble();
 
-    SlippyMapWidgetMarker *marker = new SlippyMapWidgetMarker();
+    auto marker = SlippyMapWidgetMarker::Ptr::create();
     marker->setLabel(gridId);
     marker->setPosition(QPointF(longitude, latitude));
     m_layerManager->addLayerObject(m_weatherLayer, marker);
@@ -1454,7 +1455,7 @@ void MainWindow::weatherNetworkAccessManager_onRequestFinished(QNetworkReply* re
 
 void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
 {
-    SlippyMapGpsMarker *marker;
+    SlippyMapGpsMarker::Ptr marker;
 
     if (m_gpsMarkers.contains(identifier)) {
         marker = m_gpsMarkers[identifier];
@@ -1462,7 +1463,7 @@ void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF po
         marker->setPosition(position);
     }
     else {
-        marker = new SlippyMapGpsMarker(position);
+        marker = SlippyMapGpsMarker::Ptr::create(position);
         marker->setLabel(metadata["gps_label"].toString());
         marker->setColor(Qt::green);
         marker->setEditable(false);
@@ -1491,7 +1492,7 @@ void MainWindow::onGpsDataProviderSatellitesUpdated(QString identifier,
                                                     const QList<NmeaSerialLocationDataProvider::SatelliteStatus> &satellites,
                                                     QHash<QString, QVariant> metadata)
 {
-    SlippyMapGpsMarker *marker;
+    SlippyMapGpsMarker::Ptr marker;
     if (m_gpsMarkers.contains(identifier)) {
         marker = m_gpsMarkers[identifier];
         marker->setSatellites(satellites);
@@ -1503,7 +1504,7 @@ void MainWindow::onTvwMarkersContextMenuRequested(const QPoint &point)
     QModelIndex index = ui->tvwMarkers->indexAt(point);
     if (index.isValid()) {
         if (!index.parent().isValid()) {
-            SlippyMapLayer *layer = m_layerManager->layers().at(index.row());
+            SlippyMapLayer::Ptr layer = m_layerManager->layers().at(index.row());
 
             m_clearLayerAction->setVisible(true);
             m_deleteLayerAction->setVisible(true);
@@ -1533,7 +1534,7 @@ void MainWindow::showActiveObjectPropertyPage()
     showPropertyPage(m_selectedObject);
 }
 
-void MainWindow::onPluginLayerObjectProviderMarkerAdded(SlippyMapLayerObject *object)
+void MainWindow::onPluginLayerObjectProviderMarkerAdded(const SlippyMapLayerObject::Ptr& object)
 {
     //ui->slippyMap->addMarker(marker);
 
@@ -1555,12 +1556,12 @@ void MainWindow::createMarkerAtCurrentPosition()
 
 void MainWindow::createMarkerAtPosition(const QPointF& position)
 {
-    SlippyMapWidgetMarker *marker = new SlippyMapWidgetMarker(position);
+    auto marker = SlippyMapWidgetMarker::Ptr::create(position);
     marker->setLabel(SlippyMapWidget::latLonToString(position.y(), position.x()));
     marker->setDescription(tr("Test Label"));
     marker->setColor(m_fillColorSelector->color());
 
-    SlippyMapLayer *target = m_layerManager->activeLayer();
+    SlippyMapLayer::Ptr target = m_layerManager->activeLayer();
     if (target == nullptr)
         target = m_layerManager->defaultLayer();
     if (target == nullptr)
@@ -1661,8 +1662,8 @@ void MainWindow::onEditShapeActionTriggered()
     geoPoint.setX(ui->slippyMap->widgetX2long(m_contextMenuLocation.x()));
     geoPoint.setY(ui->slippyMap->widgetY2lat(m_contextMenuLocation.y()));
 
-    for (SlippyMapLayer *layer : m_layerManager->layers()) {
-        for (SlippyMapLayerObject *object : layer->objects()) {
+    for (SlippyMapLayer::Ptr layer : m_layerManager->layers()) {
+        for (const auto& object: layer->objects()) {
             if (object->isIntersectedBy(viewport)) {
 
             }
@@ -1815,9 +1816,13 @@ void MainWindow::on_tvwMarkers_activated(const QModelIndex &index)
         }
     }
     else {
-        auto *object = static_cast<SlippyMapLayerObject*>(index.internalPointer());
-        if (object != nullptr)
-            showPropertyPage(object);
+        auto *ptr = static_cast<SlippyMapLayerObject*>(index.internalPointer());
+        for (const auto& layer: m_layerManager->layers()) {
+            for (const auto& object: layer->objects()) {
+                if (object == ptr)
+                    showPropertyPage(object);
+            }
+        }
     }
 }
 
@@ -1857,7 +1862,7 @@ void MainWindow::on_actionImport_GPX_triggered()
 
         for (const GPXTrack& track : parser.tracks()) {
             for (const GPXTrackSegment& segment : track.segments()) {
-                auto *layerTrack = new SlippyMapLayerTrack(track);
+                auto layerTrack = SlippyMapLayerTrack::Ptr::create(track);
                 QString trackName = parser.metadata().name();
 
                 qDebug() << "Name:" << parser.metadata().name();
@@ -1936,11 +1941,10 @@ bool MainWindow::closeWorkspace()
             return false;
     }
 
-    for (auto *layer : m_layerManager->layers()) {
+    for (const auto& layer : m_layerManager->layers()) {
         if (layer->isEditable()) {
             m_layerManager->takeLayer(layer);
             layer->removeAll();
-            delete layer;
         }
     }
 
@@ -1984,7 +1988,7 @@ void MainWindow::createNewLayer()
                                               &ok);
 
     if (ok) {
-        auto *newLayer = new SlippyMapLayer();
+        auto newLayer = SlippyMapLayer::Ptr::create();
         newLayer->setName(layerName);
         m_layerManager->addLayer(newLayer);
         createUndoAddLayer(tr("New Layer"), newLayer);
@@ -1995,7 +1999,7 @@ void MainWindow::deleteSelectedLayer()
 {
     QModelIndex selectedLayer = ui->tvwMarkers->currentIndex();
     if (selectedLayer.isValid() && !selectedLayer.parent().isValid()) {
-        SlippyMapLayer *layer = m_layerManager->layers().at(selectedLayer.row());
+        SlippyMapLayer::Ptr layer = m_layerManager->layers().at(selectedLayer.row());
         if (layer->isEditable()) {
             int result = QMessageBox::question(
                     this,
@@ -2017,7 +2021,7 @@ void MainWindow::clearSelectedLayer()
 {
     QModelIndex selectedLayer = ui->tvwMarkers->currentIndex();
     if (selectedLayer.isValid() && !selectedLayer.parent().isValid()) {
-        SlippyMapLayer *layer = m_layerManager->layers().at(selectedLayer.row());
+        SlippyMapLayer::Ptr layer = m_layerManager->layers().at(selectedLayer.row());
         if (layer->isEditable()) {
             int result = QMessageBox::question(
                     this,
@@ -2035,30 +2039,34 @@ void MainWindow::clearSelectedLayer()
 
 void MainWindow::deleteActiveObject()
 {
-    if (m_selectedObject == nullptr) return;
+    if (m_selectedObject.isNull()) return;
+
+    SlippyMapLayerObject::Ptr object = m_selectedObject.toStrongRef();
 
     int result = QMessageBox::question(
             this,
             tr("Delete Object"),
-            tr("Do you want to delete the object '%1'?").arg(m_selectedObject->label()),
+            tr("Do you want to delete the object '%1'?").arg(object->label()),
             QMessageBox::StandardButtons(QMessageBox::Yes | QMessageBox::No));
 
     if (result == QMessageBox::Yes) {
+        createUndoDeleteObject(
+                tr("Delete %1").arg(object->label()),
+                m_layerManager->activeLayer(),
+                object);
+
         m_layerManager->removeLayerObject(
                 m_layerManager->activeLayer(),
-                m_selectedObject);
-        createUndoDeleteObject(
-                tr("Delete %1").arg(m_selectedObject->label()),
-                m_layerManager->activeLayer(),
-                m_selectedObject);
+                object);
 
         // append to the delete list to be sent to db on next sync
         // unless it doesn't have an id yet
-        if (m_databaseMode && !m_selectedObject->id().toString().isEmpty()) {
-            m_databaseObjectDeleteList.append(m_selectedObject);
+        qDebug() << "Object" << object->label() << "going to delete list";
+        if (m_databaseMode && !object->id().toString().isEmpty()) {
+            m_databaseObjectDeleteList.append(object);
         }
 
-        m_selectedObject = nullptr;
+        qDebug() << "After clear";
 
     }
 }
@@ -2071,16 +2079,20 @@ void MainWindow::onTvwMarkersClicked(const QModelIndex &index)
     // set the selected layer to active
     //
     if (!index.parent().isValid()) {
-        auto *layer = m_layerManager->layers().at(index.row());
+        const auto& layer = m_layerManager->layers().at(index.row());
         m_layerManager->setActiveLayer(layer);
     }
     //
     // set the selected object to active
     //
     else {
-        auto *object = static_cast<SlippyMapLayerObject*>(index.internalPointer());
-        if (object != nullptr)
-            ui->slippyMap->setActiveObject(object);
+        auto *ptr = static_cast<SlippyMapLayerObject*>(index.internalPointer());
+        for (const auto& layer: m_layerManager->layers()) {
+            for (const auto& object: layer->objects()) {
+                if (object == ptr)
+                    showPropertyPage(object);
+            }
+        }
     }
 }
 
@@ -2106,7 +2118,7 @@ void MainWindow::renameActiveLayer()
 void MainWindow::deleteActiveLayer()
 {
     if (m_layerManager->activeLayer() == nullptr) return;
-    auto *layer = m_layerManager->activeLayer();
+    const auto& layer = m_layerManager->activeLayer();
 
     if (layer->isEditable()) {
         int result = QMessageBox::question(
@@ -2129,7 +2141,7 @@ void MainWindow::onSlippyMapPolygonSelected(const QList<QPointF>& points)
     if (m_layerManager->activeLayer() == nullptr) return;
 
     QVector<QPointF> pointVector = QVector<QPointF>::fromList(points);
-    auto *polygon = new SlippyMapLayerPolygon(pointVector);
+    auto polygon = SlippyMapLayerPolygon::Ptr::create(pointVector);
     polygon->setLabel(tr("New Polygon"));
     polygon->setStrokeColor(m_strokeColorSelector->color());
     polygon->setStrokeWidth(m_strokeWidth->value());
@@ -2153,7 +2165,7 @@ void MainWindow::onSlippyMapPathSelected(const QList<QPointF> &points)
     if (m_layerManager->activeLayer() == nullptr) return;
 
     QVector<QPointF> pointVector = QVector<QPointF>::fromList(points);
-    auto *path = new SlippyMapLayerPath(pointVector);
+    auto path = SlippyMapLayerPath::Ptr::create(pointVector);
     path->setLabel(tr("New Path"));
     path->setLineColor(m_fillColorSelector->color());
     path->setStrokeColor(m_strokeColorSelector->color());
@@ -2175,7 +2187,7 @@ void MainWindow::onAnimationTimerTimeout()
         ui->slippyMap->previousFrame();
 }
 
-void MainWindow::onSlippyMapLayerObjectUpdated(SlippyMapLayerObject *object)
+void MainWindow::onSlippyMapLayerObjectUpdated(const SlippyMapLayerObject::Ptr& object)
 {
     ui->slippyMap->update();
 }
@@ -2192,8 +2204,8 @@ void MainWindow::undo()
 
         switch (event.action) {
             case HistoryManager::AddObject: {
-                SlippyMapLayer *layer = event.layer;
-                SlippyMapLayerObject *object = event.original;
+                const auto& layer = event.layer;
+                SlippyMapLayerObject::Ptr object = event.original;
                 m_layerManager->removeLayerObject(layer, object);
 
                 // the user may have created, then saved, then
@@ -2205,8 +2217,8 @@ void MainWindow::undo()
                 break;
             }
             case HistoryManager::DeleteObject: {
-                SlippyMapLayer *layer = event.layer;
-                SlippyMapLayerObject *object = event.original;
+                SlippyMapLayer::Ptr layer = event.layer;
+                SlippyMapLayerObject::Ptr object = event.original;
                 m_layerManager->addLayerObject(layer, object);
 
                 // user undid the delete, so we can take it off
@@ -2218,20 +2230,19 @@ void MainWindow::undo()
             }
             case HistoryManager::ModifyObject: {
                 // the clone contains the original contents
-                SlippyMapLayerObject *temp = event.original->clone();
-                SlippyMapLayerObject *object = event.original;
-                SlippyMapLayerObject *clone = event.copy;
+                SlippyMapLayerObject::Ptr temp = SlippyMapLayerObject::Ptr(event.original->clone());
+                SlippyMapLayerObject::Ptr object = event.original;
+                SlippyMapLayerObject::Ptr clone = event.copy;
 
                 // we need to replace the original with the copy
-                event.original->copy(event.copy);
+                event.original->copy(event.copy.get());
 
                 // now put the "new" contents into copy for redo later
-                event.copy->copy(temp);
-                delete temp;
+                event.copy->copy(temp.get());
                 break;
             }
             case HistoryManager::AddLayer: {
-                SlippyMapLayer *layer = event.layer;
+                const auto& layer = event.layer;
                 m_layerManager->takeLayer(layer);
 
                 // user could have added a layer, saved and then
@@ -2244,7 +2255,7 @@ void MainWindow::undo()
                 break;
             }
             case HistoryManager::DeleteLayer: {
-                SlippyMapLayer *layer = event.layer;
+                SlippyMapLayer::Ptr layer = event.layer;
                 m_layerManager->addLayer(layer);
 
                 // remove it from delete list
@@ -2272,8 +2283,8 @@ void MainWindow::redo()
 
         switch (event.action) {
             case HistoryManager::DeleteObject: {
-                SlippyMapLayer *layer = event.layer;
-                SlippyMapLayerObject *object = event.original;
+                SlippyMapLayer::Ptr layer = event.layer;
+                SlippyMapLayerObject::Ptr object = event.original;
                 m_layerManager->removeLayerObject(layer, object);
 
                 // put it back on the delete list (unless it
@@ -2284,8 +2295,8 @@ void MainWindow::redo()
                 break;
             }
             case HistoryManager::AddObject: {
-                SlippyMapLayer *layer = event.layer;
-                SlippyMapLayerObject *object = event.original;
+                SlippyMapLayer::Ptr layer = event.layer;
+                SlippyMapLayerObject::Ptr object = event.original;
                 m_layerManager->addLayerObject(layer, object);
 
                 // remove it from the delete list
@@ -2296,20 +2307,19 @@ void MainWindow::redo()
             }
             case HistoryManager::ModifyObject: {
                 // the clone contains the original contents
-                SlippyMapLayerObject *temp = event.original->clone();
-                SlippyMapLayerObject *object = event.original;
-                SlippyMapLayerObject *clone = event.copy;
+                SlippyMapLayerObject::Ptr temp = SlippyMapLayerObject::Ptr(event.original->clone());
+                SlippyMapLayerObject::Ptr object = event.original;
+                SlippyMapLayerObject::Ptr clone = event.copy;
 
                 // we need to replace the original with the copy
-                event.original->copy(event.copy);
+                event.original->copy(event.copy.get());
 
                 // now put the "new" contents into copy for undo later
-                event.copy->copy(temp);
-                delete temp;
+                event.copy->copy(temp.get());
                 break;
             }
             case HistoryManager::AddLayer: {
-                SlippyMapLayer *layer = event.layer;
+                SlippyMapLayer::Ptr layer = event.layer;
                 m_layerManager->addLayer(layer);
 
                 // remove it from delete list
@@ -2319,7 +2329,7 @@ void MainWindow::redo()
                 break;
             }
             case HistoryManager::DeleteLayer: {
-                SlippyMapLayer *layer = event.layer;
+                SlippyMapLayer::Ptr layer = event.layer;
                 m_layerManager->takeLayer(layer);
 
                 // put it back on the delete list (unless it
@@ -2342,11 +2352,11 @@ void MainWindow::redo()
         ui->actionEdit_Undo->setText(tr("Undo") + " " + m_historyManager->currentUndoDescription());
 }
 
-void MainWindow::createUndoAddObject(const QString &description, SlippyMapLayer *layer, SlippyMapLayerObject *object)
+void MainWindow::createUndoAddObject(const QString &description, SlippyMapLayer::Ptr layer, const SlippyMapLayerObject::Ptr& object)
 {
     HistoryManager::HistoryEvent event;
     event.action = HistoryManager::AddObject;
-    event.layer = layer;
+    event.layer = SlippyMapLayer::Ptr(layer);
     event.original = object;
     event.copy = nullptr;
     event.description = description;
@@ -2356,7 +2366,7 @@ void MainWindow::createUndoAddObject(const QString &description, SlippyMapLayer 
     setWorkspaceDirty(true);
 }
 
-void MainWindow::createUndoModifyObject(const QString &description, SlippyMapLayerObject *object)
+void MainWindow::createUndoModifyObject(const QString &description, const SlippyMapLayerObject::Ptr& object)
 {
     HistoryManager::HistoryEvent event;
     event.description = description;
@@ -2366,11 +2376,13 @@ void MainWindow::createUndoModifyObject(const QString &description, SlippyMapLay
     // if requested by undo
     event.copy = m_selectedObjectCopy;
     m_historyManager->addEvent(event);
-    m_selectedObjectCopy = nullptr;
+    m_selectedObjectCopy.clear();
     setWorkspaceDirty(true);
 }
 
-void MainWindow::createUndoDeleteObject(const QString &description, SlippyMapLayer *layer, SlippyMapLayerObject *object)
+void MainWindow::createUndoDeleteObject(const QString &description,
+                                        const SlippyMapLayer::Ptr& layer,
+                                        const SlippyMapLayerObject::Ptr& object)
 {
     HistoryManager::HistoryEvent event;
     event.description = description;
@@ -2381,7 +2393,7 @@ void MainWindow::createUndoDeleteObject(const QString &description, SlippyMapLay
     setWorkspaceDirty(true);
 }
 
-void MainWindow::createUndoAddLayer(const QString &description, SlippyMapLayer *layer)
+void MainWindow::createUndoAddLayer(const QString &description, SlippyMapLayer::Ptr layer)
 {
     HistoryManager::HistoryEvent event;
     event.description = description;
@@ -2391,7 +2403,7 @@ void MainWindow::createUndoAddLayer(const QString &description, SlippyMapLayer *
     setWorkspaceDirty(true);
 }
 
-void MainWindow::createUndoDeleteLayer(const QString &description, SlippyMapLayer *layer)
+void MainWindow::createUndoDeleteLayer(const QString &description, SlippyMapLayer::Ptr layer)
 {
     HistoryManager::HistoryEvent event;
     event.description = description;
@@ -2444,20 +2456,15 @@ void MainWindow::cutActiveObject()
 
 void MainWindow::copyActiveObject()
 {
-    if (m_selectedObject == nullptr) return;
+    if (m_selectedObject.isNull()) return;
 
-    // check for and delete last copied item
-    if (m_clipBoard.action == Clipboard::Copy || m_clipBoard.action == Clipboard::Cut) {
-        // don't delete the item we are copying!
-        if (m_selectedObject != m_clipBoard.object)
-            delete m_clipBoard.object;
-    }
+    const auto& object = m_selectedObject.toStrongRef();
 
     // create clipboard entry
     m_clipBoard.type = Clipboard::Object;
     m_clipBoard.action = Clipboard::Copy;
     m_clipBoard.layer = m_layerManager->activeLayer();
-    m_clipBoard.object = m_selectedObject->clone();
+    m_clipBoard.object = SlippyMapLayerObject::Ptr(object->clone());
 
     // activate paste menu entry
     ui->actionEdit_Paste->setEnabled(true);
@@ -2467,8 +2474,8 @@ void MainWindow::pasteObject()
 {
     switch (m_clipBoard.type) {
         case Clipboard::Object: {
-            auto *layer = m_clipBoard.layer;
-            auto *object = m_clipBoard.object;
+            auto layer = m_clipBoard.layer;
+            auto object = m_clipBoard.object;
 
             // paste it onto the active layer, if there is one.
             // otherwise go to the layer it came from?
@@ -2477,7 +2484,8 @@ void MainWindow::pasteObject()
 
             // clone the object because you don't want to paste
             // the same object more than once
-            m_layerManager->addLayerObject(layer, object->clone());
+            auto clone = SlippyMapLayerObject::Ptr(object->clone());
+            m_layerManager->addLayerObject(layer, clone);
 
             createUndoAddObject(
                     tr("Paste"),
@@ -2551,7 +2559,7 @@ void MainWindow::loadViewportData()
         QString layerDesc = layerQuery.value(2).toString();
         int order = layerQuery.value(3).toInt();
 
-        SlippyMapLayer *layer = nullptr;
+        SlippyMapLayer::Ptr layer = nullptr;
         for (auto l: m_layerManager->layers()) {
             qDebug() << "Matching" << l->id().toString() << "with" << layerId;
             if (layerId.compare(l->id().toString()) == 0) {
@@ -2560,7 +2568,7 @@ void MainWindow::loadViewportData()
         }
 
         if (layer == nullptr) {
-            layer = new SlippyMapLayer();
+            layer = SlippyMapLayer::Ptr::create();
             layer->setId(layerId);
             layer->setSynced(true); // so we get the first update
             m_layerManager->addLayer(layer);
@@ -2598,7 +2606,10 @@ void MainWindow::loadViewportData()
             QJsonDocument document = QJsonDocument::fromJson(data.toUtf8());
             QJsonObject root = document.object();
 
-            for (auto *object: layer->objects()) {
+            QObject *o = nullptr;
+            SlippyMapLayerObject::Ptr object;
+
+            for (const auto& object: layer->objects()) {
                 if (object->id().compare(id) == 0) {
                     if (object->isSynced()) {
                         // update with new data
@@ -2615,8 +2626,8 @@ void MainWindow::loadViewportData()
             const QMetaObject *metaObject = QMetaType::metaObjectForType(typeId);
 
             // create a new object and cast to layer object
-            QObject *o = metaObject->newInstance();
-            auto *object = qobject_cast<SlippyMapLayerObject *>(o);
+            o = metaObject->newInstance();
+            object = SlippyMapLayerObject::Ptr(qobject_cast<SlippyMapLayerObject *>(o));
 
             object->setId(id);
             object->setLabel(label);
@@ -2645,7 +2656,7 @@ void MainWindow::saveWorkspaceToDatabase()
 
     if (result != QMessageBox::Yes) return;
 
-    for (auto *layer: m_databaseLayerDeleteList) {
+    for (const auto& layer: m_databaseLayerDeleteList) {
         qDebug() << "Deleting layer" << layer->id() << layer->name();
 
         QString queryString(
@@ -2668,7 +2679,7 @@ void MainWindow::saveWorkspaceToDatabase()
         }
     }
 
-    for (auto *layer: m_layerManager->layers()) {
+    for (const auto& layer: m_layerManager->layers()) {
         if (layer->isEditable()) {
             if (!layer->isSynced()) {
                 qDebug() << "Updating layer" << layer->id() << layer->name();
@@ -2714,7 +2725,8 @@ void MainWindow::saveWorkspaceToDatabase()
             // objects that were deleted need to be deleted
             // on the server
             //
-            for (auto *object: m_databaseObjectDeleteList) {
+            for (const auto& object: m_databaseObjectDeleteList) {
+
                 qDebug() << "Deleting object" << object->id() << object->label();
 
                 QString queryString(
@@ -2740,7 +2752,7 @@ void MainWindow::saveWorkspaceToDatabase()
                 m_databaseObjectDeleteList.removeOne(object);
             }
 
-            for (auto *object: layer->objects()) {
+            for (const auto& object: layer->objects()) {
                 if (!object->isSynced()) {
                     qDebug() << "Updating object" << object->id() << object->label();
 

@@ -11,6 +11,8 @@
 class WeatherStationMarker : public SlippyMap::SlippyMapWidgetMarker {
     Q_OBJECT
 public:
+    typedef QSharedPointer<WeatherStationMarker> Ptr;
+
     explicit WeatherStationMarker(QString stationId, QWidget* parent = nullptr);
     const QString& stationId() const;
 

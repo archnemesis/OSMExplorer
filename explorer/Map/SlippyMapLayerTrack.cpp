@@ -395,11 +395,13 @@ int SlippyMapLayerTrack::waypointRadius() const
     return m_waypointRadius;
 }
 
-QList<SlippyMapLayerObjectPropertyPage*> SlippyMapLayerTrack::propertyPages() const
+QList<SlippyMapLayerObjectPropertyPage*> SlippyMapLayerTrack::propertyPages(
+        SlippyMapLayerObject::Ptr object
+        ) const
 {
     return {
-        new SlippyMapLayerTrackPropertyPage((SlippyMapLayerObject *) this),
-        new SlippyMapLayerTrackStylePropertyPage((SlippyMapLayerObject *)this)
+        new SlippyMapLayerTrackPropertyPage(object),
+        new SlippyMapLayerTrackStylePropertyPage(object)
     };
 }
 

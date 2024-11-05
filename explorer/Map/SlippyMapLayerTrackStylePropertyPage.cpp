@@ -10,7 +10,7 @@
 #include <QVBoxLayout>
 
 
-SlippyMapLayerTrackStylePropertyPage::SlippyMapLayerTrackStylePropertyPage(SlippyMapLayerObject *object) :
+SlippyMapLayerTrackStylePropertyPage::SlippyMapLayerTrackStylePropertyPage(SlippyMapLayerObject::Ptr object) :
     SlippyMapLayerObjectPropertyPage(object)
 {
 }
@@ -32,7 +32,7 @@ void SlippyMapLayerTrackStylePropertyPage::save()
 
 void SlippyMapLayerTrackStylePropertyPage::setupUi()
 {
-    m_track = dynamic_cast<SlippyMapLayerTrack*>(m_object);
+    m_track = dynamic_cast<SlippyMapLayerTrack*>(m_object.get());
     m_lineColorSelector = new ColorSelector();
     m_lineStrokeColorSelector = new ColorSelector();
     m_waypointColorSelector = new ColorSelector();

@@ -8,7 +8,7 @@
 #include <QFormLayout>
 #include <QVBoxLayout>
 
-DatabaseObjectPropertyPage::DatabaseObjectPropertyPage(SlippyMap::SlippyMapLayerObject *object)
+DatabaseObjectPropertyPage::DatabaseObjectPropertyPage(SlippyMap::SlippyMapLayerObject::Ptr object)
         : SlippyMapLayerObjectPropertyPage(object)
 {
 

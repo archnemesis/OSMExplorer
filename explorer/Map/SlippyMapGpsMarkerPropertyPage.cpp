@@ -10,7 +10,7 @@
 #include <QProgressBar>
 #include <QFormLayout>
 
-SlippyMapGpsMarkerPropertyPage::SlippyMapGpsMarkerPropertyPage(SlippyMapLayerObject *object)
+SlippyMapGpsMarkerPropertyPage::SlippyMapGpsMarkerPropertyPage(const SlippyMapLayerObject::Ptr& object)
         : SlippyMapLayerObjectPropertyPage(object)
 {
 
@@ -56,7 +56,7 @@ void SlippyMapGpsMarkerPropertyPage::save()
 
 void SlippyMapGpsMarkerPropertyPage::updateUi()
 {
-    SlippyMapGpsMarker *marker = dynamic_cast<SlippyMapGpsMarker*>(m_object);
+    SlippyMapGpsMarker *marker = dynamic_cast<SlippyMapGpsMarker*>(m_object.get());
     int index = 0;
     for (auto satellite: marker->satellites()) {
         m_satellites.at(index)->setValue(satellite.snr());
