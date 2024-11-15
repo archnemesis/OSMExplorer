@@ -12,6 +12,7 @@
 using namespace color_widgets;
 using namespace SlippyMap;
 
+class QCheckBox;
 class QSpinBox;
 class SlippyMapLayerTrack;
 
@@ -31,6 +32,7 @@ private:
     QSpinBox *m_lineStrokeWidth;
     QSpinBox *m_waypointRadius;
     SlippyMapLayerTrack *m_track;
+    QCheckBox *m_waypointsVisible;
 };
 
 

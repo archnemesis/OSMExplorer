@@ -1,29 +1,46 @@
 <RCC>
-    <qresource prefix="/icons">
-        <file alias="satellite.png">resources/icons/satellite.png</file>
-        <file alias="pushpin.png">resources/icons/pushpin.png</file>
-        <file alias="map.png">resources/icons/map.png</file>
-        <file alias="swap.png">resources/icons/swap.png</file>
-        <file alias="zoomin.png">resources/icons/zoomin.png</file>
-        <file alias="zoomout.png">resources/icons/zoomout.png</file>
-        <file alias="settings.png">resources/icons/settings.png</file>
-        <file alias="layers.png">resources/icons/layers.png</file>
-        <file alias="path.png">resources/icons/path.png</file>
-        <file alias="ellipse.png">resources/icons/ellipse.png</file>
-        <file alias="polygon.png">resources/icons/polygon.png</file>
-        <file alias="save.png">resources/icons/save.png</file>
-        <file alias="line.png">resources/icons/line.png</file>
-        <file alias="play.png">resources/icons/play.png</file>
-        <file alias="pause.png">resources/icons/pause.png</file>
-        <file alias="fforward.png">resources/icons/fforward.png</file>
-        <file alias="rewind.png">resources/icons/rewind.png</file>
-        <file alias="newfile.png">resources/icons/newfile.png</file>
-        <file alias="folderopen.png">resources/icons/folderopen.png</file>
-        <file alias="arrowright.png">resources/icons/arrowright.png</file>
-        <file alias="arrowdown.png">resources/icons/arrowdown.png</file>
-    </qresource>
-    <qresource prefix="/images">
-        <file alias="loading_tile_256.png">resources/loading_tile_256.png</file>
-        <file alias="icon-128.png">resources/icon-128.png</file>
-    </qresource>
+  <qresource prefix="/icons">
+    <file alias="toolbar/image-add.svg">resources/toolbar/image-add.svg</file>
+    <file alias="satellite.png">resources/icons/light/satellite.png</file>
+    <file alias="pushpin.png">resources/icons/light/pushpin.png</file>
+    <file alias="map.png">resources/icons/light/map.png</file>
+    <file alias="zoomin.png">resources/icons/light/zoomin.png</file>
+    <file alias="zoomout.png">resources/icons/light/zoomout.png</file>
+    <file alias="settings.png">resources/icons/light/settings.png</file>
+    <file alias="layers.png">resources/icons/light/layers.png</file>
+    <file alias="path.png">resources/icons/light/path.png</file>
+    <file alias="ellipse.png">resources/icons/light/ellipse.png</file>
+    <file alias="polygon.png">resources/icons/light/polygon.png</file>
+    <file alias="save.png">resources/icons/light/save.png</file>
+    <file alias="line.png">resources/icons/light/line.png</file>
+    <file alias="play.png">resources/icons/light/play.png</file>
+    <file alias="pause.png">resources/icons/light/pause.png</file>
+    <file alias="fforward.png">resources/icons/light/fforward.png</file>
+    <file alias="rewind.png">resources/icons/light/rewind.png</file>
+    <file alias="newfile.png">resources/icons/light/newfile.png</file>
+    <file alias="folderopen.png">resources/icons/light/folderopen.png</file>
+    <file alias="arrowright.png">resources/icons/light/arrowright.png</file>
+    <file alias="arrowdown.png">resources/icons/light/arrowdown.png</file>
+    <file alias="arrowright_dark.png">resources/icons/light/arrowright_dark.png</file>
+    <file alias="arrowdown_dark.png">resources/icons/light/arrowdown_dark.png</file>
+    <file alias="toolbar/cut.svg">resources/toolbar/cut.svg</file>
+    <file alias="toolbar/copy.svg">resources/toolbar/copy.svg</file>
+    <file alias="toolbar/paste.svg">resources/toolbar/paste.svg</file>
+    <file alias="toolbar/save.svg">resources/toolbar/save.svg</file>
+    <file alias="toolbar/save-as.svg">resources/toolbar/save-as.svg</file>
+    <file alias="toolbar/open.svg">resources/toolbar/open.svg</file>
+    <file alias="toolbar/new.svg">resources/toolbar/new.svg</file>
+    <file alias="toolbar/path-add.svg">resources/toolbar/path-add.svg</file>
+    <file alias="toolbar/polygon-add.svg">resources/toolbar/polygon-add.svg</file>
+    <file alias="toolbar/marker-add.svg">resources/toolbar/marker-add.svg</file>
+    <file alias="toolbar/layer-add.svg">resources/toolbar/layer-add.svg</file>
+    <file alias="toolbar/rect-add.svg">resources/toolbar/rect-add.svg</file>
+    <file alias="toolbar/gps-add.svg">resources/toolbar/gps-add.svg</file>
+    <file alias="toolbar/ellipse-add-extent.svg">resources/toolbar/ellipse-add-extent.svg</file>
+  </qresource>
+  <qresource prefix="/images">
+    <file alias="loading_tile_256.png">resources/loading_tile_256.png</file>
+    <file alias="icon-128.png">resources/icon-128.png</file>
+    <file alias="splash.svg">resources/splash.svg</file>
+  </qresource>
 </RCC>

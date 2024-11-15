@@ -11,12 +11,14 @@
 #include <QJsonDocument>
 #include <QLabel>
 #include <QListWidgetItem>
+#include <QMenuBar>
 #include <QMenu>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QPalette>
 #include <QPluginLoader>
+#include <QProgressBar>
 #include <QSettings>
 #include <QSpinBox>
 #include <QSqlError>
@@ -48,6 +50,8 @@
 #include "Application/DatabaseManager.h"
 #include "Dialog/DatabaseConnectionDialog.h"
 #include "Database/DatabaseObjectPropertyPage.h"
+#include "Network/ServerConnectionDialog.h"
+#include "Network/WorkspaceSelectionDialog.h"
 
 #include "defaults.h"
 #include "config.h"
@@ -87,7 +91,7 @@ MainWindow::MainWindow(QWidget *parent) :
     m_weatherStationMarker(nullptr)
 {
     ui->setupUi(this);
-    setWindowTitle(tr("OSMExplorer") + " - Untitled.osm");
+    setWindowTitle(tr("Untitled.osm"));
     loadPluginLayers();
 
     {
@@ -124,6 +128,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     ui->tabShapeEditor->setVisible(false);
+    ui->sidebarSaveButton->setVisible(false);
+    ui->sidebarResetButton->setVisible(false);
     m_defaultPalette = qApp->palette();
 
     /*
@@ -145,18 +151,21 @@ MainWindow::MainWindow(QWidget *parent) :
         }
     });
 
-    /*
-     * Save workspace action
-     */
+    connect(ui->actionFile_NewWorkspace,
+            &QAction::triggered,
+            this,
+            &MainWindow::newWorkspace);
+
     connect(ui->actionFile_SaveWorkspace,
         &QAction::triggered,
         this,
-        &MainWindow::onActionFileSaveWorkspaceTriggered);
+            QOverload<>::of(&MainWindow::saveWorkspace)
+            );
 
     connect(ui->actionFile_OpenWorkspace,
             &QAction::triggered,
             this,
-            &MainWindow::onActionFileOpenWorkspaceTriggered);
+            &MainWindow::openWorkspace);
 
     connect(ui->actionFile_CloseWorkspace,
             &QAction::triggered,
@@ -167,6 +176,23 @@ MainWindow::MainWindow(QWidget *parent) :
         &QAction::triggered,
         this,
         &MainWindow::close);
+
+    connect(ui->actionLayer_SortAscending,
+            &QAction::triggered,
+            [this]() {
+        m_layerManager->sort(SlippyMapLayerManager::LayerSortName, Qt::AscendingOrder);
+    });
+
+    connect(ui->actionLayer_SortDescending,
+            &QAction::triggered,
+            [this]() {
+                m_layerManager->sort(SlippyMapLayerManager::LayerSortName, Qt::DescendingOrder);
+            });
+
+    QActionGroup *sortActionGroup = new QActionGroup(this);
+    sortActionGroup->addAction(ui->actionLayer_SortAscending);
+    sortActionGroup->addAction(ui->actionLayer_SortDescending);
+    sortActionGroup->setExclusive(true);
 
     /*
      * Enable showing forecast data as the map moves
@@ -234,7 +260,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionFile_ConnectToDatabase,
             &QAction::triggered,
             this,
-            &MainWindow::connectToDatabase);
+            &MainWindow::startServerLogin);
 
     /*
      * Drawing
@@ -273,13 +299,8 @@ MainWindow::MainWindow(QWidget *parent) :
             this,
             &MainWindow::onTvwMarkersClicked);
 
-    loadStartupSettings();
-    loadLayers();
-    setupMap();
-    setupWeather();
-    setupContextMenus();
-    refreshSettings();
-    setupToolbar();
+    m_serverRequestProgress = new QProgressBar();
+    m_serverRequestProgress->setVisible(false);
 
     m_statusBarPositionLabel = new QLabel();
     m_statusBarPositionLabel->setFrameStyle(QFrame::Sunken);
@@ -290,10 +311,17 @@ MainWindow::MainWindow(QWidget *parent) :
     m_statusBarGpsStatusLabel->setText("GPS Position: 0.000 N 0.000 E");
 
     statusBar()->addPermanentWidget(m_statusBarStatusLabel, 1);
+    statusBar()->addPermanentWidget(m_serverRequestProgress);
     statusBar()->addPermanentWidget(m_statusBarGpsStatusLabel);
     statusBar()->addPermanentWidget(m_statusBarPositionLabel);
 
-    ui->slippyMap->setFocus(Qt::OtherFocusReason);
+    loadStartupSettings();
+    loadLayers();
+    setupMap();
+    setupWeather();
+    setupContextMenus();
+    refreshSettings();
+    setupToolbar();
 
     m_animationTimer = new QTimer();
     m_animationTimer->setInterval(1000);
@@ -319,6 +347,25 @@ MainWindow::MainWindow(QWidget *parent) :
         }
     }
 
+    QSettings settings;
+    bool visibility = settings.value("dock/visibility", true).toBool();
+    ui->dockWidget->setVisible(visibility);
+    ui->actionViewSidebar->setChecked(visibility);
+
+    connect(ui->dockWidget,
+            &OEDockWidget::closed,
+            [this]() {
+        QSettings().setValue("dock/visibility", false);
+        ui->actionViewSidebar->setChecked(false);
+    });
+
+    connect(ui->actionViewSidebar,
+            &QAction::toggled,
+            [this](bool state) {
+        QSettings().setValue("dock/visibility", state);
+        ui->dockWidget->setVisible(state);
+    });
+
     loadMarkers();
 
     m_serverInterface = new ServerInterface(this);
@@ -327,6 +374,23 @@ MainWindow::MainWindow(QWidget *parent) :
         &ServerInterface::layersRequestFinished,
         this,
         &MainWindow::onServerInterfaceLayersRequestFinished);
+
+    connect(m_serverInterface,
+            &ServerInterface::authTokenRequestSucceeded,
+            this,
+            &MainWindow::onServerInterfaceAuthTokenRequestFinished);
+
+    connect(m_serverInterface,
+            &ServerInterface::authTokenRequestFailed,
+            this,
+            &MainWindow::onServerInterfaceAuthTokenRequestFailed);
+
+    connect(m_serverInterface,
+            &ServerInterface::workspacesRequestFinished,
+            this,
+            &MainWindow::onServerInterfaceWorkspacesRequestFinished);
+
+    m_serverNetworkManager = new QNetworkAccessManager(this);
 
     /*
      * Default layer setup
@@ -337,6 +401,9 @@ MainWindow::MainWindow(QWidget *parent) :
     m_layerManager->setDefaultLayer(m_defaultMarkerLayer);
 
     setWorkspaceDirty(false);
+    disableDrawing();
+
+    startServerLogin();
 }
 
 MainWindow::~MainWindow()
@@ -412,6 +479,7 @@ void MainWindow::setupWeather()
     m_weatherLayer->setName(tr("Weather"));
     m_weatherLayer->setVisible(true);
     m_weatherLayer->setEditable(false);
+    m_weatherLayer->setColor(QColor(0x00, 0x00, 0xCC));
     m_layerManager->addLayer(m_weatherLayer);
 }
 
@@ -466,12 +534,13 @@ void MainWindow::setupContextMenus()
 
     m_treeViewMenu->addSeparator();
 
-    m_markerVisibilityAction = new QAction();
-    m_markerVisibilityAction->setText(tr("Visible"));
-    m_markerVisibilityAction->setCheckable(true);
-    m_treeViewMenu->addAction(m_markerVisibilityAction);
-    connect(m_markerVisibilityAction, &QAction::toggled, [this](bool checked) {
+    m_layerVisibilityAction = new QAction();
+    m_layerVisibilityAction->setText(tr("Visible"));
+    m_layerVisibilityAction->setCheckable(true);
+    m_treeViewMenu->addAction(m_layerVisibilityAction);
+    connect(m_layerVisibilityAction, &QAction::toggled, [this](bool checked) {
         QModelIndex index = ui->tvwMarkers->currentIndex();
+        if (!index.isValid()) return;
         Q_ASSERT(index.row() < m_layerManager->layers().count());
         SlippyMapLayer::Ptr layer = m_layerManager->layers().at(index.row());
         layer->setVisible(checked);
@@ -491,19 +560,20 @@ void MainWindow::setupContextMenus()
                 layer->setEditable(!checked);
             });
 
-    connect(ui->tvwMarkers, &QTreeView::clicked, [this](const QModelIndex& index) {
-        if (!index.isValid() || index.parent().isValid()) return;
-        Q_ASSERT(index.row() < m_layerManager->layers().count());
-        SlippyMapLayer::Ptr layer = m_layerManager->layers().at(index.row());
-        m_markerVisibilityAction->setChecked(layer->isVisible());
-        m_markerLockedAction->setChecked(!layer->isEditable());
-    });
+    // causing multiple layers to be shown/hidden with checkbox in tvw
+//    connect(ui->tvwMarkers, &QTreeView::clicked, [this](const QModelIndex& index) {
+//        if (!index.isValid() || index.parent().isValid()) return;
+//        Q_ASSERT(index.row() < m_layerManager->layers().count());
+//        SlippyMapLayer::Ptr layer = m_layerManager->layers().at(index.row());
+//        m_layerVisibilityAction->setChecked(layer->isVisible());
+//        m_markerLockedAction->setChecked(!layer->isEditable());
+//    });
 
     connect(ui->tvwMarkers, &QTreeView::activated, [this](const QModelIndex& index) {
         if (!index.isValid() || index.parent().isValid()) return;
         Q_ASSERT(index.row() < m_layerManager->layers().count());
         SlippyMapLayer::Ptr layer = m_layerManager->layers().at(index.row());
-        m_markerVisibilityAction->setChecked(layer->isVisible());
+        m_layerVisibilityAction->setChecked(layer->isVisible());
         m_markerLockedAction->setChecked(!layer->isEditable());
     });
 
@@ -516,14 +586,11 @@ void MainWindow::setupContextMenus()
 
     m_addMarkerAction = new QAction();
     m_addMarkerAction->setText(tr("Add Marker"));
+    m_addMarkerAction->setIcon(QIcon(":/icons/toolbar/marker-add.svg"));
     connect(m_addMarkerAction,
             &QAction::triggered,
             this,
             &MainWindow::createMarkerAtContextMenuPosition);
-    connect(ui->actionObject_NewMarkerAtCurrent,
-            &QAction::triggered,
-            this,
-            &MainWindow::createMarkerAtCurrentPosition);
 
     m_deleteObjectAction = new QAction();
     m_deleteObjectAction->setText(tr("Delete..."));
@@ -598,6 +665,10 @@ void MainWindow::setupContextMenus()
     m_contextMenu->addSeparator();
     m_contextMenu->addAction(m_getForecastHereAction);
     m_contextMenu->addSeparator();
+    m_contextMenu->addAction(ui->actionEdit_Cut);
+    m_contextMenu->addAction(ui->actionEdit_Copy);
+    m_contextMenu->addAction(ui->actionEdit_Paste);
+    m_contextMenu->addSeparator();
     m_contextMenu->addAction(m_centerMapAction);
     m_contextMenu->addAction(m_zoomInHereMapAction);
     m_contextMenu->addAction(m_zoomOutHereMapAction);
@@ -621,6 +692,7 @@ void MainWindow::setupMap()
     m_gpsMarkerLayer = SlippyMapLayer::Ptr::create();
     m_gpsMarkerLayer->setName(tr("GPS"));
     m_gpsMarkerLayer->setEditable(false);
+    m_gpsMarkerLayer->setColor(QColor("#FF00CC00"));
     m_layerManager->addLayer(m_gpsMarkerLayer);
 
     connect(ui->slippyMap, &SlippyMapWidget::centerChanged, this, &MainWindow::onSlippyMapCenterChanged);
@@ -636,6 +708,7 @@ void MainWindow::setupMap()
     connect(ui->slippyMap, &SlippyMapWidget::rectSelected, this, &MainWindow::onSlippyMapRectSelected);
     connect(ui->slippyMap, &SlippyMapWidget::polygonSelected, this, &MainWindow::onSlippyMapPolygonSelected);
     connect(ui->slippyMap, &SlippyMapWidget::pathSelected, this, &MainWindow::onSlippyMapPathSelected);
+    connect(ui->slippyMap, &SlippyMapWidget::pointSelected, this, &MainWindow::onSlippyMapPointSelected);
     connect(ui->slippyMap, &SlippyMapWidget::objectActivated, this, &MainWindow::onSlippyMapLayerObjectActivated);
     connect(ui->slippyMap, &SlippyMapWidget::objectDeactivated, this, &MainWindow::onSlippyMapLayerObjectDeactivated);
     connect(ui->slippyMap, &SlippyMapWidget::objectDoubleClicked, this, &MainWindow::onSlippyMapLayerObjectDoubleClicked);
@@ -650,6 +723,18 @@ void MainWindow::setupMap()
             &QPushButton::clicked,
             ui->slippyMap,
             &SlippyMapWidget::decreaseZoomLevel);
+
+    bool crosshairs = QSettings().value("map/crosshairs", false).toBool();
+    ui->slippyMap->setCrosshairsEnabled(crosshairs);
+    ui->actionView_Crosshairs->setChecked(crosshairs);
+    connect(ui->actionView_Crosshairs,
+            &QAction::toggled,
+            [this](bool state) {
+                QSettings().setValue("map/crosshairs", state);
+                ui->slippyMap->setCrosshairsEnabled(state);
+            });
+
+    ui->slippyMap->setFocus(Qt::OtherFocusReason);
 }
 
 void MainWindow::loadStartupSettings()
@@ -711,6 +796,7 @@ void MainWindow::loadLayers()
         layer->setZOrder(zOrder);
         layer->setVisible(visible);
         layer->setBaseLayer(true);
+        layer->setCacheDuration(86400);
         ui->slippyMap->addLayer(layer);
         m_layers.append(layer);
 
@@ -721,7 +807,7 @@ void MainWindow::loadLayers()
         connect(layerShowHide, &QAction::triggered, [=]() {
             layer->setVisible(layerShowHide->isChecked());
             ui->slippyMap->update();
-            saveLayers();
+            saveTileLayerSettings();
         });
         ui->menuLayer_TileLayers->addAction(layerShowHide);
         m_layerShowHideActions.append(layerShowHide);
@@ -738,7 +824,7 @@ void MainWindow::loadLayers()
     }
 }
 
-void MainWindow::saveLayers()
+void MainWindow::saveTileLayerSettings()
 {
     QSettings settings;
 
@@ -760,20 +846,23 @@ void MainWindow::setupToolbar()
      * Lat/Lon inputs in the toolbar
      */
     m_toolBarLatitudeInput = new QLineEdit();
-    m_toolBarLatitudeInput->setPlaceholderText(tr("Latitude"));
-    m_toolBarLatitudeInput->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+    m_toolBarLatitudeInput->setPlaceholderText(tr("00.000000 N"));
+    m_toolBarLatitudeInput->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum);
 
     m_toolBarLongitudeInput = new QLineEdit();
-    m_toolBarLongitudeInput->setPlaceholderText(tr("Longitude"));
-    m_toolBarLongitudeInput->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+    m_toolBarLongitudeInput->setPlaceholderText(tr("000.000000 E"));
+    m_toolBarLongitudeInput->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum);
 
     m_toolBarLatLonButton = new QPushButton();
     m_toolBarLatLonButton->setText(tr("Go"));
+    m_toolBarLatLonButton->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum);
 
     /**
      * Color and stroke width selectors for drawing
      */
     m_strokeColorSelector = new ColorSelector();
+    m_strokeColorSelector->setObjectName("strokeColorSelector");
+    m_strokeColorSelector->setFixedWidth(60);
     m_strokeColorSelector->setColor(qApp->palette().text().color());
     m_strokeColorSelector->setToolTip(tr("Stroke color"));
     connect(m_strokeColorSelector,
@@ -783,6 +872,8 @@ void MainWindow::setupToolbar()
             });
 
     m_fillColorSelector = new ColorSelector();
+    m_fillColorSelector->setObjectName("fillColorSelector");
+    m_fillColorSelector->setFixedWidth(60);
     m_fillColorSelector->setColor(qApp->palette().highlight().color());
     m_fillColorSelector->setToolTip(tr("Fill color"));
     connect(m_fillColorSelector,
@@ -794,6 +885,7 @@ void MainWindow::setupToolbar()
     m_strokeWidth = new QSpinBox();
     m_strokeWidth->setMinimum(0);
     m_strokeWidth->setValue(2);
+    m_strokeWidth->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum);
     m_strokeWidth->setToolTip(tr("Stroke width"));
     connect(m_strokeWidth,
             QOverload<int>::of(&QSpinBox::valueChanged),
@@ -804,6 +896,7 @@ void MainWindow::setupToolbar()
     m_lineWidth = new QSpinBox();
     m_lineWidth->setMinimum(1);
     m_lineWidth->setValue(10);
+    m_lineWidth->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum);
     m_lineWidth->setToolTip(tr("Path line width"));
     connect(m_lineWidth,
             QOverload<int>::of(&QSpinBox::valueChanged),
@@ -840,23 +933,36 @@ void MainWindow::setupToolbar()
         ui->slippyMap->previousFrame();
     });
 
+    m_drawingActionGroup = new QActionGroup(this);
+    m_drawingActionGroup->setExclusive(true);
+    m_drawingActionGroup->addAction(ui->actionDrawMarker);
+    m_drawingActionGroup->addAction(ui->actionDrawLine);
+    m_drawingActionGroup->addAction(ui->actionDrawRectangle);
+    m_drawingActionGroup->addAction(ui->actionDrawEllipse);
+    m_drawingActionGroup->addAction(ui->actionDrawPolygon);
+    m_drawingActionGroup->addAction(ui->actionObjectAddFiles);
+
     ui->toolBar->addAction(ui->actionFile_NewWorkspace);
     ui->toolBar->addAction(ui->actionFile_SaveWorkspace);
     ui->toolBar->addAction(ui->actionFile_OpenWorkspace);
     ui->toolBar->addSeparator();
+    ui->toolBar->addAction(ui->actionDrawMarker);
     ui->toolBar->addAction(ui->actionDrawLine);
     ui->toolBar->addAction(ui->actionDrawRectangle);
     ui->toolBar->addAction(ui->actionDrawEllipse);
     ui->toolBar->addAction(ui->actionDrawPolygon);
-    ui->toolBar->addSeparator();
-    ui->toolBar->addWidget(m_toolBarLatitudeInput);
-    ui->toolBar->addWidget(m_toolBarLongitudeInput);
-    ui->toolBar->addWidget(m_toolBarLatLonButton);
+    ui->toolBar->addAction(ui->actionObjectAddFiles);
     ui->toolBar->addSeparator();
     ui->toolBar->addWidget(m_strokeColorSelector);
     ui->toolBar->addWidget(m_fillColorSelector);
     ui->toolBar->addWidget(m_lineWidth);
     ui->toolBar->addWidget(m_strokeWidth);
+    ui->toolBar->addSeparator();
+    ui->toolBar->addWidget(m_toolBarLatitudeInput);
+    ui->toolBar->addWidget(m_toolBarLongitudeInput);
+    ui->toolBar->addAction(tr("Go"));
+    ui->toolBar->addSeparator();
+    ui->toolBar->addAction(ui->actionMapGpsAddSource);
     ui->toolBar->addSeparator();
     ui->toolBar->addAction(ui->actionLayer_PreviousFrame);
     ui->toolBar->addAction(ui->actionLayer_Play);
@@ -891,24 +997,44 @@ void MainWindow::onSlippyMapTileRequestStarted()
 {
     m_requestCount++;
 
+    int max = m_serverRequestProgress->maximum();
+
+    m_serverRequestProgress->setMaximum(qMax(m_requestCount, max));
+    m_serverRequestProgress->setValue(max - m_requestCount);
+
     if (m_requestCount > 0) {
-        ui->statusBar->showMessage(QString("Loading %1 tiles...").arg(m_requestCount));
+        m_statusBarStatusLabel->setText(QString("Loading %1 tiles...").arg(m_requestCount));
+        m_serverRequestProgress->setVisible(true);
     }
     else {
-        ui->statusBar->clearMessage();
+        m_statusBarStatusLabel->setText(tr("Ready"));
+        m_serverRequestProgress->setVisible(false);
+        m_serverRequestProgress->setMaximum(0);
     }
 }
 
 void MainWindow::onSlippyMapTileRequestFinished()
 {
     m_requestCount--;
+    int max = m_serverRequestProgress->maximum();
+    m_serverRequestProgress->setValue(max - m_requestCount);
 
     if (m_requestCount > 0) {
-        ui->statusBar->showMessage(QString("Loading %1 tiles...").arg(m_requestCount));
+        m_statusBarStatusLabel->setText(QString("Loading %1 tiles...").arg(m_requestCount));
+        m_serverRequestProgress->setVisible(true);
     }
     else {
-        ui->statusBar->clearMessage();
+        m_statusBarStatusLabel->setText("");
+        m_serverRequestProgress->setVisible(false);
+        m_serverRequestProgress->setMaximum(0);
     }
+}
+
+void MainWindow::onSlippyMapTileRequestPending(int tiles)
+{
+    m_serverRequestProgress->setMaximum(tiles);
+    m_serverRequestProgress->setValue(0);
+    m_serverRequestProgress->setVisible(true);
 }
 
 void MainWindow::onSlippyMapCursorPositionChanged(double latitude, double longitude)
@@ -949,7 +1075,7 @@ void MainWindow::onSlippyMapCursorLeft()
 //void MainWindow::onSlippyMapMarkerAdded(SlippyMapWidgetMarker *marker)
 //{
 ////    m_markerModelGroup_myMarkers->addMarker(marker);
-////    connect(marker, &SlippyMapWidgetMarker::changed, this, &MainWindow::onActionFileSaveWorkspaceTriggered);
+////    connect(marker, &SlippyMapWidgetMarker::changed, this, &MainWindow::saveWorkspace);
 ////    ui->tvwMarkers->update();
 //}
 
@@ -1051,40 +1177,34 @@ void MainWindow::onSlippyMapRectSelected(QRect rect)
             tr("New Rectangle"),
             m_layerManager->activeLayer(),
             poly);
+
+    saveObject(poly);
 }
 
 void MainWindow::onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode)
 {
     switch (mode) {
     case SlippyMapWidget::NoDrawing:
+        ui->actionDrawMarker->setChecked(false);
         ui->actionDrawLine->setChecked(false);
         ui->actionDrawRectangle->setChecked(false);
         ui->actionDrawPolygon->setChecked(false);
         ui->actionDrawEllipse->setChecked(false);
+        break;
+    case SlippyMapWidget::MarkerDrawing:
+        ui->actionDrawMarker->setChecked(true);
         break;
     case SlippyMapWidget::PathDrawing:
         ui->actionDrawLine->setChecked(true);
-        ui->actionDrawRectangle->setChecked(false);
-        ui->actionDrawPolygon->setChecked(false);
-        ui->actionDrawEllipse->setChecked(false);
         break;
     case SlippyMapWidget::RectDrawing:
-        ui->actionDrawLine->setChecked(false);
         ui->actionDrawRectangle->setChecked(true);
-        ui->actionDrawPolygon->setChecked(false);
-        ui->actionDrawEllipse->setChecked(false);
         break;
     case SlippyMapWidget::EllipseDrawing:
-        ui->actionDrawLine->setChecked(false);
-        ui->actionDrawRectangle->setChecked(false);
-        ui->actionDrawPolygon->setChecked(false);
         ui->actionDrawEllipse->setChecked(true);
         break;
     case SlippyMapWidget::PolygonDrawing:
-        ui->actionDrawLine->setChecked(false);
-        ui->actionDrawRectangle->setChecked(false);
         ui->actionDrawPolygon->setChecked(true);
-        ui->actionDrawEllipse->setChecked(false);
     default:
         ui->slippyMap->setCursor(Qt::CrossCursor);
         break;
@@ -1093,6 +1213,10 @@ void MainWindow::onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode)
 
 void MainWindow::onSlippyMapLayerObjectActivated(const SlippyMapLayerObject::Ptr& object)
 {
+    static QMetaObject::Connection saveButtonConnection;
+
+    if (m_selectedObject == object) return;
+
     auto *commonPropertyPage = new SlippyMapLayerObjectCommonPropertyPage(
         object, m_layerManager);
 
@@ -1127,9 +1251,31 @@ void MainWindow::onSlippyMapLayerObjectActivated(const SlippyMapLayerObject::Ptr
         propertyPage->setupUi();
         ui->tabShapeEditor->addTab(propertyPage, propertyPage->tabTitle());
     }
+
+    disconnect(saveButtonConnection);
+    saveButtonConnection = connect(
+           ui->sidebarSaveButton,
+           &QPushButton::clicked,
+           [this, object, propertyPages]() {
+               if (object->isEditable()) {
+                   createUndoModifyObject(
+                           tr("Edit ") + " " + object->label(),
+                           object);
+
+                   for (auto *propertyPage: propertyPages)
+                       propertyPage->save();
+
+                   object->setSynced(false);
+                   saveObject(object);
+               }
+           });
+
     ui->tabShapeEditor->setVisible(true);
     ui->lblNoShapeSelected->setVisible(false);
+    ui->sidebarResetButton->setVisible(true);
+    ui->sidebarSaveButton->setVisible(true);
 
+    m_selectedObjectCopy.clear();
     m_selectedObjectCopy = SlippyMapLayerObject::Ptr(object->clone());
     m_selectedObject = object;
 
@@ -1138,6 +1284,8 @@ void MainWindow::onSlippyMapLayerObjectActivated(const SlippyMapLayerObject::Ptr
     ui->actionEdit_Delete->setEnabled(true);
     ui->actionEdit_Rename->setEnabled(true);
     ui->actionEdit_Properties->setEnabled(true);
+    m_addMarkerAction->setEnabled(true);
+    m_deleteObjectAction->setEnabled(true);
 }
 
 void MainWindow::onSlippyMapLayerObjectDeactivated(const SlippyMapLayerObject::Ptr& object)
@@ -1148,25 +1296,31 @@ void MainWindow::onSlippyMapLayerObjectDeactivated(const SlippyMapLayerObject::P
         ui->tabShapeEditor->removeTab(1);
         ui->tabShapeEditor->setVisible(false);
         ui->lblNoShapeSelected->setVisible(true);
+        ui->sidebarResetButton->setVisible(false);
+        ui->sidebarSaveButton->setVisible(false);
         m_selectedObject = nullptr;
         ui->actionEdit_Copy->setEnabled(false);
         ui->actionEdit_Cut->setEnabled(false);
         ui->actionEdit_Delete->setEnabled(false);
         ui->actionEdit_Rename->setEnabled(false);
         ui->actionEdit_Properties->setEnabled(false);
+        m_addMarkerAction->setEnabled(false);
+        m_deleteObjectAction->setEnabled(false);
     }
 }
 
 void MainWindow::onSlippyMapLayerObjectWasDragged(const SlippyMapLayerObject::Ptr& object)
 {
-    object->setSynced(false);
     createUndoModifyObject(
             tr("Move %1").arg(object->label()),
             object);
+    object->setSynced(false);
+    saveObject(object);
 }
 
 void MainWindow::showPropertyPage(const SlippyMapLayerObject::Ptr& object)
 {
+    static QMetaObject::Connection saveButtonConnection;
     QList<SlippyMapLayerObjectPropertyPage*> propertyPages;
     propertyPages.append(new SlippyMapLayerObjectCommonPropertyPage(object, m_layerManager));
 
@@ -1189,7 +1343,9 @@ void MainWindow::showPropertyPage(const SlippyMapLayerObject::Ptr& object)
     auto *dialog = new QDialog(this);
 
     auto *saveButton = new QPushButton(tr("Save"));
-    connect(saveButton,
+
+    disconnect(saveButtonConnection);
+    saveButtonConnection = connect(saveButton,
             &QPushButton::clicked,
             [this, object, propertyPages, dialog]() {
                 if (object->isEditable()) {
@@ -1201,7 +1357,7 @@ void MainWindow::showPropertyPage(const SlippyMapLayerObject::Ptr& object)
                         propertyPage->save();
 
                     object->setSynced(false);
-                    setWorkspaceDirty(true);
+                    saveObject(object);
                 }
 
                 dialog->accept();
@@ -1279,13 +1435,25 @@ void MainWindow::onWeatherService_forecastReady(
 
 }
 
-void MainWindow::saveWorkspace(QString fileName)
+void MainWindow::saveWorkspace()
 {
     if (m_databaseMode) {
-        saveWorkspaceToDatabase();
+        createWorkspace();
         return;
     }
 
+    QString fileName = m_workspaceFileName;
+    if (fileName.isEmpty()) {
+        fileName = QFileDialog::getSaveFileName(
+                this,
+                tr("Save Workspace"));
+    }
+
+    saveWorkspace(fileName);
+}
+
+void MainWindow::saveWorkspace(const QString& fileName)
+{
     QFile file(fileName);
 
     if (!file.open(QIODevice::WriteOnly)) {
@@ -1330,28 +1498,16 @@ void MainWindow::saveWorkspace(QString fileName)
     setWorkspaceDirty(false);
 }
 
-void MainWindow::onActionFileSaveWorkspaceTriggered()
+void MainWindow::openWorkspace()
 {
-    if (m_databaseMode) {
-        saveWorkspaceToDatabase();
+    if (!closeWorkspace())
         return;
-    }
 
-    QString fileName = m_workspaceFileName;
-    if (fileName.isEmpty()) {
-        fileName = QFileDialog::getSaveFileName(
-                this,
-                tr("Save Workspace"));
-    }
-
-    saveWorkspace(fileName);
-}
-
-void MainWindow::onActionFileOpenWorkspaceTriggered()
-{
-    if (m_workspaceDirty) {
-        if (!closeWorkspace())
-            return;
+    // if connected to server, get the workspace selection
+    // dialog again
+    if (m_databaseMode) {
+        m_serverInterface->requestWorkspaces();
+        return;
     }
 
     QString fileName = QFileDialog::getOpenFileName(
@@ -1424,6 +1580,22 @@ void MainWindow::onActionFileOpenWorkspaceTriggered()
         }
     }
 
+    setWorkspaceDirty(false);
+}
+
+void MainWindow::newWorkspace()
+{
+    if (!closeWorkspace())
+        return;
+
+    // if connected to server, get the workspace selection
+    // dialog again
+    if (m_databaseMode) {
+        m_serverInterface->requestWorkspaces();
+        return;
+    }
+
+    setWindowTitle("Untitled.osm");
     setWorkspaceDirty(false);
 }
 
@@ -1522,8 +1694,13 @@ void MainWindow::onTvwMarkersContextMenuRequested(const QPoint &point)
             m_deleteLayerAction->setEnabled(layer->isEditable());
             m_renameLayerAction->setEnabled(layer->isEditable());
 
+            // update the visibility checkbox state
+            m_layerVisibilityAction->setChecked(layer->isVisible());
+            m_markerLockedAction->setChecked(!layer->isEditable());
+
             m_newLayerAction->setVisible(false);
             m_treeViewMenu->exec(ui->tvwMarkers->viewport()->mapToGlobal(point));
+
         }
     }
     else {
@@ -1589,6 +1766,8 @@ void MainWindow::createMarkerAtPosition(const QPointF& position)
             tr("New Marker"),
             target,
             marker);
+
+    saveObject(marker);
 }
 
 void MainWindow::onDeleteMarkerActionTriggered()
@@ -1853,8 +2032,20 @@ void MainWindow::on_actionDrawEllipse_triggered()
     ui->slippyMap->setDrawMode(SlippyMapWidget::EllipseDrawing);
 }
 
+void MainWindow::on_actionDrawMarker_triggered()
+{
+    ui->slippyMap->setDrawMode(SlippyMapWidget::MarkerDrawing);
+}
+
 void MainWindow::on_actionImport_GPX_triggered()
 {
+    if (m_layerManager->activeLayer() == nullptr) {
+        QMessageBox::warning(
+                this,
+                tr("No Layer"),
+                tr("You must first select a layer"));
+        return;
+    }
     QString fileName = QFileDialog::getOpenFileName(
                 this,
                 tr("Choose Import File"),
@@ -1896,6 +2087,7 @@ void MainWindow::on_actionImport_GPX_triggered()
                         tr("Import Track"),
                         m_layerManager->activeLayer(),
                         layerTrack);
+                saveObject(layerTrack);
             }
         }
     }
@@ -1924,11 +2116,21 @@ void MainWindow::setWorkspaceDirty(bool dirty)
 
     if (dirty) {
         ui->actionFile_SaveWorkspace->setEnabled(true);
-        setWindowTitle(tr("OSMExplorer") + " - " + fileName + "*");
+        if (m_databaseMode)
+            setWindowTitle(
+                    tr("Online Workspace") + " - " + \
+                    m_workspaceName + "*");
+        else
+            setWindowTitle(fileName + "*");
     }
     else {
         ui->actionFile_SaveWorkspace->setEnabled(false);
-        setWindowTitle(tr("OSMExplorer") + " - " + fileName);
+        if (m_databaseMode)
+            setWindowTitle(
+                    tr("Online Workspace") + " - " + \
+                    m_workspaceName);
+        else
+            setWindowTitle(fileName);
     }
 }
 
@@ -1941,12 +2143,15 @@ bool MainWindow::closeWorkspace()
                               QMessageBox::StandardButtons(QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel));
 
         if (result == QMessageBox::Yes) {
-            onActionFileSaveWorkspaceTriggered();
+            saveWorkspace();
             return true;
         }
         if (result == QMessageBox::Cancel)
             return false;
     }
+
+    m_workspaceId = QUuid();
+
 
     for (const auto& layer : m_layerManager->layers()) {
         if (layer->isEditable()) {
@@ -1973,7 +2178,9 @@ void MainWindow::updateRecentFileList()
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     if (m_workspaceDirty) {
-        if (!closeWorkspace()) {
+        bool result = closeWorkspace();
+
+        if (!result) {
             event->ignore();
             return;
         }
@@ -1998,7 +2205,9 @@ void MainWindow::createNewLayer()
         auto newLayer = SlippyMapLayer::Ptr::create();
         newLayer->setName(layerName);
         m_layerManager->addLayer(newLayer);
+        m_databaseLayerUpdateList.append(newLayer);
         createUndoAddLayer(tr("New Layer"), newLayer);
+        processDatabaseUpdates();
     }
 }
 
@@ -2019,6 +2228,10 @@ void MainWindow::deleteSelectedLayer()
                 createUndoDeleteLayer(
                         tr("Delete Layer"),
                         layer);
+                if (m_databaseMode) {
+                    if (!m_databaseLayerDeleteList.contains(layer))
+                        m_databaseLayerDeleteList.append(layer);
+                }
             }
         }
     }
@@ -2037,8 +2250,13 @@ void MainWindow::clearSelectedLayer()
                     QMessageBox::StandardButtons(QMessageBox::Yes | QMessageBox::No));
 
             if (result == QMessageBox::Yes) {
+                for (const auto& object: layer->objects())
+                    m_databaseObjectDeleteList.append(object);
+
                 m_layerManager->removeLayerObjects(layer);
                 m_historyManager->clearUndoHistory();
+                setWorkspaceDirty(true);
+                processDatabaseUpdates();
             }
         }
     }
@@ -2066,21 +2284,25 @@ void MainWindow::deleteActiveObject()
                 m_layerManager->activeLayer(),
                 object);
 
+        object->setSynced(false);
+
         // append to the delete list to be sent to db on next sync
         // unless it doesn't have an id yet
-        qDebug() << "Object" << object->label() << "going to delete list";
-        if (m_databaseMode && !object->id().toString().isEmpty()) {
-            m_databaseObjectDeleteList.append(object);
-        }
+//        qDebug() << "Object" << object->label() << "going to delete list";
+//        if (m_databaseMode && !object->id().toString().isEmpty()) {
+//            m_databaseObjectDeleteList.append(object);
+//        }
 
-        qDebug() << "After clear";
-
+        deleteObject(object);
     }
 }
 
 void MainWindow::onTvwMarkersClicked(const QModelIndex &index)
 {
-    if (!index.isValid()) return;
+    if (!index.isValid()) {
+        ui->tvwMarkers->clearSelection();
+        m_layerManager->deactivateLayer();
+    }
 
     //
     // set the selected layer to active
@@ -2088,6 +2310,10 @@ void MainWindow::onTvwMarkersClicked(const QModelIndex &index)
     if (!index.parent().isValid()) {
         const auto& layer = m_layerManager->layers().at(index.row());
         m_layerManager->setActiveLayer(layer);
+        if (layer->isEditable())
+            enableDrawing();
+        else
+            disableDrawing();
     }
     //
     // set the selected object to active
@@ -2097,7 +2323,7 @@ void MainWindow::onTvwMarkersClicked(const QModelIndex &index)
         for (const auto& layer: m_layerManager->layers()) {
             for (const auto& object: layer->objects()) {
                 if (object == ptr)
-                    showPropertyPage(object);
+                    ui->slippyMap->setActiveObject(object);
             }
         }
     }
@@ -2118,7 +2344,13 @@ void MainWindow::renameActiveLayer()
 
     if (ok) {
         m_layerManager->activeLayer()->setName(name);
+        m_layerManager->activeLayer()->setSynced(false);
         m_layerManager->updateActiveLayer();
+        setWorkspaceDirty(true);
+        if (m_databaseMode) {
+            if (!m_databaseLayerUpdateList.contains(m_layerManager->activeLayer()))
+                m_databaseLayerUpdateList.append(m_layerManager->activeLayer());
+        }
     }
 }
 
@@ -2135,10 +2367,15 @@ void MainWindow::deleteActiveLayer()
                 QMessageBox::StandardButtons(QMessageBox::Yes | QMessageBox::No));
 
         if (result == QMessageBox::Yes) {
-            m_layerManager->takeLayer(layer);
             createUndoDeleteLayer(
                     tr("Delete Layer"),
                     layer);
+            m_layerManager->takeLayer(layer);
+            setWorkspaceDirty(true);
+            if (m_databaseMode) {
+                if (!m_databaseLayerDeleteList.contains(layer))
+                    m_databaseLayerDeleteList.append(layer);
+            }
         }
     }
 }
@@ -2159,6 +2396,7 @@ void MainWindow::onSlippyMapPolygonSelected(const QList<QPointF>& points)
             tr("New Polygon"),
             m_layerManager->activeLayer(),
             polygon);
+    saveObject(polygon);
 }
 
 void MainWindow::startPolygonSelection()
@@ -2184,6 +2422,12 @@ void MainWindow::onSlippyMapPathSelected(const QList<QPointF> &points)
             tr("New Path"),
             m_layerManager->activeLayer(),
             path);
+    saveObject(path);
+}
+
+void MainWindow::onSlippyMapPointSelected(const QPointF &point)
+{
+    createMarkerAtPosition(point);
 }
 
 void MainWindow::onAnimationTimerTimeout()
@@ -2196,6 +2440,7 @@ void MainWindow::onAnimationTimerTimeout()
 
 void MainWindow::onSlippyMapLayerObjectUpdated(const SlippyMapLayerObject::Ptr& object)
 {
+    qDebug() << "Object updated";
     ui->slippyMap->update();
 }
 
@@ -2375,6 +2620,8 @@ void MainWindow::createUndoAddObject(const QString &description, SlippyMapLayer:
 
 void MainWindow::createUndoModifyObject(const QString &description, const SlippyMapLayerObject::Ptr& object)
 {
+    Q_CHECK_PTR(m_selectedObjectCopy);
+
     HistoryManager::HistoryEvent event;
     event.description = description;
     event.action = HistoryManager::ModifyObject;
@@ -2383,7 +2630,7 @@ void MainWindow::createUndoModifyObject(const QString &description, const Slippy
     // if requested by undo
     event.copy = m_selectedObjectCopy;
     m_historyManager->addEvent(event);
-    m_selectedObjectCopy.clear();
+    m_selectedObjectCopy = SlippyMapLayerObject::Ptr(object->clone());
     setWorkspaceDirty(true);
 }
 
@@ -2458,7 +2705,8 @@ void MainWindow::cutActiveObject()
 
     // remove the item from the layer
     m_layerManager->removeLayerObject(m_layerManager->activeLayer(), m_selectedObject);
-    m_selectedObject = nullptr;
+    deleteObject(m_selectedObject);
+    m_selectedObject.clear();
 }
 
 void MainWindow::copyActiveObject()
@@ -2466,6 +2714,11 @@ void MainWindow::copyActiveObject()
     if (m_selectedObject.isNull()) return;
 
     const auto& object = m_selectedObject.toStrongRef();
+
+    if (!m_clipBoard.object.isNull()) {
+        // get rid of the object
+        m_clipBoard.object.clear();
+    }
 
     // create clipboard entry
     m_clipBoard.type = Clipboard::Object;
@@ -2488,9 +2741,11 @@ void MainWindow::pasteObject()
             // otherwise go to the layer it came from?
             if (m_layerManager->activeLayer() != nullptr)
                 layer = m_layerManager->activeLayer();
+            else
+                return;
 
             // clone the object because you don't want to paste
-            // the same object more than once
+            // the same object
             auto clone = SlippyMapLayerObject::Ptr(object->clone());
             m_layerManager->addLayerObject(layer, clone);
 
@@ -2498,6 +2753,9 @@ void MainWindow::pasteObject()
                     tr("Paste"),
                     layer,
                     object);
+
+            // add to the database create/update list
+            saveObject(object);
             break;
         }
         default:
@@ -2505,38 +2763,40 @@ void MainWindow::pasteObject()
     }
 }
 
-void MainWindow::connectToDatabase()
+void MainWindow::startServerLogin()
 {
-    DatabaseConnectionDialog dlg(this);
-    int status = dlg.exec();
+    if (m_serverConnectionDialog == nullptr) {
+        m_serverConnectionDialog = new ServerConnectionDialog(this);
+        m_serverConnectionDialog->setWindowTitle("Login");
+    }
+
+    QSettings settings;
+
+    QString username = settings.value("server/username", "").toString();
+    QString password = settings.value("server/password", "").toString();
+
+    m_serverConnectionDialog->setUsername(username);
+    m_serverConnectionDialog->setPassword(password);
+
+    if (!username.isEmpty())
+        m_serverConnectionDialog->setRemember(true);
+
+    int status = m_serverConnectionDialog->exec();
 
     if (status == QDialog::Accepted) {
-        QString connectionName = dlg.connectionName();
-        QString address = dlg.databaseAddress();
-        int port = dlg.databasePort();
-        QString username = dlg.databaseUsername();
-        QString password = dlg.databasePassword();
-        QString database = dlg.databaseName();
+        if (!closeWorkspace())
+            return;
 
-        auto *db = ExplorerApplication::databaseManager();
-        db->setHostAddress(address);
-        db->setHostPort(port);
-        db->setUsername(username);
-        db->setPassword(password);
-        db->setDatabaseName(database);
+        setDatabaseMode(true);
+        m_statusBarStatusLabel->setText(tr("Ready"));
 
-        if (db->connectDatabase()) {
-            m_databaseMode = true;
-            m_statusBarStatusLabel->setText(tr("Connected to %1").arg(connectionName));
-            closeWorkspace();
-            loadViewportData();
-        }
-        else {
-            QMessageBox::critical(
-                    this,
-                    tr("Connection Error"),
-                    tr("Unable to connect to database server."));
-        }
+        QString username = m_serverConnectionDialog->username();
+        QString password = m_serverConnectionDialog->password();
+
+        m_serverInterface->requestAuthToken(username, password);
+    }
+    else {
+        close();
     }
 }
 
@@ -2545,123 +2805,22 @@ void MainWindow::loadViewportData()
     if (!m_databaseMode) return;
 
     auto boundingBox = ui->slippyMap->boundingBoxLatLon();
-    m_serverInterface->requestLayersForViewport(boundingBox);
-    return;
-
-    QSqlQuery layerQueryStr;
-    layerQueryStr.prepare(QString(
-            "SELECT\n"
-            "\"id\", \"name\", \"description\", \"order\"\n"
-            "FROM\n"
-            DATABASE_SCHEMA_NAME "." DATABASE_LAYERS_TABLE));
-    auto layerQuery = QSqlQuery(layerQueryStr);
-    layerQuery.exec();
-
-    if (layerQuery.lastError().type() != QSqlError::NoError) {
-        qCritical() << "Query failed:" << layerQuery.lastError().text();
-        return;
-    }
-
-    while (layerQuery.next()) {
-        QString layerId = layerQuery.value(0).toString();
-        QString layerName = layerQuery.value(1).toString();
-        QString layerDesc = layerQuery.value(2).toString();
-        int order = layerQuery.value(3).toInt();
-
-        SlippyMapLayer::Ptr layer = nullptr;
-        for (auto l: m_layerManager->layers()) {
-            qDebug() << "Matching" << l->id().toString() << "with" << layerId;
-            if (layerId.compare(l->id().toString()) == 0) {
-                layer = l;
-            }
-        }
-
-        if (layer == nullptr) {
-            layer = SlippyMapLayer::Ptr::create();
-            layer->setId(layerId);
-            layer->setSynced(true); // so we get the first update
-            m_layerManager->addLayer(layer);
-        }
-
-        //
-        // don't overwrite local changes
-        //
-        if (layer->isSynced()) {
-            layer->setName(layerName);
-            layer->setDescription(layerDesc);
-        }
-
-        auto queryString = QString(
-                "SELECT id, label, description, ST_AsEWKT(geom), type, to_json(data) FROM "
-                DATABASE_SCHEMA_NAME "." DATABASE_OBJECTS_TABLE
-                "WHERE layer_id = ? AND geom && ST_MakeEnvelope(?, ?, ?, ?, 4326)");
-
-        QSqlQuery objectQuery;
-        objectQuery.prepare(queryString);
-        objectQuery.addBindValue(layer->id().toString());
-        objectQuery.addBindValue(boundingBox.x());
-        objectQuery.addBindValue(boundingBox.y());
-        objectQuery.addBindValue(boundingBox.x() + boundingBox.width());
-        objectQuery.addBindValue(boundingBox.y() + boundingBox.height());
-        objectQuery.exec();
-
-        while (objectQuery.next()) {
-            QString wkt = objectQuery.value(3).toString().replace("SRID=4326;", "");
-            QVariant id = objectQuery.value(0).toString();
-            QString label = objectQuery.value(1).toString();
-            QString description = objectQuery.value(2).toString();
-            QString className = objectQuery.value(4).toString().append("*");
-            QString data = objectQuery.value(5).toString();
-
-            QJsonDocument document = QJsonDocument::fromJson(data.toUtf8());
-            QJsonObject root = document.object();
-
-            QObject *o = nullptr;
-            SlippyMapLayerObject::Ptr object;
-
-            for (const auto& object: layer->objects()) {
-                if (object->id().compare(id) == 0) {
-                    if (object->isSynced()) {
-                        // update with new data
-                        object->setLabel(label);
-                        object->setDescription(description);
-                        object->hydrateFromDatabase(root, wkt);
-                    }
-                    goto continue2;
-                }
-            }
-
-            // get the type information from qt meta
-            int typeId = QMetaType::type(className.toLocal8Bit());
-            const QMetaObject *metaObject = QMetaType::metaObjectForType(typeId);
-
-            // create a new object and cast to layer object
-            o = metaObject->newInstance();
-            object = SlippyMapLayerObject::Ptr(qobject_cast<SlippyMapLayerObject *>(o));
-
-            object->setId(id);
-            object->setLabel(label);
-            object->setDescription(description);
-            object->hydrateFromDatabase(root, wkt);
-
-            m_layerManager->addLayerObject(layer, object);
-continue2:;
-        }
-
-        ui->statusBar->showMessage(tr("Loaded layer %1 (%2 objects)")
-            .arg(layer->name())
-            .arg(layer->objects().count()), 3000);
-    }
+    m_serverInterface->requestLayersForViewport(m_workspaceId, boundingBox);
 }
 
 void MainWindow::onServerInterfaceLayersRequestFinished()
 {
+    // only keep in memory that which we can see
+//    for (const auto& layer: m_layerManager->layers()) {
+//        m_layerManager->removeLayerObjects(layer);
+//    }
+
     const auto& layers = m_serverInterface->layers();
     for (const auto& layerdata: layers) {
         SlippyMapLayer::Ptr layer = nullptr;
-        for (auto l: m_layerManager->layers()) {
-            qDebug() << "Adding/updating layer" << layerdata.id;
+        for (const auto& l: m_layerManager->layers()) {
             if (layerdata.id.toString().compare(l->id().toString()) == 0) {
+                qDebug() << "Adding/updating layer" << layerdata.id;
                 layer = l;
             }
         }
@@ -2672,6 +2831,12 @@ void MainWindow::onServerInterfaceLayersRequestFinished()
             layer->setSynced(true); // so we get the first update
             m_layerManager->addLayer(layer);
         }
+        else {
+            // if the layer is in the delete list, don't worry about it
+            if (m_databaseLayerDeleteList.contains(layer)) {
+                continue;
+            }
+        }
 
         //
         // don't overwrite local changes
@@ -2679,13 +2844,12 @@ void MainWindow::onServerInterfaceLayersRequestFinished()
         if (layer->isSynced()) {
             layer->setName(layerdata.name);
             layer->setDescription(layerdata.description);
+            layer->setColor(layerdata.color);
         }
 
         for (const auto& objectdata: layerdata.objects) {
             //replace("SRID=4326;", "");
 
-            QObject *o = nullptr;
-            SlippyMapLayerObject::Ptr object;
             QString geom = objectdata.geom;
             geom.replace("SRID=4326;", "");
 
@@ -2707,191 +2871,449 @@ void MainWindow::onServerInterfaceLayersRequestFinished()
 
             if (found) continue;
 
+            // prevent item from being recreated on viewport update if
+            // it's already in the delete list
+            for (const auto& object: m_databaseObjectDeleteList) {
+                if (object->id().compare(objectdata.id.toString()) == 0) {
+                    found = true;
+                }
+            }
+
+            if (found) continue;
+
             // get the type information from qt meta
             int typeId = QMetaType::type(className.toLocal8Bit());
             const QMetaObject *metaObject = QMetaType::metaObjectForType(typeId);
 
             // create a new object and cast to layer object
-            o = metaObject->newInstance();
-            object = SlippyMapLayerObject::Ptr(qobject_cast<SlippyMapLayerObject *>(o));
+            QObject *o = metaObject->newInstance();
+            auto object = SlippyMapLayerObject::Ptr(qobject_cast<SlippyMapLayerObject *>(o));
 
             object->setId(objectdata.id);
             object->setLabel(objectdata.label);
             object->setDescription(objectdata.description);
             object->hydrateFromDatabase(objectdata.data, geom);
+            object->setSynced(true);
 
             m_layerManager->addLayerObject(layer, object);
-            continue2:;
         }
     }
 }
 
-void MainWindow::saveWorkspaceToDatabase()
+//void MainWindow::createWorkspace()
+//{
+//
+//}
+
+void MainWindow::createWorkspace()
 {
-    if (!m_databaseMode) return;
+    if (m_workspaceId.isNull()) {
+        // todo: dispatch request to create workspace,
+        //  it will then re-trigger this method to
+        //  sync everything
+        bool ok;
+        QString workspaceName = QInputDialog::getText(
+                this,
+                tr("New Workspace"),
+                tr("Enter the name of the new workspace"),
+                QLineEdit::Normal,
+                tr("New Workspace"),
+                &ok
+                );
 
-    int result = QMessageBox::question(
-        this,
-        tr("Sync Work"),
-        tr("Do you want to sync your changes to the database?"),
-        QMessageBox::Yes | QMessageBox::No);
+        if (ok) {
+            ServerInterface::Workspace workspace;
+            workspace.id = QUuid::createUuid();
+            workspace.name = workspaceName;
+            workspace.description = ""; // todo: custom dialog for name and description
 
-    if (result != QMessageBox::Yes) return;
-
-    for (const auto& layer: m_databaseLayerDeleteList) {
-        qDebug() << "Deleting layer" << layer->id() << layer->name();
-
-        QString queryString(
-                "DELETE FROM "
-                DATABASE_SCHEMA_NAME "." DATABASE_LAYERS_TABLE " "
-                "WHERE \"id\" = ?;");
-
-        QSqlQuery deleteQuery;
-        deleteQuery.prepare(queryString);
-        deleteQuery.addBindValue(layer->id());
-
-        if (!deleteQuery.exec()) {
-            qCritical() << "Delete error:" << deleteQuery.lastError().text();
-            qCritical() << "Executed query:" << deleteQuery.lastQuery();
-            QMessageBox::critical(
-                    this,
-                    tr("Database Error"),
-                    tr("Unable to delete layer: %1").arg(deleteQuery.lastError().text()));
-            return;
+            m_serverInterface->requestCreateWorkspace(workspace,
+                [this, workspace]() {
+                    m_workspaceId = workspace.id;
+                    m_workspaceName = workspace.name;
+                    setWindowTitle(m_workspaceName);
+                }
+            );
         }
+
     }
+}
 
-    for (const auto& layer: m_layerManager->layers()) {
-        if (layer->isEditable()) {
-            if (!layer->isSynced()) {
-                qDebug() << "Updating layer" << layer->id() << layer->name();
-
-                if (layer->id().isNull()) {
-                    layer->setId(QVariant(QUuid::createUuid().toString()));
-                }
-
-                QString layerInsertString(
-                            "INSERT INTO "
-                            DATABASE_SCHEMA_NAME "." DATABASE_LAYERS_TABLE " "
-                            "(\"id\", \"created\", \"name\", \"description\", \"order\") "
-                            "VALUES "
-                            "(:id, CURRENT_TIMESTAMP, :name, :description, :order) "
-                            "ON CONFLICT (id) DO UPDATE "
-                            "SET "
-                            "\"name\" = EXCLUDED.name, "
-                            "\"description\" = EXCLUDED.description, "
-                            "\"order\" = EXCLUDED.order, "
-                            "\"updated\" = CURRENT_TIMESTAMP;");
-                QSqlQuery layerInsertQuery;
-                layerInsertQuery.prepare(layerInsertString);
-                layerInsertQuery.bindValue(":id", layer->id());
-                layerInsertQuery.bindValue(":name", layer->name());
-                layerInsertQuery.bindValue(":description", layer->description());
-                layerInsertQuery.bindValue(":order", layer->order());
-
-                if (!layerInsertQuery.exec()) {
-                    qCritical() << "Upsert error:" << layerInsertQuery.lastError().text();
-                    qCritical() << "Executed query:" << layerInsertQuery.lastQuery();
-
-                    QMessageBox::critical(
-                        this,
-                        tr("Database Error"),
-                        tr("Unable to save layer: %1").arg(layerInsertQuery.lastError().text()));
-                    return;
-                }
-
-                layer->setSynced(true);
-            }
-
-            //
-            // objects that were deleted need to be deleted
-            // on the server
-            //
-            for (const auto& object: m_databaseObjectDeleteList) {
-
-                qDebug() << "Deleting object" << object->id() << object->label();
-
-                QString queryString(
-                    "DELETE FROM "
-                        DATABASE_SCHEMA_NAME "." DATABASE_OBJECTS_TABLE " "
-                        "WHERE \"id\" = ?;");
-
-                QSqlQuery deleteQuery;
-                deleteQuery.prepare(queryString);
-                deleteQuery.addBindValue(object->id());
-
-                if (!deleteQuery.exec()) {
-                    qCritical() << "Delete error:" << deleteQuery.lastError().text();
-                    qCritical() << "Executed query:" << deleteQuery.lastQuery();
-                    QMessageBox::critical(
-                            this,
-                            tr("Database Error"),
-                            tr("Unable to delete object: %1").arg(deleteQuery.lastError().text()));
-                    return;
-                }
-
-                // object will be deleted by history manager
-                m_databaseObjectDeleteList.removeOne(object);
-            }
-
+void MainWindow::processDatabaseUpdates()
+{
+    if (!m_databaseLayerDeleteList.isEmpty()) {
+        for (const auto &layer: m_databaseLayerDeleteList) {
             for (const auto& object: layer->objects()) {
-                if (!object->isSynced()) {
-                    qDebug() << "Updating object" << object->id() << object->label();
+                qDebug() << "Processing object" << object->label() << "for layer" << layer->name();
+                QNetworkRequest request;
+                QString url = QString(OSM_SERVER_HOST "/objects/%1").arg(object->id().toString());
+                request.setUrl(QUrl(url));
+                request.setRawHeader("Authorization",
+                                     QString("Bearer %1").arg(m_serverInterface->authToken()).toUtf8());
 
-                    QString queryString(
-                            "INSERT INTO " DATABASE_SCHEMA_NAME "." DATABASE_OBJECTS_TABLE " "
-                            "(\"id\", \"layer_id\", \"type\", \"created\", \"label\", \"description\", \"geom\", \"data\") "
-                            "VALUES "
-                            "(:id, :layer_id, :type, CURRENT_TIMESTAMP, :label, :description, :geom, :data) "
-                            "ON CONFLICT (id) DO UPDATE "
-                            "SET "
-                            "layer_id = EXCLUDED.layer_id, "
-                            "type = EXCLUDED.type, "
-                            "updated = CURRENT_TIMESTAMP, "
-                            "label = EXCLUDED.label, "
-                            "description = EXCLUDED.description, "
-                            "geom = EXCLUDED.geom, "
-                            "data = EXCLUDED.data;");
-
-                    if (object->id().toString().isEmpty()) {
-                        object->setId(QUuid::createUuid().toString());
-                    }
-
-                    QString geom;
-                    QJsonObject json;
-
-                    object->saveToDatabase(json, geom);
-                    geom.prepend("SRID=4326;");
-
-                    qDebug() << "Geometry string:" << geom;
-
-                    QJsonDocument data(json);
-
-                    QSqlQuery updateQuery;
-                    updateQuery.prepare(queryString);
-                    updateQuery.bindValue(":id", object->id());
-                    updateQuery.bindValue(":layer_id", layer->id());
-                    updateQuery.bindValue(":type", QString(object->metaObject()->className()));
-                    updateQuery.bindValue(":label", object->label());
-                    updateQuery.bindValue(":description", object->description());
-                    updateQuery.bindValue(":geom", geom);
-                    updateQuery.bindValue(":data", QString::fromLatin1(data.toJson(QJsonDocument::Compact)));
-
-                    if (!updateQuery.exec()) {
-                        qCritical() << "Upsert error:" << updateQuery.lastError().text();
-                        qCritical() << "Executed query:" << updateQuery.lastQuery();
-                        QMessageBox::critical(
-                            this,
-                            tr("Database Error"),
-                            tr("Unable to save object: %1").arg(updateQuery.lastError().text()));
-                        return;
-                    }
-
-                    object->setSynced(true);
-                }
+                ServerSyncRequest sync;
+                sync.type = SyncRequestDelete;
+                sync.request = request;
+                sync.object = object;
+                m_serverSyncRequestQueue.append(sync);
             }
+
+            qDebug() << "Processing" << layer->name() << "for delete";
+            QNetworkRequest request;
+            QString url = QString(OSM_SERVER_HOST "/layers/%1").arg(layer->id().toString());
+            request.setUrl(QUrl(url));
+            request.setRawHeader("Authorization",
+                                 QString("Bearer %1").arg(m_serverInterface->authToken()).toUtf8());
+
+            ServerSyncRequest sync;
+            sync.type = SyncRequestDelete;
+            sync.request = request;
+            sync.layer = layer;
+            m_serverSyncRequestQueue.append(sync);
         }
     }
 
-    setWorkspaceDirty(false);
+    if (!m_databaseLayerUpdateList.isEmpty()) {
+        for (const auto& layer: m_databaseLayerUpdateList) {
+            if (!layer->isEditable()) continue;
+
+            QJsonObject json;
+
+            if (layer->id().toString().isEmpty())
+                layer->setId(QUuid::createUuid().toString());
+
+            json["id"] = layer->id().toString();
+            json["workspace_id"] = m_workspaceId.toString();
+            json["name"] = layer->name();
+            json["description"] = layer->description();
+            json["order"] = layer->order();
+            json["color"] = layer->color().name(QColor::HexArgb);
+
+            QJsonDocument jsonDocument(json);
+            QByteArray jsonData = jsonDocument.toJson();
+
+            QNetworkRequest request;
+            request.setUrl(QUrl(OSM_SERVER_HOST "/layers"));
+            request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+            request.setRawHeader("Authorization",
+                                 QString("Bearer %1").arg(m_serverInterface->authToken()).toUtf8());
+
+            ServerSyncRequest sync;
+            sync.type = SyncRequestPut;
+            sync.request = request;
+            sync.data = jsonData;
+            sync.layer = layer;
+            m_serverSyncRequestQueue.append(sync);
+        }
+    }
+
+    if (!m_databaseObjectDeleteList.isEmpty()) {
+        for (const auto& object: m_databaseObjectDeleteList) {
+            qDebug() << "Processing object" << object->label() << "for delete";
+            QNetworkRequest request;
+            QString url = QString(OSM_SERVER_HOST "/objects/%1").arg(object->id().toString());
+            request.setUrl(QUrl(url));
+            request.setRawHeader("Authorization",
+                                 QString("Bearer %1").arg(m_serverInterface->authToken()).toUtf8());
+
+            ServerSyncRequest sync;
+            sync.type = SyncRequestDelete;
+            sync.request = request;
+            sync.object = object;
+            m_serverSyncRequestQueue.append(sync);
+        }
+    }
+
+    if (!m_databaseObjectUpdateList.isEmpty()) {
+        for (const auto& object: m_databaseObjectUpdateList) {
+            QJsonObject json;
+
+            if (object->id().toString().isEmpty()) {
+                object->setId(QUuid::createUuid().toString());
+            }
+
+            const auto& layer = m_layerManager->layerForObject(object);
+
+            json["id"] = object->id().toString();
+            json["layer_id"] = layer->id().toString();
+            json["label"] = object->label();
+            json["description"] = object->description();
+            json["type"] = QString(object->metaObject()->className());
+            json["visible"] = object->isVisible();
+
+            QJsonObject data;
+            QString geom;
+            object->saveToDatabase(data, geom);
+            json["geom"] = geom;
+            json["data"] = data;
+
+            QNetworkRequest request;
+            request.setUrl(QUrl(OSM_SERVER_HOST "/objects"));
+            request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+            request.setRawHeader("Authorization",
+                                 QString("Bearer %1").arg(m_serverInterface->authToken()).toUtf8());
+
+            ServerSyncRequest sync;
+            sync.type = SyncRequestPut;
+            sync.object = object;
+            sync.request = request;
+            sync.data = QJsonDocument(json).toJson();
+
+            m_serverSyncRequestQueue.append(sync);
+        }
+    }
+
+    // kick off the requests
+    m_serverRequestProgress->setMinimum(0);
+    m_serverRequestProgress->setMaximum(m_serverSyncRequestQueue.count());
+    m_serverRequestProgress->setValue(0);
+    m_serverRequestProgress->setVisible(true);
+    processDatabaseUpdateQueue();
+}
+
+void MainWindow::processDatabaseUpdateQueue()
+{
+    if (!m_serverSyncRequestQueue.isEmpty()) {
+        const ServerSyncRequest& sync = m_serverSyncRequestQueue.first();
+        switch (sync.type) {
+            case SyncRequestDelete: {
+                qDebug() << "Starting DELETE request for layer/object update";
+                auto *reply = m_serverNetworkManager->deleteResource(
+                        sync.request);
+                connect(reply,
+                        &QNetworkReply::finished,
+                        [this, reply, sync]() {
+                            if (reply->error() != QNetworkReply::NoError) {
+                                qCritical() << "DELETE request failed:" << reply->errorString();
+                                QMessageBox::critical(
+                                        this,
+                                        tr("Server Error"),
+                                        tr("Error processing request. Please try again."));
+                                return;
+                            }
+
+                            qDebug() << "DELETE request finished successfully";
+                            m_serverSyncRequestQueue.removeFirst();
+
+                            if (!sync.layer.isNull()) {
+                                m_databaseLayerDeleteList.removeOne(sync.layer);
+                                sync.layer->setSynced(true);
+                            }
+                            if (!sync.object.isNull()) {
+                                m_databaseObjectDeleteList.removeOne(sync.object);
+                                sync.object->setSynced(true);
+                            }
+
+                            int val = m_serverRequestProgress->value();
+                            m_serverRequestProgress->setValue(val + 1);
+                            processDatabaseUpdateQueue();
+                });
+                break;
+            }
+            case SyncRequestPut: {
+                qDebug() << "Starting PUT request for layer/object update";
+                auto *reply = m_serverNetworkManager->put(
+                        sync.request,
+                        sync.data);
+                connect(reply,
+                        &QNetworkReply::finished,
+                        [this, reply, sync]() {
+                            if (reply->error() != QNetworkReply::NoError) {
+                                qCritical() << "PUT request failed:" << reply->errorString();
+                                QMessageBox::critical(
+                                        this,
+                                        tr("Server Error"),
+                                        tr("Error processing request. Please try again."));
+                                return;
+                            }
+
+                            qDebug() << "PUT request finished successfully";
+                            m_serverSyncRequestQueue.removeFirst();
+
+                            if (!sync.layer.isNull()) {
+                                m_databaseLayerUpdateList.removeOne(sync.layer);
+                                sync.layer->setSynced(true);
+                            }
+                            if (!sync.object.isNull()) {
+                                m_databaseObjectUpdateList.removeOne(sync.object);
+                                sync.object->setSynced(true);
+                            }
+
+                            int val = m_serverRequestProgress->value();
+                            m_serverRequestProgress->setValue(val + 1);
+                            processDatabaseUpdateQueue();
+                        });
+                break;
+            }
+        }
+    }
+    else {
+        m_serverRequestProgress->setVisible(false);
+        setWorkspaceDirty(false);
+    }
+}
+
+void MainWindow::onServerInterfaceAuthTokenRequestFinished()
+{
+    QSettings settings;
+
+    if (m_serverConnectionDialog->remember()) {
+        settings.setValue("server/username", m_serverConnectionDialog->username());
+        settings.setValue("server/password", m_serverConnectionDialog->password());
+    }
+    else {
+        settings.setValue("server/username", "");
+        settings.setValue("server/password", "");
+        m_serverConnectionDialog->setUsername("");
+        m_serverConnectionDialog->setPassword("");
+    }
+
+    m_serverInterface->requestWorkspaces();
+}
+
+void MainWindow::onServerInterfaceAuthTokenRequestFailed()
+{
+    QMessageBox::critical(this,
+                          tr("Authentication Failure"),
+                          tr("Your credentials were invalid. Please try again."));
+    startServerLogin();
+}
+
+void MainWindow::disableDrawing()
+{
+    m_drawingActionGroup->setEnabled(false);
+}
+
+void MainWindow::enableDrawing()
+{
+    m_drawingActionGroup->setEnabled(true);
+}
+
+void MainWindow::onServerInterfaceWorkspacesRequestFinished()
+{
+    WorkspaceSelectionDialog dlg(this);
+
+    QMap<QUuid,QString> workspaces;
+    for (const auto& workspace: m_serverInterface->workspaces()) {
+        workspaces[workspace.id] = workspace.name;
+    }
+
+    dlg.setWorkspaceList(workspaces);
+    int result = dlg.exec();
+
+    if (result == QDialog::Accepted) {
+        if (dlg.createNew()) {
+            QUuid id = QUuid::createUuid();
+            QString name = dlg.newWorkspaceName();
+            QString description = dlg.newWorkspaceDescription();
+
+            ServerInterface::Workspace workspace;
+            workspace.id = id;
+            workspace.name = name;
+            workspace.description = description;
+
+            QJsonObject root;
+            root["id"] = id.toString();
+            root["name"] = name;
+            root["description"] = description;
+
+            QJsonDocument doc(root);
+            QByteArray data = doc.toJson();
+
+            QNetworkRequest request;
+            request.setUrl(QUrl(OSM_SERVER_HOST "/workspaces"));
+            request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+            request.setRawHeader("Authorization",
+                                 QString("Bearer %1").arg(m_serverInterface->authToken()).toUtf8());
+
+            QNetworkReply *reply = m_serverNetworkManager->put(request, data);
+            connect(reply,
+                    &QNetworkReply::finished,
+                    [this, id, reply, name]() {
+                            if (reply->error() != QNetworkReply::NoError) {
+                                qCritical() << "Create workspace request failed";
+                                qCritical() << reply->errorString();
+                                QMessageBox::critical(
+                                        this,
+                                        tr("Server Error"),
+                                        tr("Error processing request. Please try again."));
+                                return;
+                            }
+
+                            auto body = QJsonDocument::fromJson(reply->readAll());
+                            auto root = body.object();
+
+                            if (root["status"] != "ok") {
+                                qCritical() << "Server error" << root["reason"];
+                                QMessageBox::critical(
+                                        this,
+                                        tr("Server Error"),
+                                        root["reason"].toString());
+                                return;
+                            }
+
+                            m_workspaceId = id;
+                            m_workspaceName = name;
+                            setWindowTitle(
+                                    tr("Online Workspace") + " - " + \
+                                    m_workspaceName);
+                            loadViewportData();
+                            setWorkspaceDirty(false);
+                        });
+
+        }
+        else {
+            m_workspaceId = dlg.existingWorkspaceId();
+            m_workspaceName = workspaces[m_workspaceId];
+            setWindowTitle(
+                    tr("Online Workspace") + " - " + \
+                    m_workspaceName);
+            loadViewportData();
+            setWorkspaceDirty(false);
+        }
+    }
+}
+
+void MainWindow::setDatabaseMode(bool databaseMode)
+{
+    m_databaseMode = databaseMode;
+    ui->actionFile_SaveWorkspaceAs->setEnabled(!databaseMode);
+}
+
+void MainWindow::setWindowTitle(const QString &title)
+{
+    QWidget::setWindowTitle(tr("OSMExplorer") + " - " + title);
+}
+
+void MainWindow::setupMenuBar()
+{
+    m_mainMenuBar = new QMenuBar(this);
+
+    m_fileMenu = new QMenu(tr("&File"));
+    m_editMenu = new QMenu(tr("&Edit"));
+    m_layerMenu = new QMenu(tr("&Layer"));
+    m_objectMenu = new QMenu(tr("&Object"));
+    m_drawMenu = new QMenu(tr("&Draw"));
+    m_viewMenu = new QMenu(tr("&View"));
+    m_toolsMenu = new QMenu(tr("&Tools"));
+    m_helpMenu = new QMenu(tr("&Help"));
+
+    m_exitAction = new QAction(tr("E&xit"));
+    m_exitAction->setShortcut(QKeySequence::fromString("Ctrl+Q"));
+
+    m_newWorkspaceAction = new QAction(tr("&New Workspace"));
+    m_newWorkspaceAction->setShortcut(QKeySequence::fromString("Ctrl+N"));
+}
+
+void MainWindow::saveObject(const SlippyMapLayerObject::Ptr &object)
+{
+    m_databaseObjectUpdateList.append(object);
+    processDatabaseUpdates();
+}
+
+void MainWindow::deleteObject(const SlippyMapLayerObject::Ptr &object)
+{
+    if (object->id().isNull()) return;
+    m_databaseObjectDeleteList.append(object);
+    processDatabaseUpdates();
 }

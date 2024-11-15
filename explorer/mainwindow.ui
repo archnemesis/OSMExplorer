@@ -18,7 +18,21 @@
     <normaloff>:/images/icon-128.png</normaloff>:/images/icon-128.png</iconset>
   </property>
   <property name="styleSheet">
-   <string notr="true"/>
+   <string notr="true">QMenu {
+    background-color: #202020;
+    margin: 2px; /* some spacing around the menu */
+	color: #FFFFFF;
+}
+
+QMenu::item {
+    padding: 2px 25px 2px 20px;
+    border: 1px solid transparent; /* reserve space for selection border */
+}
+
+QMenu::item:selected {
+	border-color: palette(highlight);
+   background-color: palette(highlight);
+}</string>
   </property>
   <property name="documentMode">
    <bool>false</bool>
@@ -52,7 +66,6 @@
        <string notr="true">QPushButton {
 	border-radius: 10px;
 	background-color: palette(base);
-	padding: 5px;
 }</string>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -81,7 +94,7 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>400</width>
+           <width>300</width>
            <height>0</height>
           </size>
          </property>
@@ -103,26 +116,33 @@
 }
 
 QTreeView {
+	color: #000000;
 	background-color: white;
 	border-radius: 10px;
 	border-width: 0px;
 	padding: 0px;
 	margin: 0px;
+	show-decoration-selected: 0;
 }
 
 QTreeView::item {
-	background-color: white;
+	background-color: #FFFFFF;
 	padding: 5px 10px 5px 10px;
 	border-width: 0px;
 	border-bottom: 1px solid #FFCCCCCC;
+	show-decoration-selected: 0;
+	color: #000000;
 }
 
 QTreeView::item:focus {
 	border: none;
 	outline: none;
+	color: #FFFFFF;
+	background-color: palette(highlight);
 }
 
 QTreeView::item:selected {
+	color: #FFFFFF;
 	background-color: palette(highlight);
 	border-width: 0px;
 	border-bottom: 1px solid #FFCCCCCC;
@@ -132,6 +152,8 @@ QTreeView::item:selected:!active {
 	background-color: palette(alternate-base);
 	border-width: 0px;
 	border-bottom: 1px solid #FFCCCCCC;
+	color: #000000;
+	selection-color: #000000;
 }
 
 QTreeView::branch {
@@ -151,13 +173,25 @@ QTreeView::branch:selected:!active {
 QTreeView::branch:has-children:!has-siblings:closed,
 QTreeView::branch:closed:has-children:has-siblings {
 	border-image: none;
-	image: url(:/icons/arrowright.png);
+	image: url(:/icons/arrowright_dark.png);
 }
 
 QTreeView::branch:open:has-children:!has-siblings,
 QTreeView::branch:open:has-children:has-siblings  {
         border-image: none;
-        image: url(:/icons/arrowdown.png);
+        image: url(:/icons/arrowdown_dark.png);
+}
+
+QTreeView::selected:branch:has-children:!has-siblings:closed,
+QTreeView::selected:branch:closed:has-children:has-siblings {
+	border-image: none;
+	image: url(:/icons/arrowright.png) !important;
+}
+
+QTreeView::selected:branch:open:has-children:!has-siblings,
+QTreeView::selected:branch:open:has-children:has-siblings  {
+        border-image: none;
+        image: url(:/icons/arrowdown.png) !important;
 }
 
 QTreeView &gt; QFrame {
@@ -302,8 +336,8 @@ QTreeView &gt; QFrame {
    </property>
    <property name="iconSize">
     <size>
-     <width>24</width>
-     <height>24</height>
+     <width>32</width>
+     <height>32</height>
     </size>
    </property>
    <attribute name="toolBarArea">
@@ -312,6 +346,7 @@ QTreeView &gt; QFrame {
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="separator"/>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -321,6 +356,12 @@ QTreeView &gt; QFrame {
      <width>1094</width>
      <height>22</height>
     </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QMenuBar {
+	background-color: #202020;
+	color: #FFFFFF;
+}</string>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -358,6 +399,7 @@ QTreeView &gt; QFrame {
     <addaction name="actionFile_CloseWorkspace"/>
     <addaction name="separator"/>
     <addaction name="actionFile_ConnectToDatabase"/>
+    <addaction name="actionFile_DisconnectDatabase"/>
     <addaction name="separator"/>
     <addaction name="actionFile_SaveWorkspace"/>
     <addaction name="actionFile_SaveWorkspaceAs"/>
@@ -373,8 +415,12 @@ QTreeView &gt; QFrame {
     <property name="title">
      <string>Object</string>
     </property>
-    <addaction name="actionObject_NewMarker"/>
-    <addaction name="actionObject_NewMarkerAtCurrent"/>
+    <addaction name="actionDrawMarker"/>
+    <addaction name="actionDrawLine"/>
+    <addaction name="actionDrawEllipse"/>
+    <addaction name="actionDrawRectangle"/>
+    <addaction name="actionDrawPolygon"/>
+    <addaction name="actionObjectAddFiles"/>
     <addaction name="separator"/>
     <addaction name="actionObject_Properties"/>
     <addaction name="actionObject_Delete"/>
@@ -396,15 +442,8 @@ QTreeView &gt; QFrame {
     <addaction name="separator"/>
     <addaction name="actionViewClearRoute"/>
     <addaction name="actionViewGpsLog"/>
-   </widget>
-   <widget class="QMenu" name="menuDraw">
-    <property name="title">
-     <string>Draw</string>
-    </property>
-    <addaction name="actionDrawLine"/>
-    <addaction name="actionDrawEllipse"/>
-    <addaction name="actionDrawRectangle"/>
-    <addaction name="actionDrawPolygon"/>
+    <addaction name="separator"/>
+    <addaction name="actionView_Crosshairs"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -426,12 +465,20 @@ QTreeView &gt; QFrame {
      <addaction name="actionLayer_TileLayers_ShowAll"/>
      <addaction name="separator"/>
     </widget>
+    <widget class="QMenu" name="menuSort_By">
+     <property name="title">
+      <string>Sort By</string>
+     </property>
+     <addaction name="actionSortByName"/>
+     <addaction name="actionSortByCustomOrder"/>
+    </widget>
     <addaction name="actionLayer_New"/>
     <addaction name="actionLayer_Rename"/>
     <addaction name="actionLayer_Delete"/>
     <addaction name="separator"/>
     <addaction name="actionLayer_SortAscending"/>
     <addaction name="actionLayer_SortDescending"/>
+    <addaction name="menuSort_By"/>
     <addaction name="separator"/>
     <addaction name="menuLayer_TileLayers"/>
     <addaction name="separator"/>
@@ -444,7 +491,6 @@ QTreeView &gt; QFrame {
      <string>Weather</string>
     </property>
     <addaction name="actionWeather_ShowWFOGrid"/>
-    <addaction name="actionShow_Alerts"/>
     <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
@@ -467,24 +513,50 @@ QTreeView &gt; QFrame {
    <addaction name="menuLayer"/>
    <addaction name="menuMarker"/>
    <addaction name="menuWeather"/>
-   <addaction name="menuDraw"/>
    <addaction name="menuView"/>
    <addaction name="menuTools"/>
    <addaction name="menuHelp"/>
   </widget>
-  <widget class="QDockWidget" name="dockWidget_3">
+  <widget class="OEDockWidget" name="dockWidget">
+   <property name="minimumSize">
+    <size>
+     <width>400</width>
+     <height>446</height>
+    </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
    <property name="windowTitle">
-    <string>Shape</string>
+    <string>Object</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_3">
-    <layout class="QVBoxLayout" name="verticalLayout_6">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="spacing">
+      <number>10</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>10</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>10</number>
+     </property>
      <item>
       <widget class="QTabWidget" name="tabShapeEditor">
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="tab">
         <attribute name="title">
@@ -557,7 +629,53 @@ QTreeView &gt; QFrame {
       </widget>
      </item>
      <item>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="spacing">
+        <number>10</number>
+       </property>
+       <property name="leftMargin">
+        <number>10</number>
+       </property>
+       <property name="rightMargin">
+        <number>10</number>
+       </property>
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="sidebarSaveButton">
+         <property name="text">
+          <string>Save</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="sidebarResetButton">
+         <property name="text">
+          <string>Reset</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
       <widget class="QLabel" name="lblNoShapeSelected">
+       <property name="styleSheet">
+        <string notr="true">QLabel {
+	padding-top: 40px;
+	padding-bottom: 40px;
+}</string>
+       </property>
        <property name="text">
         <string>Select a shape...</string>
        </property>
@@ -565,19 +683,6 @@ QTreeView &gt; QFrame {
         <set>Qt::AlignCenter</set>
        </property>
       </widget>
-     </item>
-     <item>
-      <spacer name="verticalSpacer">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>40</height>
-        </size>
-       </property>
-      </spacer>
      </item>
     </layout>
    </widget>
@@ -593,7 +698,7 @@ QTreeView &gt; QFrame {
   <action name="actionObject_NewMarker">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/pushpin.png</normaloff>:/icons/pushpin.png</iconset>
+     <normaloff>:/icons/toolbar/marker-add.svg</normaloff>:/icons/toolbar/marker-add.svg</iconset>
    </property>
    <property name="text">
     <string>New marker...</string>
@@ -667,10 +772,10 @@ QTreeView &gt; QFrame {
    </property>
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/line.png</normaloff>:/icons/line.png</iconset>
+     <normaloff>:/icons/toolbar/path-add.svg</normaloff>:/icons/toolbar/path-add.svg</iconset>
    </property>
    <property name="text">
-    <string>Line</string>
+    <string>Add Line</string>
    </property>
   </action>
   <action name="actionDrawEllipse">
@@ -679,10 +784,10 @@ QTreeView &gt; QFrame {
    </property>
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/ellipse.png</normaloff>:/icons/ellipse.png</iconset>
+     <normaloff>:/icons/toolbar/ellipse-add-extent.svg</normaloff>:/icons/toolbar/ellipse-add-extent.svg</iconset>
    </property>
    <property name="text">
-    <string>Ellipse</string>
+    <string>Add Ellipse</string>
    </property>
    <property name="toolTip">
     <string>Ellipse</string>
@@ -694,10 +799,10 @@ QTreeView &gt; QFrame {
    </property>
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/path.png</normaloff>:/icons/path.png</iconset>
+     <normaloff>:/icons/toolbar/rect-add.svg</normaloff>:/icons/toolbar/rect-add.svg</iconset>
    </property>
    <property name="text">
-    <string>Rectangle</string>
+    <string>Add Rectangle</string>
    </property>
   </action>
   <action name="actionDrawPolygon">
@@ -706,10 +811,10 @@ QTreeView &gt; QFrame {
    </property>
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/polygon.png</normaloff>:/icons/polygon.png</iconset>
+     <normaloff>:/icons/toolbar/polygon-add.svg</normaloff>:/icons/toolbar/polygon-add.svg</iconset>
    </property>
    <property name="text">
-    <string>Polygon</string>
+    <string>Add Polygon</string>
    </property>
   </action>
   <action name="actionMapLayersConfigure">
@@ -733,6 +838,10 @@ QTreeView &gt; QFrame {
    </property>
   </action>
   <action name="actionMapGpsAddSource">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/toolbar/gps-add.svg</normaloff>:/icons/toolbar/gps-add.svg</iconset>
+   </property>
    <property name="text">
     <string>Add Source...</string>
    </property>
@@ -750,7 +859,7 @@ QTreeView &gt; QFrame {
   <action name="actionLayer_New">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/layers.png</normaloff>:/icons/layers.png</iconset>
+     <normaloff>:/icons/toolbar/layer-add.svg</normaloff>:/icons/toolbar/layer-add.svg</iconset>
    </property>
    <property name="text">
     <string>New...</string>
@@ -789,7 +898,7 @@ QTreeView &gt; QFrame {
   <action name="actionFile_NewWorkspace">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/newfile.png</normaloff>:/icons/newfile.png</iconset>
+     <normaloff>:/icons/toolbar/new.svg</normaloff>:/icons/toolbar/new.svg</iconset>
    </property>
    <property name="text">
     <string>New Workspace...</string>
@@ -801,7 +910,7 @@ QTreeView &gt; QFrame {
   <action name="actionFile_OpenWorkspace">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/folderopen.png</normaloff>:/icons/folderopen.png</iconset>
+     <normaloff>:/icons/toolbar/open.svg</normaloff>:/icons/toolbar/open.svg</iconset>
    </property>
    <property name="text">
     <string>Open Workspace...</string>
@@ -826,7 +935,7 @@ QTreeView &gt; QFrame {
   <action name="actionFile_SaveWorkspace">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/save.png</normaloff>:/icons/save.png</iconset>
+     <normaloff>:/icons/toolbar/save.svg</normaloff>:/icons/toolbar/save.svg</iconset>
    </property>
    <property name="text">
     <string>Save Workspace</string>
@@ -836,6 +945,10 @@ QTreeView &gt; QFrame {
    </property>
   </action>
   <action name="actionFile_SaveWorkspaceAs">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/toolbar/save-as.svg</normaloff>:/icons/toolbar/save-as.svg</iconset>
+   </property>
    <property name="text">
     <string>Save Workspace As...</string>
    </property>
@@ -924,6 +1037,10 @@ QTreeView &gt; QFrame {
    <property name="enabled">
     <bool>false</bool>
    </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/toolbar/cut.svg</normaloff>:/icons/toolbar/cut.svg</iconset>
+   </property>
    <property name="text">
     <string>Cut</string>
    </property>
@@ -935,6 +1052,10 @@ QTreeView &gt; QFrame {
    <property name="enabled">
     <bool>false</bool>
    </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/toolbar/copy.svg</normaloff>:/icons/toolbar/copy.svg</iconset>
+   </property>
    <property name="text">
     <string>Copy</string>
    </property>
@@ -945,6 +1066,10 @@ QTreeView &gt; QFrame {
   <action name="actionEdit_Paste">
    <property name="enabled">
     <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/toolbar/paste.svg</normaloff>:/icons/toolbar/paste.svg</iconset>
    </property>
    <property name="text">
     <string>Paste</string>
@@ -988,6 +1113,67 @@ QTreeView &gt; QFrame {
     <string>Connect to Database...</string>
    </property>
   </action>
+  <action name="actionView_Crosshairs">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Crosshairs</string>
+   </property>
+  </action>
+  <action name="actionDrawMarker">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/toolbar/marker-add.svg</normaloff>:/icons/toolbar/marker-add.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Add Marker</string>
+   </property>
+  </action>
+  <action name="actionFile_SwitchWorkspace">
+   <property name="text">
+    <string>Switch Workspace...</string>
+   </property>
+  </action>
+  <action name="actionFile_DisconnectDatabase">
+   <property name="text">
+    <string>Disconnect</string>
+   </property>
+  </action>
+  <action name="actionSortByName">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Name</string>
+   </property>
+  </action>
+  <action name="actionSortByCustomOrder">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Custom Order</string>
+   </property>
+  </action>
+  <action name="actionObjectAddFiles">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/toolbar/image-add.svg</normaloff>:/icons/toolbar/image-add.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Add Files</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
@@ -1001,6 +1187,12 @@ QTreeView &gt; QFrame {
    <class>SlippyMapTreeView</class>
    <extends>QTreeView</extends>
    <header location="global">Map/SlippyMapTreeView.h</header>
+  </customwidget>
+  <customwidget>
+   <class>OEDockWidget</class>
+   <extends>QDockWidget</extends>
+   <header location="global">Widget/OEDockWidget.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources>

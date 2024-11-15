@@ -133,6 +133,7 @@ void SlippyMapLayerTrack::hydrateFromDatabase(const QJsonObject &json, const QSt
     int lineWidth = json["lineWidth"].toInt();
     int strokeWidth = json["strokeWidth"].toInt();
     int waypointRadius = json["waypointRadius"].toInt();
+    bool waypointsVisible = json["waypointsVisible"].toBool(true);
     setLineWidth(lineWidth);
     setStrokeWidth(strokeWidth);
     setWaypointRadius(waypointRadius);
@@ -143,6 +144,7 @@ void SlippyMapLayerTrack::hydrateFromDatabase(const QJsonObject &json, const QSt
     setLineColor(lineColor);
     setStrokeColor(strokeColor);
     setWaypointColor(waypointColor);
+    setWaypointsVisible(waypointsVisible);
 
     auto linestring = from_wkt<linestring_t>(geometry.toStdString());
 
@@ -165,6 +167,7 @@ void SlippyMapLayerTrack::saveToDatabase(QJsonObject &json, QString &geometry)
     json["strokeColor"] = strokeColor().name(QColor::HexArgb);
     json["waypointRadius"] = waypointRadius();
     json["waypointColor"] = waypointColor().name(QColor::HexArgb);
+    json["waypointsVisible"] = waypointsVisible();
 
     QStringList pointStrings;
     for (const auto& point: m_points) {
@@ -413,4 +416,14 @@ const QVector<QPointF> &SlippyMapLayerTrack::points() const
 void SlippyMapLayerTrack::setPoints(const QVector<QPointF> &points)
 {
     m_points = points;
+}
+
+void SlippyMapLayerTrack::setWaypointsVisible(bool visible)
+{
+    m_waypointsVisible = visible;
+}
+
+bool SlippyMapLayerTrack::waypointsVisible() const
+{
+    return m_waypointsVisible;
 }

@@ -42,12 +42,14 @@ public:
     void setStrokeColor(const QColor& color);
     void setWaypointColor(const QColor& color);
     void setWaypointRadius(int radius);
+    void setWaypointsVisible(bool visible);
     int lineWidth() const;
     const QColor& lineColor() const;
     int strokeWidth() const;
     const QColor& strokeColor() const;
     const QColor& waypointColor() const;
     int waypointRadius() const;
+    bool waypointsVisible() const;
 
 private:
     void initStyle();
@@ -63,6 +65,7 @@ private:
     int m_trackLineWidth;
     int m_trackLineStrokeWidth;
     int m_waypointRadius;
+    bool m_waypointsVisible;
 
     GPXTrack m_track;
 

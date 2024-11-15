@@ -5,6 +5,7 @@
 #include "SlippyMapLayerTrackStylePropertyPage.h"
 #include "SlippyMapLayerTrack.h"
 
+#include <QCheckBox>
 #include <QSpinBox>
 #include <QFormLayout>
 #include <QVBoxLayout>
@@ -39,6 +40,7 @@ void SlippyMapLayerTrackStylePropertyPage::setupUi()
     m_waypointRadius = new QSpinBox();
     m_lineWidth = new QSpinBox();
     m_lineStrokeWidth = new QSpinBox();
+    m_waypointsVisible = new QCheckBox();
 
     m_lineColorSelector->setColor(m_track->lineColor());
     m_lineStrokeColorSelector->setColor(m_track->strokeColor());
@@ -46,6 +48,7 @@ void SlippyMapLayerTrackStylePropertyPage::setupUi()
     m_waypointRadius->setValue(m_track->waypointRadius());
     m_lineWidth->setValue(m_track->lineWidth());
     m_lineStrokeWidth->setValue(m_track->strokeWidth());
+    m_waypointsVisible->setChecked(m_track->waypointsVisible());
 
     auto *formLayout = new QFormLayout();
     formLayout->addRow(tr("Line Color"), m_lineColorSelector);
@@ -54,10 +57,14 @@ void SlippyMapLayerTrackStylePropertyPage::setupUi()
     formLayout->addRow(tr("Stroke Width"), m_lineStrokeWidth);
     formLayout->addRow(tr("Waypoint Color"), m_waypointColorSelector);
     formLayout->addRow(tr("Waypoint Radius"), m_waypointRadius);
+    formLayout->addRow(m_waypointsVisible);
+    formLayout->setSpacing(10);
 
     auto *vLayout = new QVBoxLayout();
     vLayout->addLayout(formLayout);
     vLayout->addStretch();
+    vLayout->setSpacing(0);
+    vLayout->setContentsMargins(10, 10, 10, 10);
 
     setLayout(vLayout);
 }
@@ -70,4 +77,5 @@ void SlippyMapLayerTrackStylePropertyPage::updateUi()
     m_waypointRadius->setValue(m_track->waypointRadius());
     m_lineWidth->setValue(m_track->lineWidth());
     m_lineStrokeWidth->setValue(m_track->strokeWidth());
+    m_waypointsVisible->setChecked(m_track->waypointsVisible());
 }

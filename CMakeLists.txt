@@ -119,6 +119,19 @@ set(PROJECT_SOURCES
         explorer/config.h
         explorer/Network/ServerInterface.cpp
         explorer/Network/ServerInterface.h
+        explorer/Network/ServerConnectionDialog.cpp
+        explorer/Network/ServerConnectionDialog.h
+        explorer/Widget/OEDockWidget.cpp
+        explorer/Widget/OEDockWidget.h
+        explorer/Network/WorkspaceSelectionDialog.cpp
+        explorer/Network/WorkspaceSelectionDialog.h
+        explorer/Network/WorkspaceSelectionDialog.ui
+        explorer/Window/TabbedMainWindow.cpp
+        explorer/Window/TabbedMainWindow.h
+        explorer/Window/SlippyMapTab.cpp
+        explorer/Window/SlippyMapTab.h
+        explorer/Map/SlippyMapLayerObjectAttachmentsPropertyPage.cpp
+        explorer/Map/SlippyMapLayerObjectAttachmentsPropertyPage.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
