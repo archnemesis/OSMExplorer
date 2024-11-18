@@ -14,17 +14,25 @@ ServerConnectionDialog::ServerConnectionDialog(QWidget *parent) : QDialog(parent
 {
     setFixedWidth(500);
 
+    QString username = QSettings().value("server/username", "").toString();
+    QString password = QSettings().value("server/password", "").toString();
+
     m_username = new QLineEdit();
     m_username->setPlaceholderText(tr("Username"));
+    m_username->setText(username);
 
     m_password = new QLineEdit();
     m_password->setPlaceholderText(tr("Password"));
     m_password->setEchoMode(QLineEdit::Password);
+    m_password->setText(password);
 
     m_loginButton = new QPushButton(tr("Log In"));
     m_cancelButton = new QPushButton(tr("Cancel"));
 
     m_rememberPassword = new QCheckBox(tr("Remember password"));
+
+    if (!username.isEmpty())
+        setRemember(true);
 
     connect(m_loginButton,
             &QPushButton::clicked,

@@ -13,8 +13,10 @@
 #include "Application/HistoryManager.h"
 #include "Map/SlippyMapGpsMarker.h"
 #include "Network/ServerInterface.h"
+#include "GeoCoding/GeoCodingInterface.h"
+#include "GeoCoding/GeoCodingListModel.h"
 
-class WeatherStationMarker;
+class SlippyMapLayerProxyModel;
 
 namespace Ui {
 class MainWindow;
@@ -22,11 +24,14 @@ class MainWindow;
 
 class DirectionListItemWidget;
 class ExplorerPluginInterface;
+class GeoCodingListModel;
+class HistoryManager;
 class LocationDataProvider;
 class MapDataImportDialog;
 class QAction;
 class QActionGroup;
 class QComboBox;
+class QCompleter;
 class QLabel;
 class QListWidgetItem;
 class QMenu;
@@ -35,13 +40,13 @@ class QNetworkAccessManager;
 class QNetworkReply;
 class QProgressBar;
 class QSpinBox;
+class ServerConnectionDialog;
 class SettingsDialog;
+class SlippyMapGpsMarker;
 class SlippyMapLayerObjectPropertyPage;
 class TextLogViewerForm;
 class WeatherForecastWindow;
-class SlippyMapGpsMarker;
-class HistoryManager;
-class ServerConnectionDialog;
+class WeatherStationMarker;
 
 namespace color_widgets {
     class ColorSelector;
@@ -89,6 +94,7 @@ protected slots:
     void onSlippyMapLayerObjectUpdated(const SlippyMapLayerObject::Ptr& object);
     void onSlippyMapLayerObjectWasDragged(const SlippyMapLayerObject::Ptr& object);
     void onSlippyMapDragFinished();
+
     void onWeatherService_stationListReady(
             const QList<NationalWeatherServiceInterface::WeatherStation>& stations);
     void onWeatherService_forecastReady(
@@ -106,43 +112,50 @@ protected slots:
             QHash<QString, QVariant> metadata);
     void onTvwMarkersContextMenuRequested(const QPoint& point);
     void onTvwMarkersClicked(const QModelIndex& index);
-    void showActiveObjectPropertyPage();
-    void onPluginLayerObjectProviderMarkerAdded(const SlippyMapLayerObject::Ptr& object);
+    void advanceLayerAnimationFrame();
+    void centerMapOnContextMenuPosition();
+    void clearSelectedLayer();
+    void copyActiveObject();
     void createMarkerAtContextMenuPosition();
     void createMarkerAtCurrentPosition();
     void createMarkerAtPosition(const QPointF& position);
-    void onDeleteMarkerActionTriggered();
-    void onEditMarkerActionTriggered();
-    void onCenterMapActionTriggered();
-    void setDarkModeEnabled(bool enabled);
-    void onEditShapeActionTriggered();
-    void startPolygonSelection();
-    void onAnimationTimerTimeout();
-    void undo();
-    void redo();
-    void undoEventAdded(HistoryManager::HistoryEvent event);
-    void redoHistoryCleared();
+    void createNewLayer();
     void cutActiveObject();
-    void copyActiveObject();
-    void pasteObject();
-    void startServerLogin();
-    void loadViewportData();
-    void onServerInterfaceWorkspacesRequestFinished();
-    void onServerInterfaceLayersRequestFinished();
-    void onServerInterfaceAuthTokenRequestFinished();
-    void onServerInterfaceAuthTokenRequestFailed();
+    void deleteActiveLayer();
+    void deleteActiveObject();
+    void deleteObject(const SlippyMapLayerObject::Ptr& object);
+    void deleteSelectedLayer();
     void disableDrawing();
     void enableDrawing();
-    void onWindowSizeTimerTimeout();
+    void getGeoCodedLocation();
+    void loadViewportData();
+    void openOrCreateWorkspace(const QList<ServerInterface::Workspace>& workspaces);
+    void pasteObject();
+    void redo();
+    void redoHistoryCleared();
     void refreshSettings();
-    void createNewLayer();
-    void deleteSelectedLayer();
-    void deleteActiveLayer();
-    void clearSelectedLayer();
-    void deleteActiveObject();
     void renameActiveLayer();
     void saveObject(const SlippyMapLayerObject::Ptr& object);
-    void deleteObject(const SlippyMapLayerObject::Ptr& object);
+    void saveWindowSize();
+    void showActiveObjectPropertyPage();
+    void showAddGpsSourceDialog();
+    void showGpsLogDialog();
+    void showSettingsDialog();
+    void startPolygonSelection();
+    void startServerLogin();
+    void undo();
+    void undoEventAdded(HistoryManager::HistoryEvent event);
+    void activateLayerAtIndex(const QModelIndex &index);
+
+    // todo: finish renaming these
+    void on_actionDrawLine_triggered();
+    void on_actionDrawRectangle_triggered();
+    void on_actionDrawEllipse_triggered();
+    void on_actionDrawMarker_triggered();
+    void on_actionImport_GPX_triggered();
+    void on_actionMarkerImport_triggered();
+    void on_actionToolsOSMImport_triggered();
+    void on_geoCodingInterface_locationFound(QList<GeoCodingInterface::GeoCodedAddress> locations);
 
 protected:
     enum AnimationState {
@@ -171,78 +184,6 @@ protected:
         SlippyMapLayerObject::Ptr object;
     };
 
-    bool closeWorkspace();
-    void loadMarkers();
-    void loadLayers();
-    void loadPluginLayers();
-    void loadStartupSettings();
-    void resizeEvent(QResizeEvent *event) override;
-    void saveTileLayerSettings();
-    void createWorkspace();
-    void saveWorkspace(const QString& fileName);
-    void setWorkspaceDirty(bool dirty);
-    void setupContextMenus();
-    void setupMap();
-    void setupToolbar();
-    void setupWeather();
-    void setupMenuBar();
-    void showPropertyPage(const SlippyMapLayerObject::Ptr& object);
-    void updateRecentFileList();
-    void createUndoAddObject(const QString& description, SlippyMapLayer::Ptr layer, const SlippyMapLayerObject::Ptr& object);
-    void createUndoModifyObject(const QString& description, const SlippyMapLayerObject::Ptr& object);
-    void createUndoDeleteObject(const QString &description,
-                                const SlippyMapLayer::Ptr& layer,
-                                const SlippyMapLayerObject::Ptr& object);
-    void createUndoAddLayer(const QString& description, SlippyMapLayer::Ptr layer);
-    void createUndoDeleteLayer(const QString &description, SlippyMapLayer::Ptr layer);
-    void closeEvent(QCloseEvent *event) override;
-    void processDatabaseUpdates();
-    void processDatabaseUpdateQueue();
-    void setDatabaseMode(bool databaseMode);
-
-    /*
-     * Main Menu
-     */
-    QMenuBar *m_mainMenuBar;
-
-    QMenu *m_fileMenu;
-    QMenu *m_editMenu;
-    QMenu *m_layerMenu;
-    QMenu *m_objectMenu;
-    QMenu *m_drawMenu;
-    QMenu *m_viewMenu;
-    QMenu *m_toolsMenu;
-    QMenu *m_helpMenu;
-
-    QAction *m_exitAction;
-
-    /*
-     * Workspace Menu Items
-     */
-    QMenu *m_recentWorkspacesMenu;
-
-    QAction *m_newWorkspaceAction;
-    QAction *m_openWorkspaceAction;
-    QAction *m_closeWorkspaceAction;
-    QAction *m_saveWorkspaceAction;
-    QAction *m_saveWorkspaceAsAction;
-
-    /*
-     * Import Menu Items
-     */
-    QMenu *m_fileImportMenu;
-    QAction *m_importGpxAction;
-    QAction *m_importCsvAction;
-
-    /*
-     * Server/Cloud Items
-     */
-    QAction *m_connectServerAction;
-    QAction *m_disconnectServerAction;
-
-
-private:
-
     class Clipboard {
     public:
         enum EntryType {
@@ -263,10 +204,42 @@ private:
         SlippyMapLayerObject::Ptr object;
     };
 
+    bool closeWorkspace();
+    void loadMarkers();
+    void loadLayers();
+    void loadPluginLayers();
+    void loadStartupSettings();
+    void resizeEvent(QResizeEvent *event) override;
+    void saveTileLayerSettings();
+    void createWorkspace();
+    void setWorkspaceDirty(bool dirty);
+    void setupContextMenus();
+    void setupMap();
+    void setupToolbar();
+    void setupWeather();
+    void setupMenuBar();
+    void showPropertiesDialog(const SlippyMapLayerObject::Ptr& object);
+    void updateRecentFileList();
+    void createUndoAddObject(const QString& description, SlippyMapLayer::Ptr layer, const SlippyMapLayerObject::Ptr& object);
+    void createUndoModifyObject(const QString& description, const SlippyMapLayerObject::Ptr& object);
+    void createUndoDeleteObject(const QString &description,
+                                const SlippyMapLayer::Ptr& layer,
+                                const SlippyMapLayerObject::Ptr& object);
+    void createUndoAddLayer(const QString& description, SlippyMapLayer::Ptr layer);
+    void createUndoDeleteLayer(const QString &description, SlippyMapLayer::Ptr layer);
+    void closeEvent(QCloseEvent *event) override;
+    void processDatabaseUpdates();
+    void processDatabaseUpdateQueue();
+    void setDatabaseMode(bool databaseMode);
+    void loadWorkspaces();
+
+private:
     Ui::MainWindow *ui;
     AnimationState m_animationState = Forward;
     Clipboard m_clipBoard;
     DirectionListItemWidget *m_currentRouteListItemWidget = nullptr;
+    GeoCodingInterface *m_geoCodingInterface;
+    GeoCodingListModel *m_geoCodingListModel;
     HistoryManager *m_historyManager;
     MapDataImportDialog *m_importDialog = nullptr;
     NationalWeatherServiceInterface *m_weatherService = nullptr;
@@ -292,12 +265,14 @@ private:
     QAction *m_zoomInHereMapAction = nullptr;
     QAction *m_zoomOutHereMapAction = nullptr;
     QActionGroup *m_drawingActionGroup = nullptr;
+    QCompleter *m_locationSearchCompleter = nullptr;
     QHash<QString,SlippyMapGpsMarker::Ptr> m_gpsMarkers;
     QLabel *m_statusBarGpsStatusLabel;
     QLabel *m_statusBarPositionLabel;
     QLabel *m_statusBarStatusLabel;
     QLineEdit *m_toolBarLatitudeInput;
     QLineEdit *m_toolBarLongitudeInput;
+    QLineEdit *m_toolBarGeoCodingInput;
     QList<ExplorerPluginInterface*> m_plugins;
     QList<LocationDataProvider*> m_gpsProviders;
     QList<QString> m_recentFileList;
@@ -341,7 +316,9 @@ private:
     SlippyMapLayer::Ptr m_gpsMarkerLayer = nullptr;
     SlippyMapLayer::Ptr m_weatherLayer;
     SlippyMapLayer::Ptr m_databaseLayer;
+    SlippyMapLayer::Ptr m_searchMarkerLayer;
     SlippyMapLayerManager *m_layerManager = nullptr;
+    SlippyMapLayerProxyModel *m_layerManagerProxy = nullptr;
     SlippyMapLayerObject::WeakPtr m_selectedObject;
     SlippyMapLayerObject::Ptr m_selectedObjectCopy = nullptr;
     SlippyMapLayerObjectPropertyPage *m_selectedObjectPropertyPage = nullptr;
@@ -355,23 +332,6 @@ private:
     color_widgets::ColorSelector *m_fillColorSelector;
     color_widgets::ColorSelector *m_strokeColorSelector;
     int m_requestCount = 0;
-
-private slots:
-    void on_actionNewMarker_triggered();
-    void on_actionViewSidebar_toggled(bool arg1);
-    void on_actionViewClearRoute_triggered();
-    void on_actionFileSettings_triggered();
-    void on_actionMapGpsAddSource_triggered();
-    void on_actionViewGpsLog_triggered();
-    void on_tvwMarkers_activated(const QModelIndex &index);
-    void on_tvwMarkers_clicked(const QModelIndex &index);
-    void on_actionDrawLine_triggered();
-    void on_actionDrawRectangle_triggered();
-    void on_actionDrawEllipse_triggered();
-    void on_actionDrawMarker_triggered();
-    void on_actionImport_GPX_triggered();
-    void on_actionMarkerImport_triggered();
-    void on_actionToolsOSMImport_triggered();
 
 };
 

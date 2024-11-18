@@ -10,11 +10,12 @@
 
 ExplorerApplication::ExplorerApplication(int &argc, char **argv) :
     QApplication(argc, argv){
-    m_pluginManager = new PluginManager();
+    m_pluginManager = new PluginManager(this);
     m_pluginManager->loadPlugins();
-    m_layerManager = new SlippyMap::SlippyMapLayerManager();
-    m_historyManager = new HistoryManager();
-    m_databaseManager = new DatabaseManager();
+    m_layerManager = new SlippyMap::SlippyMapLayerManager(this);
+    m_historyManager = new HistoryManager(this);
+    m_databaseManager = new DatabaseManager(this);
+    m_serverInterface = new ServerInterface(this);
 }
 
 ExplorerApplication * ExplorerApplication::instance() {
@@ -30,6 +31,12 @@ SlippyMap::SlippyMapLayerManager *ExplorerApplication::layerManager()
 {
     auto *app = dynamic_cast<ExplorerApplication*>(QApplication::instance());
     return app->m_layerManager;
+}
+
+ServerInterface* ExplorerApplication::serverInterface()
+{
+    auto *app = dynamic_cast<ExplorerApplication*>(QApplication::instance());
+    return app->m_serverInterface;
 }
 
 HistoryManager *ExplorerApplication::historyManager()

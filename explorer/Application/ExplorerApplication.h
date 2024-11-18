@@ -7,6 +7,8 @@
 
 #include <QApplication>
 
+#include "Network/ServerInterface.h"
+
 class PluginManager;
 class HistoryManager;
 class DatabaseManager;
@@ -25,12 +27,14 @@ public:
     static HistoryManager *historyManager();
     static DatabaseManager *databaseManager();
     static SlippyMap::SlippyMapLayerManager *layerManager();
+    static ServerInterface *serverInterface();
 
 private:
     PluginManager *m_pluginManager;
     HistoryManager *m_historyManager;
     DatabaseManager *m_databaseManager;
     SlippyMap::SlippyMapLayerManager *m_layerManager;
+    ServerInterface *m_serverInterface;
 };
 
 
