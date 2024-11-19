@@ -75,6 +75,7 @@
 #include <QToolButton>
 
 #include "Application/PluginManager.h"
+#include "Dialog/ObjectBrowserDialog.h"
 #include "GeoCoding/GeoCodingListModel.h"
 #include "Map/SlippyMapGpsMarker.h"
 #include "Map/SlippyMapLayerObjectFilesPropertyPage.h"
@@ -621,6 +622,11 @@ void MainWindow::setupContextMenus()
             &QAction::triggered,
             this,
             &MainWindow::showActiveObjectPropertyPage);
+
+    connect(ui->actionObject_Browser,
+        &QAction::triggered,
+        this,
+        &MainWindow::showObjectBrowserDialog);
 
     m_centerMapAction = new QAction();
     m_centerMapAction->setText(tr("Center Here"));
@@ -1343,17 +1349,25 @@ void MainWindow::showPropertiesDialog(const SlippyMapLayerObject::Ptr& object)
 {
     static QMetaObject::Connection saveButtonConnection;
     QList<SlippyMapLayerObjectPropertyPage*> propertyPages;
-    propertyPages.append(new SlippyMapLayerObjectCommonPropertyPage(object, m_layerManager));
-    propertyPages.append(new SlippyMapLayerObjectFilesPropertyPage(object, this));
+
+    //
+    // we don't show these for GPS markers
+    //
+    auto gpsMarker = object.dynamicCast<SlippyMapGpsMarker::Ptr>();
+    if (gpsMarker.isNull()) {
+        propertyPages.append(new SlippyMapLayerObjectCommonPropertyPage(object, m_layerManager));
+        propertyPages.append(new SlippyMapLayerObjectFilesPropertyPage(object, this));
+    }
 
     for (auto *propertyPage : object->propertyPages(object))
         propertyPages.append(propertyPage);
 
-    if (m_databaseMode)
+    if (gpsMarker.isNull()) {
         propertyPages.append(new DatabaseObjectPropertyPage(object));
 
-    for (auto *propertyPage : ExplorerApplication::pluginManager()->getPropertyPages())
-        propertyPages.append(propertyPage);
+        for (auto *propertyPage : ExplorerApplication::pluginManager()->getPropertyPages())
+            propertyPages.append(propertyPage);
+    }
 
     auto *tabWidget = new QTabWidget();
 
@@ -1458,15 +1472,32 @@ void MainWindow::newWorkspace()
     if (!closeWorkspace())
         return;
 
-    // if connected to server, get the workspace selection
-    // dialog again
-    if (m_databaseMode) {
-        loadWorkspaces();
-        return;
-    }
+    bool ok;
+    QString workspaceName = QInputDialog::getText(
+            this,
+            tr("New Workspace"),
+            tr("Enter the name of the new workspace"),
+            QLineEdit::Normal,
+            tr("New Workspace"),
+            &ok
+            );
 
-    setWindowTitle("Untitled.osm");
-    setWorkspaceDirty(false);
+    if (ok) {
+        ServerInterface::Workspace workspace;
+        workspace.id = QUuid::createUuid();
+        workspace.name = workspaceName;
+        workspace.description = ""; // todo: custom dialog for name and description
+
+        m_serverInterface->createWorkspace(workspace,
+            [this, workspace]() {
+                m_workspaceId = workspace.id;
+                m_workspaceName = workspace.name;
+                setWindowTitle(m_workspaceName);
+            },
+            [this](ServerInterface::RequestError error) {
+                // todo: handle create workspace error
+            });
+    }
 }
 
 void MainWindow::weatherNetworkAccessManager_onRequestFinished(QNetworkReply* reply) {
@@ -1746,6 +1777,19 @@ void MainWindow::showGpsLogDialog()
     m_nmeaLog->show();
 }
 
+void MainWindow::showObjectBrowserDialog()
+{
+    qDebug() << "Showing object browser";
+
+    if (m_objectBrowser == nullptr) {
+        m_objectBrowser = new ObjectBrowserDialog(m_workspaceId);
+    }
+
+    m_objectBrowser->setWindowTitle(tr("Object Browser"));
+    m_objectBrowser->refresh();
+    m_objectBrowser->show();
+}
+
 void MainWindow::activateLayerAtIndex(const QModelIndex &index)
 {
     if (index.isValid() && !index.parent().isValid()) {
@@ -1862,6 +1906,7 @@ void MainWindow::on_geoCodingInterface_locationFound(QList<GeoCodingInterface::G
         marker->setPosition(coord);
         marker->setEditable(false);
         marker->setMovable(false);
+        marker->setColor(QColor(0xFFCC0000));
         m_layerManager->addLayerObject(m_searchMarkerLayer, marker);
     }
     else {
@@ -2554,8 +2599,6 @@ void MainWindow::startServerLogin()
 
 void MainWindow::loadViewportData()
 {
-    if (!m_databaseMode) return;
-
     auto boundingBox = ui->slippyMap->boundingBoxLatLon();
 
     m_serverInterface->getLayersForViewport(
@@ -2636,6 +2679,7 @@ void MainWindow::loadViewportData()
                     auto object = SlippyMapLayerObject::Ptr(qobject_cast<SlippyMapLayerObject *>(o));
 
                     object->setId(objectdata.id);
+                    object->setLayerId(layer->id());
                     object->setLabel(objectdata.label);
                     object->setDescription(objectdata.description);
                     object->hydrateFromDatabase(objectdata.data, geom);
@@ -2651,69 +2695,19 @@ void MainWindow::loadViewportData()
         });
 }
 
-void MainWindow::createWorkspace()
-{
-    if (m_workspaceId.isNull()) {
-        // todo: dispatch request to create workspace,
-        //  it will then re-trigger this method to
-        //  sync everything
-        bool ok;
-        QString workspaceName = QInputDialog::getText(
-                this,
-                tr("New Workspace"),
-                tr("Enter the name of the new workspace"),
-                QLineEdit::Normal,
-                tr("New Workspace"),
-                &ok
-                );
-
-        if (ok) {
-            ServerInterface::Workspace workspace;
-            workspace.id = QUuid::createUuid();
-            workspace.name = workspaceName;
-            workspace.description = ""; // todo: custom dialog for name and description
-
-            m_serverInterface->createWorkspace(workspace,
-                [this, workspace]() {
-                    m_workspaceId = workspace.id;
-                    m_workspaceName = workspace.name;
-                    setWindowTitle(m_workspaceName);
-                }
-            );
-        }
-
-    }
-}
-
 void MainWindow::processDatabaseUpdates()
 {
     if (!m_databaseLayerDeleteList.isEmpty()) {
         for (const auto &layer: m_databaseLayerDeleteList) {
             for (const auto& object: layer->objects()) {
-                qDebug() << "Processing object" << object->label() << "for layer" << layer->name();
-                QNetworkRequest request;
-                QString url = QString(OSM_SERVER_HOST "/objects/%1").arg(object->id().toString());
-                request.setUrl(QUrl(url));
-                request.setRawHeader("Authorization",
-                                     QString("Bearer %1").arg(m_serverInterface->authToken()).toUtf8());
-
                 ServerSyncRequest sync;
                 sync.type = SyncRequestDelete;
-                sync.request = request;
                 sync.object = object;
                 m_serverSyncRequestQueue.append(sync);
             }
 
-            qDebug() << "Processing" << layer->name() << "for delete";
-            QNetworkRequest request;
-            QString url = QString(OSM_SERVER_HOST "/layers/%1").arg(layer->id().toString());
-            request.setUrl(QUrl(url));
-            request.setRawHeader("Authorization",
-                                 QString("Bearer %1").arg(m_serverInterface->authToken()).toUtf8());
-
             ServerSyncRequest sync;
             sync.type = SyncRequestDelete;
-            sync.request = request;
             sync.layer = layer;
             m_serverSyncRequestQueue.append(sync);
         }
@@ -2728,26 +2722,8 @@ void MainWindow::processDatabaseUpdates()
             if (layer->id().toString().isEmpty())
                 layer->setId(QUuid::createUuid().toString());
 
-            json["id"] = layer->id().toString();
-            json["workspace_id"] = m_workspaceId.toString();
-            json["name"] = layer->name();
-            json["description"] = layer->description();
-            json["order"] = layer->order();
-            json["color"] = layer->color().name(QColor::HexArgb);
-
-            QJsonDocument jsonDocument(json);
-            QByteArray jsonData = jsonDocument.toJson();
-
-            QNetworkRequest request;
-            request.setUrl(QUrl(OSM_SERVER_HOST "/layers"));
-            request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-            request.setRawHeader("Authorization",
-                                 QString("Bearer %1").arg(m_serverInterface->authToken()).toUtf8());
-
             ServerSyncRequest sync;
             sync.type = SyncRequestPut;
-            sync.request = request;
-            sync.data = jsonData;
             sync.layer = layer;
             m_serverSyncRequestQueue.append(sync);
         }
@@ -2755,16 +2731,8 @@ void MainWindow::processDatabaseUpdates()
 
     if (!m_databaseObjectDeleteList.isEmpty()) {
         for (const auto& object: m_databaseObjectDeleteList) {
-            qDebug() << "Processing object" << object->label() << "for delete";
-            QNetworkRequest request;
-            QString url = QString(OSM_SERVER_HOST "/objects/%1").arg(object->id().toString());
-            request.setUrl(QUrl(url));
-            request.setRawHeader("Authorization",
-                                 QString("Bearer %1").arg(m_serverInterface->authToken()).toUtf8());
-
             ServerSyncRequest sync;
             sync.type = SyncRequestDelete;
-            sync.request = request;
             sync.object = object;
             m_serverSyncRequestQueue.append(sync);
         }
@@ -2780,30 +2748,10 @@ void MainWindow::processDatabaseUpdates()
 
             const auto& layer = m_layerManager->layerForObject(object);
 
-            json["id"] = object->id().toString();
-            json["layer_id"] = layer->id().toString();
-            json["label"] = object->label();
-            json["description"] = object->description();
-            json["type"] = QString(object->metaObject()->className());
-            json["visible"] = object->isVisible();
-
-            QJsonObject data;
-            QString geom;
-            object->saveToDatabase(data, geom);
-            json["geom"] = geom;
-            json["data"] = data;
-
-            QNetworkRequest request;
-            request.setUrl(QUrl(OSM_SERVER_HOST "/objects"));
-            request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-            request.setRawHeader("Authorization",
-                                 QString("Bearer %1").arg(m_serverInterface->authToken()).toUtf8());
-
             ServerSyncRequest sync;
             sync.type = SyncRequestPut;
             sync.object = object;
-            sync.request = request;
-            sync.data = QJsonDocument(json).toJson();
+            sync.layer = layer;
 
             m_serverSyncRequestQueue.append(sync);
         }
@@ -2821,74 +2769,102 @@ void MainWindow::processDatabaseUpdateQueue()
 {
     if (!m_serverSyncRequestQueue.isEmpty()) {
         const ServerSyncRequest& sync = m_serverSyncRequestQueue.first();
+
         switch (sync.type) {
             case SyncRequestDelete: {
-                qDebug() << "Starting DELETE request for layer/object update";
-                auto *reply = m_serverNetworkManager->deleteResource(
-                        sync.request);
-                connect(reply,
-                        &QNetworkReply::finished,
-                        [this, reply, sync]() {
-                            if (reply->error() != QNetworkReply::NoError) {
-                                qCritical() << "DELETE request failed:" << reply->errorString();
-                                QMessageBox::critical(
-                                        this,
-                                        tr("Server Error"),
-                                        tr("Error processing request. Please try again."));
-                                return;
-                            }
-
-                            qDebug() << "DELETE request finished successfully";
-                            m_serverSyncRequestQueue.removeFirst();
-
-                            if (!sync.layer.isNull()) {
-                                m_databaseLayerDeleteList.removeOne(sync.layer);
-                                sync.layer->setSynced(true);
-                            }
-                            if (!sync.object.isNull()) {
-                                m_databaseObjectDeleteList.removeOne(sync.object);
-                                sync.object->setSynced(true);
-                            }
-
+                if (!sync.object.isNull()) {
+                    m_serverInterface->deleteObject(
+                        sync.object->id().toUuid(),
+                        [this]() {
                             int val = m_serverRequestProgress->value();
                             m_serverRequestProgress->setValue(val + 1);
+                            m_serverSyncRequestQueue.removeFirst();
                             processDatabaseUpdateQueue();
-                });
+                        },
+                        [this](ServerInterface::RequestError error) {
+
+                        });
+                }
+                else if (!sync.layer.isNull()) {
+                    m_serverInterface->deleteLayer(
+                        sync.layer->id().toUuid(),
+                        [this]() {
+                            int val = m_serverRequestProgress->value();
+                            m_serverRequestProgress->setValue(val + 1);
+                            m_serverSyncRequestQueue.removeFirst();
+                            processDatabaseUpdateQueue();
+                        },
+                        [this](ServerInterface::RequestError error) {
+
+                        });
+                }
                 break;
             }
             case SyncRequestPut: {
-                qDebug() << "Starting PUT request for layer/object update";
-                auto *reply = m_serverNetworkManager->put(
-                        sync.request,
-                        sync.data);
-                connect(reply,
-                        &QNetworkReply::finished,
-                        [this, reply, sync]() {
-                            if (reply->error() != QNetworkReply::NoError) {
-                                qCritical() << "PUT request failed:" << reply->errorString();
-                                QMessageBox::critical(
-                                        this,
-                                        tr("Server Error"),
-                                        tr("Error processing request. Please try again."));
-                                return;
-                            }
+                if (!sync.object.isNull()) {
+                    ServerInterface::Object object;
+                    object.id = sync.object->id().toUuid();
+                    object.layerId = sync.layer->id().toUuid();
+                    object.label = sync.object->label();
+                    object.description = sync.object->description();
+                    object.type = QString(sync.object->metaObject()->className());
+                    object.visible = sync.object->isVisible();
 
-                            qDebug() << "PUT request finished successfully";
+                    QJsonObject data;
+                    QString geom;
+                    sync.object->packageObjectData(data, geom);
+                    object.data = data;
+                    object.geom = geom;
+
+                    m_serverInterface->saveObject(
+                        object,
+                        [this, sync]() {
                             m_serverSyncRequestQueue.removeFirst();
-
-                            if (!sync.layer.isNull()) {
-                                m_databaseLayerUpdateList.removeOne(sync.layer);
-                                sync.layer->setSynced(true);
-                            }
-                            if (!sync.object.isNull()) {
-                                m_databaseObjectUpdateList.removeOne(sync.object);
-                                sync.object->setSynced(true);
-                            }
+                            sync.object->setSynced(true);
 
                             int val = m_serverRequestProgress->value();
                             m_serverRequestProgress->setValue(val + 1);
+
                             processDatabaseUpdateQueue();
+                        },
+                        [this](ServerInterface::RequestError error) {
+                            QMessageBox::critical(
+                                this,
+                                tr("Server Error"),
+                                tr("There was an error syncing to the database."));
+                            // todo: indicate that we aren't synced and the user should
+                            //  click save
                         });
+                }
+                else if (!sync.layer.isNull()) {
+                    ServerInterface::Layer layer;
+                    layer.id = sync.layer->id().toUuid();
+                    layer.workspaceId = m_workspaceId;
+                    layer.name = sync.layer->name();
+                    layer.description = sync.layer->description();
+                    layer.order = sync.layer->order();
+                    layer.color = sync.layer->color();
+
+                    m_serverInterface->saveLayer(
+                        layer,
+                        [this, sync]() {
+                            m_serverSyncRequestQueue.removeFirst();
+                            sync.layer->setSynced(true);
+
+                            int val = m_serverRequestProgress->value();
+                            m_serverRequestProgress->setValue(val + 1);
+
+                            processDatabaseUpdateQueue();
+                        },
+                        [this](ServerInterface::RequestError error) {
+                            QMessageBox::critical(
+                                this,
+                                tr("Server Error"),
+                                tr("There was an error syncing to the database."));
+                            // todo: indicate that we aren't synced and the user should
+                            //  click save
+                        });
+                }
                 break;
             }
         }
@@ -2934,55 +2910,22 @@ void MainWindow::openOrCreateWorkspace(const QList<ServerInterface::Workspace>& 
             workspace.name = name;
             workspace.description = description;
 
-            QJsonObject root;
-            root["id"] = id.toString();
-            root["name"] = name;
-            root["description"] = description;
-
-            QJsonDocument doc(root);
-            QByteArray data = doc.toJson();
-
-            QNetworkRequest request;
-            request.setUrl(QUrl(OSM_SERVER_HOST "/workspaces"));
-            request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-            request.setRawHeader("Authorization",
-                                 QString("Bearer %1").arg(m_serverInterface->authToken()).toUtf8());
-
-            QNetworkReply *reply = m_serverNetworkManager->put(request, data);
-            connect(reply,
-                    &QNetworkReply::finished,
-                    [this, id, reply, name]() {
-                            if (reply->error() != QNetworkReply::NoError) {
-                                qCritical() << "Create workspace request failed";
-                                qCritical() << reply->errorString();
-                                QMessageBox::critical(
-                                        this,
-                                        tr("Server Error"),
-                                        tr("Error processing request. Please try again."));
-                                return;
-                            }
-
-                            auto body = QJsonDocument::fromJson(reply->readAll());
-                            auto root = body.object();
-
-                            if (root["status"] != "ok") {
-                                qCritical() << "Server error" << root["reason"];
-                                QMessageBox::critical(
-                                        this,
-                                        tr("Server Error"),
-                                        root["reason"].toString());
-                                return;
-                            }
-
-                            m_workspaceId = id;
-                            m_workspaceName = name;
-                            setWindowTitle(
-                                    tr("Online Workspace") + " - " + \
-                                    m_workspaceName);
-                            loadViewportData();
-                            setWorkspaceDirty(false);
-                        });
-
+            m_serverInterface->createWorkspace(workspace,
+            [this, workspace]() {
+                    m_workspaceId = workspace.id;
+                    m_workspaceName = workspace.name;
+                    setWindowTitle(
+                            tr("Online Workspace") + " - " + \
+                            m_workspaceName);
+                    loadViewportData();
+                    setWorkspaceDirty(false);
+                },
+                [this](ServerInterface::RequestError error) {
+                    QMessageBox::critical(
+                            this,
+                            tr("Server Error"),
+                            tr("Error processing request. Please try again."));
+                });
         }
         else {
             m_workspaceId = dlg.existingWorkspaceId();

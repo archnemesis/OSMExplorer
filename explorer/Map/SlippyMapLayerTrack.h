@@ -22,7 +22,7 @@ public:
     virtual SlippyMapLayerTrack* clone() const;
     virtual void copy(SlippyMapLayerObject *other);
     void hydrateFromDatabase(const QJsonObject& json, const QString& geometry) override;
-    void saveToDatabase(QJsonObject& json, QString& geometry) override;
+    void packageObjectData(QJsonObject& json, QString& geometry) override;
     QDataStream& serialize(QDataStream& stream) const override;
     QList<SlippyMapLayerObjectPropertyPage*> propertyPages(SlippyMapLayerObject::Ptr object) const;
     bool contains(const QPointF& point, int zoom) const override;

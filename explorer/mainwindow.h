@@ -28,6 +28,7 @@ class GeoCodingListModel;
 class HistoryManager;
 class LocationDataProvider;
 class MapDataImportDialog;
+class ObjectBrowserDialog;
 class QAction;
 class QActionGroup;
 class QComboBox;
@@ -140,6 +141,7 @@ protected slots:
     void showActiveObjectPropertyPage();
     void showAddGpsSourceDialog();
     void showGpsLogDialog();
+    void showObjectBrowserDialog();
     void showSettingsDialog();
     void startPolygonSelection();
     void startServerLogin();
@@ -211,13 +213,11 @@ protected:
     void loadStartupSettings();
     void resizeEvent(QResizeEvent *event) override;
     void saveTileLayerSettings();
-    void createWorkspace();
     void setWorkspaceDirty(bool dirty);
     void setupContextMenus();
     void setupMap();
     void setupToolbar();
     void setupWeather();
-    void setupMenuBar();
     void showPropertiesDialog(const SlippyMapLayerObject::Ptr& object);
     void updateRecentFileList();
     void createUndoAddObject(const QString& description, SlippyMapLayer::Ptr layer, const SlippyMapLayerObject::Ptr& object);
@@ -243,6 +243,7 @@ private:
     HistoryManager *m_historyManager;
     MapDataImportDialog *m_importDialog = nullptr;
     NationalWeatherServiceInterface *m_weatherService = nullptr;
+    ObjectBrowserDialog *m_objectBrowser = nullptr;
     SyncCompleteAction m_syncCompleteAction;
     QAction *m_addMarkerAction = nullptr;
     QAction *m_centerMapAction = nullptr;

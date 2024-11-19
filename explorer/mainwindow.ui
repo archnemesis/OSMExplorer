@@ -354,7 +354,7 @@ QTreeView &gt; QFrame {
      <x>0</x>
      <y>0</y>
      <width>1094</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="styleSheet">
@@ -422,6 +422,7 @@ QTreeView &gt; QFrame {
     <addaction name="actionDrawPolygon"/>
     <addaction name="actionObjectAddFiles"/>
     <addaction name="separator"/>
+    <addaction name="actionObject_Browser"/>
     <addaction name="actionObject_Properties"/>
     <addaction name="actionObject_Delete"/>
     <addaction name="separator"/>
@@ -521,7 +522,7 @@ QTreeView &gt; QFrame {
    <property name="minimumSize">
     <size>
      <width>400</width>
-     <height>446</height>
+     <height>456</height>
     </size>
    </property>
    <property name="styleSheet">
@@ -1172,6 +1173,11 @@ QTreeView &gt; QFrame {
    </property>
    <property name="text">
     <string>Add Files</string>
+   </property>
+  </action>
+  <action name="actionObject_Browser">
+   <property name="text">
+    <string>Browser...</string>
    </property>
   </action>
  </widget>

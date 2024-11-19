@@ -159,7 +159,7 @@ void SlippyMapLayerTrack::hydrateFromDatabase(const QJsonObject &json, const QSt
     emit updated();
 }
 
-void SlippyMapLayerTrack::saveToDatabase(QJsonObject &json, QString &geometry)
+void SlippyMapLayerTrack::packageObjectData(QJsonObject &json, QString &geometry)
 {
     json["lineWidth"] = lineWidth();
     json["lineColor"] = lineColor().name(QColor::HexArgb);

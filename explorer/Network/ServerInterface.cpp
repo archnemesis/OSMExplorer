@@ -38,12 +38,21 @@ void ServerInterface::getLayersForViewport(
 {
     m_layers.clear();
     QNetworkRequest request;
-    QString url = QString(OSM_SERVER_HOST "/layers?x=%1&y=%2&w=%3&h=%4&workspace=%5")
-            .arg(rect.x(), 0, 'f', 7)
-            .arg(rect.y(), 0, 'f', 7)
-            .arg(rect.width(), 0, 'f', 7)
-            .arg(rect.width(), 0, 'f', 7)
-            .arg(workspaceId.toString());
+
+    QString url;
+    if (rect.isNull()) {
+        url = QString(OSM_SERVER_HOST "/layers?workspace=%1")
+                .arg(workspaceId.toString());
+    }
+    else {
+        url = QString(OSM_SERVER_HOST "/layers?x=%1&y=%2&w=%3&h=%4&workspace=%5")
+                .arg(rect.x(), 0, 'f', 7)
+                .arg(rect.y(), 0, 'f', 7)
+                .arg(rect.width(), 0, 'f', 7)
+                .arg(rect.width(), 0, 'f', 7)
+                .arg(workspaceId.toString());
+    }
+
     request.setUrl(QUrl(url));
     request.setRawHeader("Authorization",
                          QString("Bearer %1").arg(m_authToken).toUtf8());
@@ -93,6 +102,21 @@ void ServerInterface::getLayersForViewport(
                 layer.order = order;
                 layer.color = QColor(color);
 
+                QJsonObject creatorObject = layerObject["creator"].toObject();
+                layer.creator.id = QUuid(creatorObject["id"].toString());
+                layer.creator.username = creatorObject["username"].toString();
+                layer.creator.email = creatorObject["email"].toString();
+                layer.creator.created = QDateTime::fromString(
+                            creatorObject["created"].toString(),
+                            "yyyy-MM-ddThh:mm:ss.zzzZ");
+
+                QString updated = creatorObject["updated"].toString();
+                if (!updated.isEmpty()) {
+                    layer.creator.updated = QDateTime::fromString(
+                            creatorObject["updated"].toString(),
+                            "yyyy-MM-ddThh:mm:ss.zzzZ");
+                }
+
                 if (!layerObject.contains("objects")) continue;
 
                 QJsonArray objectsArray = layerObject["objects"].toArray();
@@ -119,6 +143,14 @@ void ServerInterface::getLayersForViewport(
                     obj.editable = editable;
                     obj.data = data;
                     obj.geom = geom;
+
+                    QJsonObject objCreatorObject = object["creator"].toObject();
+                    obj.creator.id = QUuid(objCreatorObject["id"].toString());
+                    obj.creator.username = objCreatorObject["username"].toString();
+                    obj.creator.email = objCreatorObject["email"].toString();
+                    obj.creator.created = QDateTime::fromString(
+                                objCreatorObject["created"].toString(),
+                                "yyyy-MM-ddThh:mm:ss.zzzZ");
 
                     layer.objects.append(obj);
                 }
@@ -384,6 +416,99 @@ void ServerInterface::saveObject(
             });
 }
 
+void ServerInterface::deleteObject(
+    const QUuid& objectId,
+    const std::function<void()>& onSuccess,
+    const std::function<void(RequestError)>& onFailure)
+{
+    QString url = QString(OSM_SERVER_HOST "/objects/%1")
+        .arg(objectId.toString());
+    QNetworkRequest request;
+    request.setUrl(QUrl(url));
+    request.setRawHeader("Authorization",
+        QString("Bearer %1").arg(authToken()).toUtf8());
+
+    auto *reply = m_networkManager->deleteResource(request);
+
+    connect(reply,
+        &QNetworkReply::finished,
+        [this, reply, onSuccess, onFailure]() {
+            int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
+            if (reply->error() != QNetworkReply::NoError \
+                && reply->error() != QNetworkReply::ProtocolInvalidOperationError) {
+                qCritical() << "Unable to save object" << reply->error() << reply->errorString();
+                onFailure(RequestFailedError);
+                return;
+            }
+
+            if (statusCode == 401) {
+                onFailure(AuthenticationError);
+                return;
+            }
+
+            QByteArray responseData = reply->readAll();
+            QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData);
+            QJsonObject root = jsonDoc.object();
+
+            QString status = root["status"].toString();
+            QString fileId = root["id"].toString();
+
+            if (status != "ok") {
+                qDebug() << "Server rejected request:" << root["message"];
+                onFailure(InvalidRequestError);
+            }
+
+            onSuccess();
+        });
+}
+
+void ServerInterface::deleteLayer(
+    const QUuid& layerId,
+    const std::function<void()>& onSuccess,
+    const std::function<void(RequestError)>& onFailure)
+{
+    QString url = QString(OSM_SERVER_HOST "/layers/%1")
+        .arg(layerId.toString().mid(1, layerId.toString().length() - 2));
+    QNetworkRequest request;
+    request.setUrl(QUrl(url));
+    request.setRawHeader("Authorization",
+        QString("Bearer %1").arg(authToken()).toUtf8());
+
+    auto *reply = m_networkManager->deleteResource(request);
+
+    connect(reply,
+        &QNetworkReply::finished,
+        [this, reply, onSuccess, onFailure]() {
+            const int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
+            if (reply->error() != QNetworkReply::NoError \
+                && reply->error() != QNetworkReply::ProtocolInvalidOperationError) {
+                qCritical() << "Unable to save object" << reply->error() << reply->errorString();
+                onFailure(RequestFailedError);
+                return;
+            }
+
+            if (statusCode == 401) {
+                onFailure(AuthenticationError);
+                return;
+            }
+
+            QByteArray responseData = reply->readAll();
+            QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData);
+            QJsonObject root = jsonDoc.object();
+
+            QString status = root["status"].toString();
+
+            if (status != "ok") {
+                qDebug() << "Server rejected request:" << root["message"];
+                onFailure(InvalidRequestError);
+            }
+
+            onSuccess();
+        });
+}
+
 void ServerInterface::uploadAttachment(
     const QUuid& objectId,
     QHttpMultiPart *multiPart,
@@ -396,7 +521,7 @@ void ServerInterface::uploadAttachment(
     QNetworkRequest request;
     request.setUrl(QUrl(url));
     request.setRawHeader("Authorization",
-        QString("Bearer %1").arg(m_authToken).toUtf8());
+        QString("Bearer %1").arg(authToken()).toUtf8());
 
     auto *reply = m_networkManager->post(request, multiPart);
 
@@ -504,9 +629,81 @@ void ServerInterface::getAttachmentsForObject(const QUuid& objectId,
         });
 }
 
+void ServerInterface::getObjectsForWorkspace(
+    const QUuid& workspaceId,
+    const std::function<void(const QList<Layer>&)>& onSuccess,
+    const std::function<void(RequestError)>& onFailure)
+{
+    QString url = QString(OSM_SERVER_HOST "/layers?workspace=%1")
+        .arg(workspaceId.toString());
+    QNetworkRequest request;
+    request.setUrl(QUrl(url));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization",
+                         QString("Bearer %1").arg(m_authToken).toUtf8());
+
+    auto *reply = m_networkManager->get(request);
+    connect(reply,
+        &QNetworkReply::finished,
+        [this, reply, onSuccess, onFailure]() {
+            int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
+            if (reply->error() != QNetworkReply::NoError \
+                && reply->error() != QNetworkReply::ProtocolInvalidOperationError) {
+                qCritical() << "Unable to save object" << reply->error() << reply->errorString();
+                onFailure(RequestFailedError);
+                return;
+            }
+
+            if (statusCode == 401) {
+                onFailure(AuthenticationError);
+                return;
+            }
+
+            QList<Attachment> attachments;
+            QByteArray responseData = reply->readAll();
+            QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData);
+            QJsonObject root = jsonDoc.object();
+            QString status = root["status"].toString();
+
+            if (status != "ok") {
+                qDebug() << "Server rejected request:" << root["message"];
+                onFailure(InvalidRequestError);
+                return;
+            }
+
+            QJsonArray layersArray = root["layers"].toArray();
+            for (int i = 0; i < layersArray.size(); i++) {
+                QJsonObject layerObject = layersArray[i].toObject();
+                Layer layer;
+                layer.id = QUuid(layerObject["id"].toString());
+                layer.name = layerObject["name"].toString();
+                layer.description = layerObject["description"].toString();
+                layer.color = layerObject["color"].toInt();
+                layer.order = layerObject["order"].toInt();
+                layer.created = QDateTime::fromString(
+                                layerObject["created"].toString(),
+                                "yyyy-MM-ddThh:mm:ss.zzzZ");
+
+                QString updated = layerObject["updated"].toString();
+                if (!updated.isEmpty())
+                    layer.updated = QDateTime::fromString(
+                        updated,
+                        "yyyy-MM-ddThh:mm:ss.zzzZ");
+
+                QJsonArray objectsArray = layerObject["objects"].toArray();
+                for (int j = 0; j < objectsArray.size(); j++) {
+
+                }
+            }
+        });
+
+}
+
 void ServerInterface::createWorkspace(
-        const ServerInterface::Workspace &workspace,
-        const std::function<void()>& callback)
+        const Workspace &workspace,
+        const std::function<void(void)>& onSuccess,
+        const std::function<void(RequestError)>& onFailure)
 {
     QJsonObject root;
     root["id"] = workspace.id.toString();
@@ -525,10 +722,79 @@ void ServerInterface::createWorkspace(
     QNetworkReply *reply = m_networkManager->put(request, data);
     connect(reply,
             &QNetworkReply::finished,
-            [this, callback]() {
-                callback();
-                emit createWorkspaceRequestFinished();
+            [this, reply, onSuccess, onFailure]() {
+                int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
+                if (reply->error() != QNetworkReply::NoError \
+                    && reply->error() != QNetworkReply::ProtocolInvalidOperationError) {
+                    qCritical() << "Unable to save object" << reply->error() << reply->errorString();
+                    onFailure(RequestFailedError);
+                    return;
+                }
+
+                if (statusCode == 401) {
+                    onFailure(AuthenticationError);
+                    return;
+                }
+
+                onSuccess();
             });
+}
+
+void ServerInterface::saveLayer(
+    const Layer& layer,
+    const std::function<void()>& onSuccess,
+    const std::function<void(RequestError)>& onFailure)
+{
+    QJsonObject json;
+    json["id"] = layer.id.toString();
+    json["workspace_id"] = layer.workspaceId.toString();
+    json["name"] = layer.name;
+    json["description"] = layer.description;
+    json["order"] = layer.order;
+    json["color"] = layer.color.name(QColor::HexArgb);
+
+    QJsonDocument jsonDocument(json);
+    QByteArray jsonData = jsonDocument.toJson();
+
+    QNetworkRequest request;
+    request.setUrl(QUrl(OSM_SERVER_HOST "/layers"));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization",
+                         QString("Bearer %1").arg(authToken()).toUtf8());
+
+    auto *reply = m_networkManager->put(request, jsonData);
+    connect(reply,
+        &QNetworkReply::finished,
+        [this, reply, onSuccess, onFailure]() {
+            int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
+            if (reply->error() != QNetworkReply::NoError \
+                && reply->error() != QNetworkReply::ProtocolInvalidOperationError) {
+                qCritical() << "Unable to save object" << reply->error() << reply->errorString();
+                onFailure(RequestFailedError);
+                return;
+            }
+
+            if (statusCode == 401) {
+                onFailure(AuthenticationError);
+                return;
+            }
+
+            QByteArray responseData = reply->readAll();
+            QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData);
+            QJsonObject root = jsonDoc.object();
+            QString status = root["status"].toString();
+
+            if (status != "ok") {
+                qDebug() << "Server rejected request:" << root["message"];
+                onFailure(InvalidRequestError);
+                return;
+            }
+
+            onSuccess();
+        });
+
 }
 
 void ServerInterface::requestDeleteObject(const QUuid &id, const std::function<void()> &callback)

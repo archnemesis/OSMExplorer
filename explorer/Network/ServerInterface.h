@@ -17,6 +17,15 @@
 class ServerInterface : public QObject {
     Q_OBJECT
 public:
+    struct User
+    {
+        QUuid id;
+        QString username;
+        QString email;
+        QDateTime created;
+        QDateTime updated;
+    };
+
     struct Object {
         QUuid id;
         QUuid layerId;
@@ -29,10 +38,13 @@ public:
         QString geom;
         QDateTime created;
         QDateTime updated;
+        User creator;
+        User lastEditedBy;
     };
 
     struct Layer {
         QUuid id;
+        QUuid workspaceId;
         QString name;
         QString description;
         int order;
@@ -40,6 +52,7 @@ public:
         QDateTime created;
         QDateTime updated;
         QColor color;
+        User creator;
     };
 
     struct Workspace {
@@ -112,7 +125,19 @@ public:
      */
     void createWorkspace(
         const Workspace &workspace,
-        const std::function<void()>& callback);
+        const std::function<void(void)>& onSuccess,
+        const std::function<void(RequestError)>& onFailure);
+
+    /**
+     * Save or create a layer on the server.
+     * @param layer
+     * @param onSuccess
+     * @param onFailure
+     */
+    void saveLayer(
+        const Layer &layer,
+        const std::function<void(void)>& onSuccess,
+        const std::function<void(RequestError)>& onFailure);
 
     /**
      * Save an object to the server.
@@ -123,6 +148,22 @@ public:
     void saveObject(
         const Object &object,
         const std::function<void()>& onSuccess,
+        const std::function<void(RequestError)>& onFailure);
+
+    /**
+     * Delete an object from the server.
+     * @param objectId
+     * @param onSuccess
+     * @param onFailure
+     */
+    void deleteObject(
+        const QUuid &objectId,
+        const std::function<void(void)>& onSuccess,
+        const std::function<void(RequestError)>& onFailure);
+
+    void deleteLayer(
+        const QUuid &layerId,
+        const std::function<void(void)>& onSuccess,
         const std::function<void(RequestError)>& onFailure);
 
     /**
@@ -145,6 +186,11 @@ public:
         const std::function<void(const QList<Attachment>&)>& onSuccess,
         const std::function<void(RequestError)>& onFailure
         );
+
+    void getObjectsForWorkspace(
+        const QUuid& workspaceId,
+        const std::function<void(const QList<Layer>&)>& onSuccess,
+        const std::function<void(RequestError)>& onFailure);
 
     /**
      * Delete an object from the server.
