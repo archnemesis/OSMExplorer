@@ -81,3 +81,18 @@ const QList<NmeaSerialLocationDataProvider::SatelliteStatus> &SlippyMapGpsMarker
 {
     return m_satellites;
 }
+
+const QDateTime& SlippyMapGpsMarker::gpsTime() const
+{
+    return m_gpsTime;
+}
+
+void SlippyMapGpsMarker::setGpsData(const NmeaSerialLocationDataProvider::PositionData& positionData)
+{
+    m_positionData = positionData;
+}
+
+const NmeaSerialLocationDataProvider::PositionData& SlippyMapGpsMarker::gpsData() const
+{
+    return m_positionData;
+}

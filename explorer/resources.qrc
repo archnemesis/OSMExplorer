@@ -30,17 +30,23 @@
     <file alias="toolbar/save-as.svg">resources/toolbar/save-as.svg</file>
     <file alias="toolbar/open.svg">resources/toolbar/open.svg</file>
     <file alias="toolbar/new.svg">resources/toolbar/new.svg</file>
+    <file alias="toolbar/record.svg">resources/toolbar/record.svg</file>
+    <file alias="toolbar/atlas.svg">resources/toolbar/atlas.svg</file>
+    <file alias="toolbar/redo.svg">resources/toolbar/redo.svg</file>
+    <file alias="toolbar/undo.svg">resources/toolbar/undo.svg</file>
     <file alias="toolbar/path-add.svg">resources/toolbar/path-add.svg</file>
     <file alias="toolbar/polygon-add.svg">resources/toolbar/polygon-add.svg</file>
     <file alias="toolbar/marker-add.svg">resources/toolbar/marker-add.svg</file>
     <file alias="toolbar/layer-add.svg">resources/toolbar/layer-add.svg</file>
     <file alias="toolbar/rect-add.svg">resources/toolbar/rect-add.svg</file>
     <file alias="toolbar/gps-add.svg">resources/toolbar/gps-add.svg</file>
+    <file alias="toolbar/gps-disconnect.svg">resources/toolbar/gps-disconnect.svg</file>
+    <file alias="toolbar/gps-recenter.svg">resources/toolbar/gps-recenter.svg</file>
     <file alias="toolbar/ellipse-add-extent.svg">resources/toolbar/ellipse-add-extent.svg</file>
   </qresource>
   <qresource prefix="/images">
     <file alias="loading_tile_256.png">resources/loading_tile_256.png</file>
     <file alias="icon-128.png">resources/icon-128.png</file>
-    <file alias="splash.svg">resources/splash.svg</file>
+    <file alias="splash.png">resources/splash.png</file>
   </qresource>
 </RCC>

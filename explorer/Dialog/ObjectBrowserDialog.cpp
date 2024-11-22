@@ -19,12 +19,10 @@ ObjectBrowserDialog::ObjectBrowserDialog(const QUuid& workspaceId, QWidget *pare
 {
     setupUi();
 
-    m_model = new QStandardItemModel(this);
-    m_model->setHorizontalHeaderLabels({
-        tr("Name"),
-        tr("Description"),
-        tr("Created by")
-    });
+    m_model = new QStandardItemModel(0, 3, this);
+    m_model->setHeaderData(0, Qt::Horizontal, tr("Name"));
+    m_model->setHeaderData(1, Qt::Horizontal, tr("Description"));
+    m_model->setHeaderData(2, Qt::Horizontal, tr("Created by"));
     m_treeView->setModel(m_model);
 
     m_serverInterface = ExplorerApplication::serverInterface();
@@ -61,6 +59,8 @@ void ObjectBrowserDialog::refresh()
         m_workspaceId,
         QRectF(),
         [this](const QList<ServerInterface::Layer>& layers) {
+            m_model->clear();
+
             for (const auto& layer : layers) {
                 QList items = {
                     new QStandardItem(layer.name),

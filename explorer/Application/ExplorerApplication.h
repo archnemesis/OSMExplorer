@@ -12,6 +12,7 @@
 class PluginManager;
 class HistoryManager;
 class DatabaseManager;
+class QLocalServer;
 
 namespace SlippyMap {
     class SlippyMapLayerManager;

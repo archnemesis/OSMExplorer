@@ -11,6 +11,8 @@
 #include <QCheckBox>
 
 
+class QLabel;
+
 class ServerConnectionDialog : public QDialog
 {
     Q_OBJECT
@@ -24,12 +26,18 @@ public:
     void setPassword(const QString& password);
     void setRemember(bool remember);
 
+protected slots:
+    void doLogin();
+
 private:
+    QLabel *m_errorLabel;
     QLineEdit *m_username;
     QLineEdit *m_password;
     QPushButton *m_loginButton;
     QPushButton *m_cancelButton;
     QCheckBox *m_rememberPassword;
+    QLabel *m_registerLabel;
+    QLabel *m_forgotPasswordLabel;
 };
 
 

@@ -5,6 +5,9 @@
 // You may need to build the project (run Qt uic code generator) to get "ui_WorkspaceSelectionDialog.h" resolved
 
 #include "WorkspaceSelectionDialog.h"
+
+#include <qstandarditemmodel.h>
+
 #include "ui_WorkspaceSelectionDialog.h"
 
 
@@ -92,6 +95,8 @@ void WorkspaceSelectionDialog::setWorkspaceList(const QMap<QUuid, QString> &work
 {
     m_workspaceList = workspaceList;
     for (const auto& id: m_workspaceList.keys()) {
-        ui->existingWorkspaceList->addItem(m_workspaceList.value(id));
+        auto *item = new QListWidgetItem(m_workspaceList.value(id));
+        item->setIcon(QIcon(":/icons/toolbar/atlas.svg"));
+        ui->existingWorkspaceList->addItem(item);
     }
 }

@@ -177,11 +177,12 @@ void SettingsDialog::on_btnIntegrationConfigure_clicked()
 {
     qDebug() << "Showing config for plugin...";
     int currentRow = ui->lstIntegrationList->currentRow();
-    QDialog *dlg = ExplorerApplication::pluginManager()->getPlugins().at(currentRow)->configurationDialog(this);
-    dlg->setParent(this);
-    dlg->setModal(true);
-    int result = dlg->exec();
-    dlg->deleteLater();
+    if (currentRow >= 0) {
+        QDialog *dlg = ExplorerApplication::pluginManager()->getPlugins().at(currentRow)->configurationDialog(this);
+        dlg->setModal(true);
+        int result = dlg->exec();
+        delete dlg;
+    }
 }
 
 void SettingsDialog::on_btnLayerAdd_clicked()

@@ -18,27 +18,13 @@
     <normaloff>:/images/icon-128.png</normaloff>:/images/icon-128.png</iconset>
   </property>
   <property name="styleSheet">
-   <string notr="true">QMenu {
-    background-color: #202020;
-    margin: 2px; /* some spacing around the menu */
-	color: #FFFFFF;
-}
-
-QMenu::item {
-    padding: 2px 25px 2px 20px;
-    border: 1px solid transparent; /* reserve space for selection border */
-}
-
-QMenu::item:selected {
-	border-color: palette(highlight);
-   background-color: palette(highlight);
-}</string>
+   <string notr="true"/>
   </property>
   <property name="documentMode">
    <bool>false</bool>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QHBoxLayout" name="horizontalLayout_4">
+   <layout class="QHBoxLayout" name="horizontalLayout_2">
     <property name="spacing">
      <number>0</number>
     </property>
@@ -55,6 +41,34 @@ QMenu::item:selected {
      <number>0</number>
     </property>
     <item>
+     <widget class="SlippyMapTreeView" name="tvwMarkers">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>300</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>0</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
+      </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="SlippyMapWidget" name="slippyMap" native="true">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -69,141 +83,6 @@ QMenu::item:selected {
 }</string>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_3">
-       <property name="spacing">
-        <number>10</number>
-       </property>
-       <property name="leftMargin">
-        <number>20</number>
-       </property>
-       <property name="topMargin">
-        <number>20</number>
-       </property>
-       <property name="rightMargin">
-        <number>20</number>
-       </property>
-       <property name="bottomMargin">
-        <number>20</number>
-       </property>
-       <item>
-        <widget class="SlippyMapTreeView" name="tvwMarkers">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>300</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>0</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">QHeaderView::section {
-	font-weight: bold;
-	background-color: palette(highlight);
-	color: palette(bright-text);
-	border-width: 0px;
-	padding: 10px;
-	border-top-left-radius: 10px;
-	border-top-right-radius: 10px;
-}
-
-QTreeView {
-	color: #000000;
-	background-color: white;
-	border-radius: 10px;
-	border-width: 0px;
-	padding: 0px;
-	margin: 0px;
-	show-decoration-selected: 0;
-}
-
-QTreeView::item {
-	background-color: #FFFFFF;
-	padding: 5px 10px 5px 10px;
-	border-width: 0px;
-	border-bottom: 1px solid #FFCCCCCC;
-	show-decoration-selected: 0;
-	color: #000000;
-}
-
-QTreeView::item:focus {
-	border: none;
-	outline: none;
-	color: #FFFFFF;
-	background-color: palette(highlight);
-}
-
-QTreeView::item:selected {
-	color: #FFFFFF;
-	background-color: palette(highlight);
-	border-width: 0px;
-	border-bottom: 1px solid #FFCCCCCC;
-}
-
-QTreeView::item:selected:!active {
-	background-color: palette(alternate-base);
-	border-width: 0px;
-	border-bottom: 1px solid #FFCCCCCC;
-	color: #000000;
-	selection-color: #000000;
-}
-
-QTreeView::branch {
-	background-color: #FFFFFFFF;
-	border-width: 0px;
-	border-bottom: 1px solid #FFCCCCCC;
-}
-
-QTreeView::branch:selected {
-    background: palette(highlight);
-}
-
-QTreeView::branch:selected:!active {
-    background: palette(alternate-base);
-}
-
-QTreeView::branch:has-children:!has-siblings:closed,
-QTreeView::branch:closed:has-children:has-siblings {
-	border-image: none;
-	image: url(:/icons/arrowright_dark.png);
-}
-
-QTreeView::branch:open:has-children:!has-siblings,
-QTreeView::branch:open:has-children:has-siblings  {
-        border-image: none;
-        image: url(:/icons/arrowdown_dark.png);
-}
-
-QTreeView::selected:branch:has-children:!has-siblings:closed,
-QTreeView::selected:branch:closed:has-children:has-siblings {
-	border-image: none;
-	image: url(:/icons/arrowright.png) !important;
-}
-
-QTreeView::selected:branch:open:has-children:!has-siblings,
-QTreeView::selected:branch:open:has-children:has-siblings  {
-        border-image: none;
-        image: url(:/icons/arrowdown.png) !important;
-}
-
-QTreeView &gt; QFrame {
-	background-color: #00000000;
-	border-radius: 0px;
-}</string>
-         </property>
-         <property name="alternatingRowColors">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
        <item>
         <layout class="QVBoxLayout" name="verticalLayout_7">
          <property name="spacing">
@@ -347,176 +226,6 @@ QTreeView &gt; QFrame {
     <bool>false</bool>
    </attribute>
    <addaction name="separator"/>
-  </widget>
-  <widget class="QMenuBar" name="menuBar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1094</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">QMenuBar {
-	background-color: #202020;
-	color: #FFFFFF;
-}</string>
-   </property>
-   <widget class="QMenu" name="menuFile">
-    <property name="title">
-     <string>File</string>
-    </property>
-    <widget class="QMenu" name="menuFileGps">
-     <property name="title">
-      <string>GPS</string>
-     </property>
-     <property name="icon">
-      <iconset resource="resources.qrc">
-       <normaloff>:/icons/satellite.png</normaloff>:/icons/satellite.png</iconset>
-     </property>
-     <addaction name="actionMapGpsAddSource"/>
-     <addaction name="separator"/>
-    </widget>
-    <widget class="QMenu" name="menuRecent">
-     <property name="title">
-      <string>Recent</string>
-     </property>
-     <addaction name="actionFile_Recent_ClearMenu"/>
-     <addaction name="separator"/>
-    </widget>
-    <widget class="QMenu" name="menuImport">
-     <property name="title">
-      <string>Import</string>
-     </property>
-     <addaction name="actionImport_GPX"/>
-     <addaction name="actionImport_GeoJSON"/>
-     <addaction name="actionImport_CSV"/>
-    </widget>
-    <addaction name="actionFile_NewWorkspace"/>
-    <addaction name="actionFile_OpenWorkspace"/>
-    <addaction name="menuRecent"/>
-    <addaction name="actionFile_CloseWorkspace"/>
-    <addaction name="separator"/>
-    <addaction name="actionFile_ConnectToDatabase"/>
-    <addaction name="actionFile_DisconnectDatabase"/>
-    <addaction name="separator"/>
-    <addaction name="actionFile_SaveWorkspace"/>
-    <addaction name="actionFile_SaveWorkspaceAs"/>
-    <addaction name="separator"/>
-    <addaction name="menuImport"/>
-    <addaction name="actionFileExport"/>
-    <addaction name="separator"/>
-    <addaction name="menuFileGps"/>
-    <addaction name="separator"/>
-    <addaction name="actionExit"/>
-   </widget>
-   <widget class="QMenu" name="menuMarker">
-    <property name="title">
-     <string>Object</string>
-    </property>
-    <addaction name="actionDrawMarker"/>
-    <addaction name="actionDrawLine"/>
-    <addaction name="actionDrawEllipse"/>
-    <addaction name="actionDrawRectangle"/>
-    <addaction name="actionDrawPolygon"/>
-    <addaction name="actionObjectAddFiles"/>
-    <addaction name="separator"/>
-    <addaction name="actionObject_Browser"/>
-    <addaction name="actionObject_Properties"/>
-    <addaction name="actionObject_Delete"/>
-    <addaction name="separator"/>
-    <addaction name="actionMarkerExport"/>
-    <addaction name="actionMarkerImport"/>
-   </widget>
-   <widget class="QMenu" name="menuHelp">
-    <property name="title">
-     <string>Help</string>
-    </property>
-    <addaction name="actionAbout"/>
-   </widget>
-   <widget class="QMenu" name="menuView">
-    <property name="title">
-     <string>View</string>
-    </property>
-    <addaction name="actionViewSidebar"/>
-    <addaction name="separator"/>
-    <addaction name="actionViewClearRoute"/>
-    <addaction name="actionViewGpsLog"/>
-    <addaction name="separator"/>
-    <addaction name="actionView_Crosshairs"/>
-   </widget>
-   <widget class="QMenu" name="menuTools">
-    <property name="title">
-     <string>Tools</string>
-    </property>
-    <addaction name="actionToolsOSMImport"/>
-    <addaction name="separator"/>
-    <addaction name="actionFileSettings"/>
-   </widget>
-   <widget class="QMenu" name="menuLayer">
-    <property name="title">
-     <string>Layer</string>
-    </property>
-    <widget class="QMenu" name="menuLayer_TileLayers">
-     <property name="title">
-      <string>Tile Layers</string>
-     </property>
-     <addaction name="actionLayer_TileLayers_HideAll"/>
-     <addaction name="actionLayer_TileLayers_ShowAll"/>
-     <addaction name="separator"/>
-    </widget>
-    <widget class="QMenu" name="menuSort_By">
-     <property name="title">
-      <string>Sort By</string>
-     </property>
-     <addaction name="actionSortByName"/>
-     <addaction name="actionSortByCustomOrder"/>
-    </widget>
-    <addaction name="actionLayer_New"/>
-    <addaction name="actionLayer_Rename"/>
-    <addaction name="actionLayer_Delete"/>
-    <addaction name="separator"/>
-    <addaction name="actionLayer_SortAscending"/>
-    <addaction name="actionLayer_SortDescending"/>
-    <addaction name="menuSort_By"/>
-    <addaction name="separator"/>
-    <addaction name="menuLayer_TileLayers"/>
-    <addaction name="separator"/>
-    <addaction name="actionLayer_PreviousFrame"/>
-    <addaction name="actionLayer_NextFrame"/>
-    <addaction name="actionLayer_Play"/>
-   </widget>
-   <widget class="QMenu" name="menuWeather">
-    <property name="title">
-     <string>Weather</string>
-    </property>
-    <addaction name="actionWeather_ShowWFOGrid"/>
-    <addaction name="separator"/>
-   </widget>
-   <widget class="QMenu" name="menuEdit">
-    <property name="title">
-     <string>&amp;Edit</string>
-    </property>
-    <addaction name="actionEdit_Undo"/>
-    <addaction name="actionEdit_Redo"/>
-    <addaction name="separator"/>
-    <addaction name="actionEdit_Cut"/>
-    <addaction name="actionEdit_Copy"/>
-    <addaction name="actionEdit_Paste"/>
-    <addaction name="actionEdit_Delete"/>
-    <addaction name="separator"/>
-    <addaction name="actionEdit_Properties"/>
-    <addaction name="actionEdit_Rename"/>
-   </widget>
-   <addaction name="menuFile"/>
-   <addaction name="menuEdit"/>
-   <addaction name="menuLayer"/>
-   <addaction name="menuMarker"/>
-   <addaction name="menuWeather"/>
-   <addaction name="menuView"/>
-   <addaction name="menuTools"/>
-   <addaction name="menuHelp"/>
   </widget>
   <widget class="OEDockWidget" name="dockWidget">
    <property name="minimumSize">
@@ -687,6 +396,19 @@ QTreeView &gt; QFrame {
      </item>
     </layout>
    </widget>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1094</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
   </widget>
   <action name="actionExit">
    <property name="text">

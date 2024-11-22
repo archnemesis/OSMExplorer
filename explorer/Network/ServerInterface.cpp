@@ -173,25 +173,18 @@ const QList<ServerInterface::Object>& ServerInterface::objects()
 }
 
 void ServerInterface::login(
-    QWidget *parent,
+    const QString& username,
+    const QString& password,
     const std::function<void(const QString&)>& onSuccess,
     const std::function<void(ServerInterface::RequestError)>& onFailure)
 {
-    ServerConnectionDialog dlg(parent);
-    int result = dlg.exec();
-
-    if (result != QDialog::Accepted) {
-        onFailure(UserCancelledError);
-        return;
-    }
-
     QNetworkRequest request;
     request.setUrl(QUrl(OSM_SERVER_HOST "/login"));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
     QJsonObject auth;
-    auth["username"] = dlg.username();
-    auth["password"] = dlg.password();
+    auth["username"] = username;
+    auth["password"] = password;
     QJsonDocument requestDoc(auth);
     QByteArray requestJson = requestDoc.toJson();
 
@@ -200,8 +193,9 @@ void ServerInterface::login(
         &QNetworkReply::finished,
         [this, reply, onSuccess, onFailure]() {
             if (reply->error() != QNetworkReply::NoError \
-                && reply->error() != QNetworkReply::ProtocolInvalidOperationError) {
-                qCritical() << "Unable to save object";
+                && reply->error() != QNetworkReply::ProtocolInvalidOperationError \
+                && reply->error() != QNetworkReply::AuthenticationRequiredError) {
+                qCritical() << "Login request failed:" << reply->errorString();
                 onFailure(RequestFailedError);
                 return;
             }

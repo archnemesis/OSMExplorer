@@ -14,6 +14,7 @@ SlippyMapLayerProxyModel::SlippyMapLayerProxyModel(QObject* parent) : QSortFilte
 bool SlippyMapLayerProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const
 {
     auto index = sourceModel()->index(sourceRow, 0, sourceParent);
+    if (index.parent().isValid()) return true;
     auto *ptr = static_cast<SlippyMap::SlippyMapLayer*>(index.internalPointer());
     if (ptr != nullptr) {
         if (ptr->showInLayerView())

@@ -15,6 +15,8 @@
 
 #include <nmea/sentence.hpp>
 #include <nmea/message/gga.hpp>
+#include <nmea/message/gll.hpp>
+#include <nmea/message/gsa.hpp>
 
 using namespace std;
 using namespace nmea;
@@ -152,13 +154,24 @@ void NmeaSerialLocationDataProvider::onSerialPortReadyRead()
 {
     while (m_serialPort->canReadLine()) {
         QByteArray data = m_serialPort->readLine();
+
+        // nmea library chokes on anything less than a full sentence
+        if (data.length() <= 1) continue;
+
         sentence nmea_sentence(data.toStdString());
+
+        emit lineReceived(QString::fromLocal8Bit(data).trimmed());
 
         if (nmea_sentence.type() == "GGA") {
             gga nmea_gga(nmea_sentence);
             if (nmea_gga.latitude.exists() && nmea_gga.longitude.exists()) {
                 QHash<QString,QVariant> metadata;
                 metadata["gps_label"] = m_labelText;
+
+                m_positionData.setLatitude(nmea_gga.latitude.get());
+                m_positionData.setLongitude(nmea_gga.longitude.get());
+                m_positionData.setAltitude(nmea_gga.altitude.get());
+                gpsUpdated(m_positionData);
 
                 emit positionUpdated(
                         portName(),
@@ -168,13 +181,46 @@ void NmeaSerialLocationDataProvider::onSerialPortReadyRead()
             if (nmea_gga.utc.exists()) {
                 double utc = nmea_gga.utc.get();
                 QDateTime time = QDateTime::fromTime_t((unsigned int)utc);
+                emit gpsTimeUpdated(time);
+
+                m_positionData.setGpsTime(time);
+                emit gpsUpdated(m_positionData);
             }
+        }
+        else if (nmea_sentence.type() == "GSA") {
+            gsa nmea_gsa(nmea_sentence);
+
+            emit gpsSatelliteStatusUpdated(
+                nmea_gsa.hdop.get(),
+                nmea_gsa.vdop.get(),
+                nmea_gsa.pdop.get());
+
+            m_positionData.setHdop(nmea_gsa.hdop.get());
+            m_positionData.setVdop(nmea_gsa.vdop.get());
+            m_positionData.setPdop(nmea_gsa.pdop.get());
+
+            switch (nmea_gsa.fix.get()) {
+            case gsa::fix_type::FIX_2D:
+                m_positionData.setFixType(PositionData::Fix2D);
+                break;
+            case gsa::fix_type::FIX_3D:
+                m_positionData.setFixType(PositionData::Fix3D);
+                break;
+            case gsa::fix_type::NONE:
+                m_positionData.setFixType(PositionData::FixNone);
+                break;
+            }
+
+            emit gpsUpdated(m_positionData);
         }
         else if (nmea_sentence.type() == "GSV") {
             gsv nmea_gsv(nmea_sentence);
 
-            if (nmea_gsv.satellite_count.exists()) {
+            if (nmea_gsv.message_number.get() == 1) {
                 m_satellites.clear();
+            }
+
+            if (nmea_gsv.satellite_count.exists()) {
                 for (int i = 0; i < nmea_gsv.satellites.size(); i++) {
                     SatelliteStatus sat;
 
@@ -186,12 +232,17 @@ void NmeaSerialLocationDataProvider::onSerialPortReadyRead()
                         sat.setSnr(nmea_gsv.satellites.at(i).snr.get());
                     if (nmea_gsv.satellites.at(i).prn.exists())
                         sat.setPrn(nmea_gsv.satellites.at(i).prn.get());
-                    m_satellites.append(sat);
+                    m_satellites[sat.prn()] = sat;
                 }
 
                 QHash<QString,QVariant> metadata;
                 metadata["gps_label"] = m_labelText;
                 emit satellitesUpdated(portName(), m_satellites, metadata);
+            }
+
+            if (nmea_gsv.message_number.get() == nmea_gsv.message_count.get()) {
+                m_positionData.setSatellites(m_satellites.values());
+                emit gpsUpdated(m_positionData);
             }
         }
     }

@@ -50,6 +50,7 @@ public:
     const QColor& waypointColor() const;
     int waypointRadius() const;
     bool waypointsVisible() const;
+    void appendPoint(const QPointF& point);
 
 private:
     void initStyle();

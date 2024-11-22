@@ -8,6 +8,7 @@
 #include <QStyleFactory>
 
 #include "Map/SlippyMapLayerTrack.h"
+#include "Network/ServerConnectionDialog.h"
 
 int main(int argc, char *argv[])
 {
@@ -25,9 +26,18 @@ int main(int argc, char *argv[])
 
     ExplorerApplication a(argc, argv);
     a.setStyle(QStyleFactory::create("Fusion"));
-    MainWindow w;
-//    Explorer::TabbedMainWindow w;
-    w.show();
 
-    return a.exec();
+    // todo: check if an IPC is already open for the app, that means we
+    //  already have a process running and we should instead connect and
+    //  send the link info
+
+
+    ServerConnectionDialog dlg;
+    int result = dlg.exec();
+
+    if (result == QDialog::Accepted) {
+        MainWindow w;
+        w.show();
+        return a.exec();
+    }
 }

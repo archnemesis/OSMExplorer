@@ -15,6 +15,7 @@
 #include "Network/ServerInterface.h"
 #include "GeoCoding/GeoCodingInterface.h"
 #include "GeoCoding/GeoCodingListModel.h"
+#include "Map/SlippyMapLayerTrack.h"
 
 class SlippyMapLayerProxyModel;
 
@@ -35,6 +36,8 @@ class QComboBox;
 class QCompleter;
 class QLabel;
 class QListWidgetItem;
+class QLocalServer;
+class QLocalSocket;
 class QMenu;
 class QMessageBox;
 class QNetworkAccessManager;
@@ -58,9 +61,7 @@ namespace SlippyMap
     class SlippyMapLayer;
     class SlippyMapLayerPolygon;
     class SlippyMapLayerPath;
-};
-
-using namespace SlippyMap;
+}
 
 class MainWindow : public QMainWindow
 {
@@ -97,20 +98,16 @@ protected slots:
     void onSlippyMapDragFinished();
 
     void onWeatherService_stationListReady(
-            const QList<NationalWeatherServiceInterface::WeatherStation>& stations);
+        const QList<NationalWeatherServiceInterface::WeatherStation>& stations);
     void onWeatherService_forecastReady(
-            const NationalWeatherServiceInterface::Forecast12Hr& forecast);
+        const NationalWeatherServiceInterface::Forecast12Hr& forecast);
 
     void saveWorkspace();
     void openWorkspace();
     void newWorkspace();
-    void onActionFileCloseWorkspaceTriggered();
+    bool closeWorkspace();
     void weatherNetworkAccessManager_onRequestFinished(QNetworkReply *reply);
-    void onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString,QVariant> metadata);
-    void onGpsDataProviderSatellitesUpdated(
-            QString identifier,
-            const QList<NmeaSerialLocationDataProvider::SatelliteStatus>& satellites,
-            QHash<QString, QVariant> metadata);
+    void updateGpsData(const NmeaSerialLocationDataProvider::PositionData& position);
     void onTvwMarkersContextMenuRequested(const QPoint& point);
     void onTvwMarkersClicked(const QModelIndex& index);
     void advanceLayerAnimationFrame();
@@ -143,18 +140,18 @@ protected slots:
     void showGpsLogDialog();
     void showObjectBrowserDialog();
     void showSettingsDialog();
-    void startPolygonSelection();
+    void setDrawPolygonMode();
     void startServerLogin();
     void undo();
     void undoEventAdded(HistoryManager::HistoryEvent event);
     void activateLayerAtIndex(const QModelIndex &index);
 
     // todo: finish renaming these
-    void on_actionDrawLine_triggered();
-    void on_actionDrawRectangle_triggered();
-    void on_actionDrawEllipse_triggered();
-    void on_actionDrawMarker_triggered();
-    void on_actionImport_GPX_triggered();
+    void setDrawLineMode();
+    void setDrawRectMode();
+    void setDrawEllipseMode();
+    void setDrawMarkerMode();
+    void importGpx();
     void on_actionMarkerImport_triggered();
     void on_actionToolsOSMImport_triggered();
     void on_geoCodingInterface_locationFound(QList<GeoCodingInterface::GeoCodedAddress> locations);
@@ -206,7 +203,6 @@ protected:
         SlippyMapLayerObject::Ptr object;
     };
 
-    bool closeWorkspace();
     void loadMarkers();
     void loadLayers();
     void loadPluginLayers();
@@ -216,10 +212,11 @@ protected:
     void setWorkspaceDirty(bool dirty);
     void setupContextMenus();
     void setupMap();
-    void setupToolbar();
+    void setupToolBar();
+    void setupMenuBar();
     void setupWeather();
+    void setupUi();
     void showPropertiesDialog(const SlippyMapLayerObject::Ptr& object);
-    void updateRecentFileList();
     void createUndoAddObject(const QString& description, SlippyMapLayer::Ptr layer, const SlippyMapLayerObject::Ptr& object);
     void createUndoModifyObject(const QString& description, const SlippyMapLayerObject::Ptr& object);
     void createUndoDeleteObject(const QString &description,
@@ -232,6 +229,7 @@ protected:
     void processDatabaseUpdateQueue();
     void setDatabaseMode(bool databaseMode);
     void loadWorkspaces();
+    void startLocalServer();
 
 private:
     Ui::MainWindow *ui;
@@ -275,7 +273,7 @@ private:
     QLineEdit *m_toolBarLongitudeInput;
     QLineEdit *m_toolBarGeoCodingInput;
     QList<ExplorerPluginInterface*> m_plugins;
-    QList<LocationDataProvider*> m_gpsProviders;
+    NmeaSerialLocationDataProvider *m_gpsLocationProvider = nullptr;
     QList<QString> m_recentFileList;
     QList<SlippyMapWidgetLayer*> m_layers;
     QList<QAction*> m_layerShowHideActions;
@@ -287,6 +285,8 @@ private:
     QList<SlippyMapWidgetMarker::Ptr> m_loadedMarkers;
     QList<SlippyMapWidgetMarker::Ptr> m_weatherStationMarkers;
     QListWidgetItem *m_currentRouteListItem = nullptr;
+    QLocalServer *m_localServer;
+    QLocalSocket *m_localSocket;
     QMap<SlippyMapWidgetMarker*,QListWidgetItem*> m_markerListItemMap;
     QMenu *m_contextMenu = nullptr;
     QMenu *m_treeViewMenu = nullptr;
@@ -313,6 +313,8 @@ private:
     ServerConnectionDialog *m_serverConnectionDialog = nullptr;
     ServerInterface *m_serverInterface = nullptr;
     SettingsDialog *m_settingsDialog = nullptr;
+    SlippyMapGpsMarker::Ptr m_gpsMarker = nullptr;
+    SlippyMapLayerTrack::Ptr m_gpsTrack = nullptr;
     SlippyMapLayer::Ptr m_defaultMarkerLayer = nullptr;
     SlippyMapLayer::Ptr m_gpsMarkerLayer = nullptr;
     SlippyMapLayer::Ptr m_weatherLayer;
@@ -334,6 +336,73 @@ private:
     color_widgets::ColorSelector *m_strokeColorSelector;
     int m_requestCount = 0;
 
+    QMenu *m_menuFile;
+
+    QAction *m_actionFile_newWorkspace;
+    QAction *m_actionFile_openWorkspace;
+    QAction *m_actionFile_saveWorkspace;
+    QAction *m_actionFile_closeWorkspace;
+    QAction *m_actionFile_import;
+    QAction *m_actionFile_export;
+    QAction *m_actionFile_quit;
+
+    QMenu *m_menuFile_recentWorkspacesMenu;
+    QAction *m_actionFile_recentWorkspacesClearAll;
+
+    QMenu *m_menuEdit;
+    QAction *m_actionEdit_cut;
+    QAction *m_actionEdit_copy;
+    QAction *m_actionEdit_paste;
+    QAction *m_actionEdit_undo;
+    QAction *m_actionEdit_redo;
+    QAction *m_actionEdit_delete;
+    QAction *m_actionEdit_properties;
+
+    QMenu *m_menuLayer;
+    QAction *m_actionLayer_new;
+    QAction *m_actionLayer_rename;
+    QAction *m_actionLayer_delete;
+    QAction *m_actionLayer_sortAscending;
+    QAction *m_actionLayer_sortDescending;
+    QAction *m_actionLayer_nextFrame;
+    QAction *m_actionLayer_previousFrame;
+    QAction *m_actionLayer_play;
+
+    QMenu *m_menuLayer_tileLayersMenu;
+
+    QMenu *m_menuObject;
+    QAction *m_actionObject_addMarker;
+    QAction *m_actionObject_addLine;
+    QAction *m_actionObject_addRectangle;
+    QAction *m_actionObject_addEllipse;
+    QAction *m_actionObject_addPolygon;
+    QAction *m_actionObject_properties;
+    QAction *m_actionObject_browser;
+    QAction *m_actionObject_delete;
+
+    QMenu *m_menuObject_importMenu;
+    QAction *m_actionObject_importGpx;
+    QAction *m_actionObject_importCsv;
+    QAction *m_actionObject_importSvg;
+    QAction *m_actionObject_importGeoJson;
+
+    QMenu *m_menuTools;
+    QAction *m_actionTools_crosshairs;
+    QAction *m_actionTools_sidebar;
+    QAction *m_actionTools_settings;
+    QAction *m_actionTools_connectGps;
+    QAction *m_actionTools_disconnectGps;
+    QAction *m_actionTools_viewGpsLog;
+    QAction *m_actionTools_centerGps;
+    QAction *m_actionTools_recordGpsPosition;
+
+    QMenu *m_menuHelp;
+    QAction *m_actionHelp_about;
+
 };
+
+;
+
+using namespace SlippyMap;
 
 #endif // MAINWINDOW_H

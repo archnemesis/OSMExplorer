@@ -68,10 +68,19 @@ public:
         const QList<SatelliteStatus>& satellites() const { return m_satellites; }
         double latitude() const { return m_latitude; }
         double longitude() const { return m_longitude; }
+        QPointF position() const { return QPointF(m_longitude, m_latitude); }
         void setLatitude(double latitude) { m_latitude = latitude; }
         void setLongitude(double longitude) { m_longitude = longitude; }
         double altitude() const { return m_altitude; }
         void setAltitude(double altitude) { m_altitude = altitude; }
+        void setHdop(double hdop) { m_hdop = hdop; }
+        void setVdop(double vdop) { m_vdop = vdop; }
+        void setPdop(double pdop) { m_pdop = pdop; }
+        double hdop() const { return m_hdop; }
+        double vdop() const { return m_vdop; }
+        double pdop() const { return m_pdop; }
+        void setFixType(FixType fixType) { m_fixType = fixType; }
+        FixType fixType() const { return m_fixType; }
 
     private:
         QDateTime m_time;
@@ -90,8 +99,11 @@ public:
 signals:
     void lineReceived(const QString& line);
     void satellitesUpdated(QString portName,
-                           const QList<SatelliteStatus>& satellites,
+                           const QMap<int, SatelliteStatus>& satellites,
                            QHash<QString, QVariant> metadata);
+    void gpsTimeUpdated(QDateTime gpsTime);
+    void gpsSatelliteStatusUpdated(qreal hdop, qreal vdop, qreal pdop);
+    void gpsUpdated(const PositionData& gpsData);
 
 protected slots:
     void onSerialPortReadyRead();
@@ -107,7 +119,8 @@ protected:
     QSerialPort::StopBits m_stopBits;
     QSerialPort *m_serialPort = nullptr;
     QTimer m_readTimer;
-    QList<SatelliteStatus> m_satellites;
+    QMap<int,SatelliteStatus> m_satellites;
+    PositionData m_positionData;
 };
 
 #endif // NMEASERIALLOCATIONDATAPROVIDER_H

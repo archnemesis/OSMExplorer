@@ -427,3 +427,8 @@ bool SlippyMapLayerTrack::waypointsVisible() const
 {
     return m_waypointsVisible;
 }
+
+void SlippyMapLayerTrack::appendPoint(const QPointF& point)
+{
+    m_points.append(point);
+}

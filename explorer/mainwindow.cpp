@@ -13,6 +13,8 @@
 #include <QLabel>
 #include <QListWidgetItem>
 #include <QStringListModel>
+#include <QLocalServer>
+#include <QLocalSocket>
 #include <QMenuBar>
 #include <QMenu>
 #include <QMessageBox>
@@ -100,7 +102,6 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     setWindowTitle(tr("Untitled.osm"));
-    loadPluginLayers();
 
     {
         auto *dropShadow = new QGraphicsDropShadowEffect();
@@ -159,64 +160,21 @@ MainWindow::MainWindow(QWidget *parent) :
         }
     });
 
-    connect(ui->actionFile_NewWorkspace,
-            &QAction::triggered,
-            this,
-            &MainWindow::newWorkspace);
-
-    connect(ui->actionFile_SaveWorkspace,
-        &QAction::triggered,
-        this,
-            QOverload<>::of(&MainWindow::saveWorkspace)
-            );
-
-    connect(ui->actionFile_OpenWorkspace,
-            &QAction::triggered,
-            this,
-            &MainWindow::openWorkspace);
-
-    connect(ui->actionFile_CloseWorkspace,
-            &QAction::triggered,
-            this,
-            &MainWindow::onActionFileCloseWorkspaceTriggered);
-
-    connect(ui->actionExit,
-        &QAction::triggered,
-        this,
-        &MainWindow::close);
-
-    connect(ui->actionLayer_SortAscending,
-            &QAction::triggered,
-            [this]() {
-        m_layerManager->sort(SlippyMapLayerManager::LayerSortName, Qt::AscendingOrder);
-    });
-
-    connect(ui->actionLayer_SortDescending,
-            &QAction::triggered,
-            [this]() {
-                m_layerManager->sort(SlippyMapLayerManager::LayerSortName, Qt::DescendingOrder);
-            });
-
-    QActionGroup *sortActionGroup = new QActionGroup(this);
-    sortActionGroup->addAction(ui->actionLayer_SortAscending);
-    sortActionGroup->addAction(ui->actionLayer_SortDescending);
-    sortActionGroup->setExclusive(true);
-
     /*
      * Enable showing forecast data as the map moves
      */
-    connect(ui->actionWeather_ShowWFOGrid,
-        &QAction::toggled,
-        [this](bool state){
-            if (state) {
-                m_weatherService->getWeatherStationList(QPointF(
-                        ui->slippyMap->longitude(),
-                        ui->slippyMap->latitude()));
-            }
-            else {
-                // TODO: remove the weather markers
-            }
-        });
+    // connect(ui->actionWeather_ShowWFOGrid,
+    //     &QAction::toggled,
+    //     [this](bool state){
+    //         if (state) {
+    //             m_weatherService->getWeatherStationList(QPointF(
+    //                     ui->slippyMap->longitude(),
+    //                     ui->slippyMap->latitude()));
+    //         }
+    //         else {
+    //             // TODO: remove the weather markers
+    //         }
+    //     });
 
     m_historyManager = ExplorerApplication::historyManager();
 
@@ -229,85 +187,6 @@ MainWindow::MainWindow(QWidget *parent) :
             &HistoryManager::redoHistoryCleared,
             this,
             &MainWindow::redoHistoryCleared);
-
-    connect(ui->actionFileSettings,
-        &QAction::triggered,
-        this,
-        &MainWindow::showSettingsDialog);
-
-    connect(ui->actionMapGpsAddSource,
-        &QAction::triggered,
-        this,
-        &MainWindow::showAddGpsSourceDialog);
-
-    connect(ui->actionViewGpsLog,
-        &QAction::triggered,
-        this,
-        &MainWindow::showGpsLogDialog);
-
-    ui->actionEdit_Undo->setEnabled(false);
-    connect(ui->actionEdit_Undo,
-            &QAction::triggered,
-            this,
-            &MainWindow::undo);
-
-    ui->actionEdit_Redo->setEnabled(false);
-    connect(ui->actionEdit_Redo,
-            &QAction::triggered,
-            this,
-            &MainWindow::redo);
-
-    connect(ui->actionEdit_Cut,
-            &QAction::triggered,
-            this,
-            &MainWindow::cutActiveObject);
-
-    connect(ui->actionEdit_Copy,
-            &QAction::triggered,
-            this,
-            &MainWindow::copyActiveObject);
-
-    connect(ui->actionEdit_Paste,
-            &QAction::triggered,
-            this,
-            &MainWindow::pasteObject);
-
-    connect(ui->actionEdit_Delete,
-            &QAction::triggered,
-            this,
-            &MainWindow::deleteActiveObject);
-
-    /*
-     * Database Connection Stuff
-     */
-    connect(ui->actionFile_ConnectToDatabase,
-            &QAction::triggered,
-            this,
-            &MainWindow::startServerLogin);
-
-    /*
-     * Drawing
-     */
-    connect(ui->actionDrawPolygon,
-            &QAction::triggered,
-            this,
-            &MainWindow::startPolygonSelection);
-
-    /*
-     * New layer action
-     */
-    connect(ui->actionLayer_New,
-            &QAction::triggered,
-            this,
-            &MainWindow::createNewLayer);
-
-    /*
-     * Delete layer action
-     */
-    connect(ui->actionLayer_Delete,
-            &QAction::triggered,
-            this,
-            &MainWindow::deleteSelectedLayer);
 
     /*
      * TreeView signals and slots
@@ -344,12 +223,15 @@ MainWindow::MainWindow(QWidget *parent) :
     statusBar()->addPermanentWidget(m_statusBarPositionLabel);
 
     loadStartupSettings();
-    loadLayers();
     setupMap();
     setupWeather();
-    setupContextMenus();
     refreshSettings();
-    setupToolbar();
+    setupMenuBar();
+    setupToolBar();
+    setupContextMenus();
+    loadLayers();
+    loadPluginLayers();
+    startLocalServer();
 
     m_animationTimer = new QTimer();
     m_animationTimer->setInterval(1000);
@@ -378,20 +260,12 @@ MainWindow::MainWindow(QWidget *parent) :
     QSettings settings;
     bool visibility = settings.value("dock/visibility", true).toBool();
     ui->dockWidget->setVisible(visibility);
-    ui->actionViewSidebar->setChecked(visibility);
 
     connect(ui->dockWidget,
             &OEDockWidget::closed,
             [this]() {
         QSettings().setValue("dock/visibility", false);
-        ui->actionViewSidebar->setChecked(false);
-    });
-
-    connect(ui->actionViewSidebar,
-            &QAction::toggled,
-            [this](bool state) {
-        QSettings().setValue("dock/visibility", state);
-        ui->dockWidget->setVisible(state);
+        m_actionTools_sidebar->setChecked(false);
     });
 
     loadMarkers();
@@ -410,8 +284,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     setWorkspaceDirty(false);
     disableDrawing();
+    loadWorkspaces();
 
-    startServerLogin();
+    //startServerLogin();
 }
 
 MainWindow::~MainWindow()
@@ -455,7 +330,7 @@ void MainWindow::loadPluginLayers()
                         settings.setValue(key, checked);
                     });
 
-            ui->menuLayer_TileLayers->addAction(action);
+            m_menuLayer_tileLayersMenu->addAction(action);
         }
     }
 
@@ -492,6 +367,11 @@ void MainWindow::setupWeather()
     m_layerManager->addLayer(m_weatherLayer);
 }
 
+void MainWindow::setupUi()
+{
+
+}
+
 void MainWindow::setupContextMenus()
 {
     /*
@@ -516,10 +396,6 @@ void MainWindow::setupContextMenus()
             &QAction::triggered,
             this,
             &MainWindow::renameActiveLayer);
-    connect(ui->actionLayer_Rename,
-            &QAction::triggered,
-            this,
-            &MainWindow::renameActiveLayer);
 
     m_deleteLayerAction = new QAction();
     m_deleteLayerAction->setText(tr("Delete"));
@@ -528,10 +404,6 @@ void MainWindow::setupContextMenus()
             &QAction::triggered,
             this,
             &MainWindow::deleteSelectedLayer);
-    connect(ui->actionLayer_Delete,
-            &QAction::triggered,
-            this,
-            &MainWindow::deleteActiveLayer);
 
     m_clearLayerAction = new QAction();
     m_clearLayerAction->setText(tr("Clear Layer"));
@@ -607,10 +479,6 @@ void MainWindow::setupContextMenus()
             &QAction::triggered,
             this,
             &MainWindow::deleteActiveObject);
-    connect(ui->actionObject_Delete,
-            &QAction::triggered,
-            this,
-            &MainWindow::deleteActiveObject);
 
     m_objectPropertiesAction = new QAction();
     m_objectPropertiesAction->setText(tr("Properties..."));
@@ -618,15 +486,6 @@ void MainWindow::setupContextMenus()
             &QAction::triggered,
             this,
             &MainWindow::showActiveObjectPropertyPage);
-    connect(ui->actionObject_Properties,
-            &QAction::triggered,
-            this,
-            &MainWindow::showActiveObjectPropertyPage);
-
-    connect(ui->actionObject_Browser,
-        &QAction::triggered,
-        this,
-        &MainWindow::showObjectBrowserDialog);
 
     m_centerMapAction = new QAction();
     m_centerMapAction->setText(tr("Center Here"));
@@ -679,9 +538,9 @@ void MainWindow::setupContextMenus()
     m_contextMenu->addSeparator();
     m_contextMenu->addAction(m_getForecastHereAction);
     m_contextMenu->addSeparator();
-    m_contextMenu->addAction(ui->actionEdit_Cut);
-    m_contextMenu->addAction(ui->actionEdit_Copy);
-    m_contextMenu->addAction(ui->actionEdit_Paste);
+    m_contextMenu->addAction(m_actionEdit_cut);
+    m_contextMenu->addAction(m_actionEdit_copy);
+    m_contextMenu->addAction(m_actionEdit_paste);
     m_contextMenu->addSeparator();
     m_contextMenu->addAction(m_centerMapAction);
     m_contextMenu->addAction(m_zoomInHereMapAction);
@@ -744,13 +603,6 @@ void MainWindow::setupMap()
 
     bool crosshairs = QSettings().value("map/crosshairs", false).toBool();
     ui->slippyMap->setCrosshairsEnabled(crosshairs);
-    ui->actionView_Crosshairs->setChecked(crosshairs);
-    connect(ui->actionView_Crosshairs,
-            &QAction::toggled,
-            [this](bool state) {
-                QSettings().setValue("map/crosshairs", state);
-                ui->slippyMap->setCrosshairsEnabled(state);
-            });
 
     ui->slippyMap->setFocus(Qt::OtherFocusReason);
 
@@ -801,11 +653,8 @@ void MainWindow::loadLayers()
         tileLayer->deleteLater();
     }
 
-    for (QAction *action: m_layerShowHideActions)
-        ui->menuLayer_TileLayers->removeAction(action);
-
+    m_menuLayer_tileLayersMenu->clear();
     m_layers.clear();
-    m_layerShowHideActions.clear();
 
     int layerCount = settings.beginReadArray("layers");
     for (int i = 0; i < layerCount; i++) {
@@ -815,7 +664,8 @@ void MainWindow::loadLayers()
         QString tileUrl = settings.value("tileServer").toString();
         int zOrder = settings.value("zOrder").toInt();
         bool visible = settings.value("visible", true).toBool();
-        SlippyMapWidgetLayer *layer = new SlippyMapWidgetLayer(tileUrl);
+
+        auto *layer = new SlippyMapWidgetLayer(tileUrl);
         layer->setName(name);
         layer->setDescription(description);
         layer->setZOrder(zOrder);
@@ -834,8 +684,7 @@ void MainWindow::loadLayers()
             ui->slippyMap->update();
             saveTileLayerSettings();
         });
-        ui->menuLayer_TileLayers->addAction(layerShowHide);
-        m_layerShowHideActions.append(layerShowHide);
+        m_menuLayer_tileLayersMenu->addAction(layerShowHide);
     }
     settings.endArray();
 
@@ -865,7 +714,7 @@ void MainWindow::saveTileLayerSettings()
     settings.endArray();
 }
 
-void MainWindow::setupToolbar()
+void MainWindow::setupToolBar()
 {
     /**
      * Lat/Lon inputs in the toolbar
@@ -943,49 +792,19 @@ void MainWindow::setupToolbar()
     ui->slippyMap->setDrawingStrokeColor(m_strokeColorSelector->color());
     ui->slippyMap->setDrawingStrokeWidth(m_strokeWidth->value());
 
-    /*
-     * Animation buttons
-     */
-    connect(ui->actionLayer_Play,
-            &QAction::toggled,
-            [this](bool state) {
-        if (state)
-            m_animationState = Forward;
-        else
-            m_animationState = Paused;
-    });
-
-    connect(ui->actionLayer_NextFrame,
-            &QAction::triggered,
-            [this]() {
-        ui->slippyMap->nextFrame();
-    });
-
-    connect(ui->actionLayer_PreviousFrame,
-            &QAction::triggered,
-            [this]() {
-        ui->slippyMap->previousFrame();
-    });
-
     m_drawingActionGroup = new QActionGroup(this);
     m_drawingActionGroup->setExclusive(true);
-    m_drawingActionGroup->addAction(ui->actionDrawMarker);
-    m_drawingActionGroup->addAction(ui->actionDrawLine);
-    m_drawingActionGroup->addAction(ui->actionDrawRectangle);
-    m_drawingActionGroup->addAction(ui->actionDrawEllipse);
-    m_drawingActionGroup->addAction(ui->actionDrawPolygon);
-    m_drawingActionGroup->addAction(ui->actionObjectAddFiles);
+    m_drawingActionGroup->addAction(m_actionObject_addMarker);
+    m_drawingActionGroup->addAction(m_actionObject_addLine);
+    m_drawingActionGroup->addAction(m_actionObject_addRectangle);
+    m_drawingActionGroup->addAction(m_actionObject_addEllipse);
+    m_drawingActionGroup->addAction(m_actionObject_addPolygon);
 
-    ui->toolBar->addAction(ui->actionFile_NewWorkspace);
-    ui->toolBar->addAction(ui->actionFile_SaveWorkspace);
-    ui->toolBar->addAction(ui->actionFile_OpenWorkspace);
+    ui->toolBar->addAction(m_actionFile_newWorkspace);
+    ui->toolBar->addAction(m_actionFile_openWorkspace);
+    ui->toolBar->addAction(m_actionFile_saveWorkspace);
     ui->toolBar->addSeparator();
-    ui->toolBar->addAction(ui->actionDrawMarker);
-    ui->toolBar->addAction(ui->actionDrawLine);
-    ui->toolBar->addAction(ui->actionDrawRectangle);
-    ui->toolBar->addAction(ui->actionDrawEllipse);
-    ui->toolBar->addAction(ui->actionDrawPolygon);
-    ui->toolBar->addAction(ui->actionObjectAddFiles);
+    ui->toolBar->addActions(m_drawingActionGroup->actions());
     ui->toolBar->addSeparator();
     ui->toolBar->addWidget(m_strokeColorSelector);
     ui->toolBar->addWidget(m_fillColorSelector);
@@ -997,11 +816,14 @@ void MainWindow::setupToolbar()
     ui->toolBar->addWidget(m_toolBarGeoCodingInput);
     ui->toolBar->addWidget(m_toolBarLatLonButton);
     ui->toolBar->addSeparator();
-    ui->toolBar->addAction(ui->actionMapGpsAddSource);
+    ui->toolBar->addAction(m_actionTools_connectGps);
+    ui->toolBar->addAction(m_actionTools_disconnectGps);
+    ui->toolBar->addAction(m_actionTools_centerGps);
+    ui->toolBar->addAction(m_actionTools_recordGpsPosition);
     ui->toolBar->addSeparator();
-    ui->toolBar->addAction(ui->actionLayer_PreviousFrame);
-    ui->toolBar->addAction(ui->actionLayer_Play);
-    ui->toolBar->addAction(ui->actionLayer_NextFrame);
+    ui->toolBar->addAction(m_actionLayer_previousFrame);
+    ui->toolBar->addAction(m_actionLayer_play);
+    ui->toolBar->addAction(m_actionLayer_nextFrame);
 }
 
 void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
@@ -1021,6 +843,440 @@ void MainWindow::onSlippyMapCenterChanged(double latitude, double longitude)
     m_toolBarLongitudeInput->setText(QString("%1 %2")
         .arg(longitude, 0, 'f', 6)
         .arg(cardinal_lon));
+}
+
+void MainWindow::setupMenuBar()
+{
+    /* ----- File Menu ----- */
+
+    m_actionFile_newWorkspace = new QAction(tr("New Workspace..."));
+    m_actionFile_newWorkspace->setIcon(QIcon(":/icons/toolbar/new.svg"));
+    connect(m_actionFile_newWorkspace,
+            &QAction::triggered,
+            this,
+            &MainWindow::newWorkspace);
+
+    m_actionFile_openWorkspace = new QAction(tr("Open Workspace..."));
+    m_actionFile_openWorkspace->setIcon(QIcon(":/icons/toolbar/open.svg"));
+    connect(m_actionFile_openWorkspace,
+            &QAction::triggered,
+            this,
+            &MainWindow::openWorkspace);
+
+    m_actionFile_saveWorkspace = new QAction(tr("Save Workspace"));
+    m_actionFile_saveWorkspace->setIcon(QIcon(":/icons/toolbar/save.svg"));
+    connect(m_actionFile_saveWorkspace,
+        &QAction::triggered,
+        this,
+            QOverload<>::of(&MainWindow::saveWorkspace)
+            );
+
+    m_actionFile_closeWorkspace = new QAction(tr("Close Workspace"));
+    connect(m_actionFile_closeWorkspace,
+            &QAction::triggered,
+            this,
+            &MainWindow::closeWorkspace);
+
+    m_actionFile_import = new QAction(tr("Import..."));
+    connect(m_actionFile_import,
+        &QAction::triggered,
+        [this]() {
+            QMessageBox::information(
+                this,
+                tr("Not Implemented"),
+                tr("This feature has not been implemented."));
+        });
+
+
+    m_actionFile_export = new QAction(tr("Export..."));
+    connect(m_actionFile_export,
+        &QAction::triggered,
+        [this]() {
+            QMessageBox::information(
+                this,
+                tr("Not Implemented"),
+                tr("This feature has not been implemented."));
+        });
+
+    m_actionFile_quit = new QAction(tr("&Quit"));
+    connect(m_actionFile_quit,
+        &QAction::triggered,
+        this,
+        &MainWindow::close);
+
+    m_menuFile = new QMenu(tr("&File"));
+    m_menuFile->addAction(m_actionFile_newWorkspace);
+    m_menuFile->addAction(m_actionFile_openWorkspace);
+    m_menuFile->addAction(m_actionFile_closeWorkspace);
+    m_menuFile->addSeparator();
+    m_menuFile->addAction(m_actionFile_saveWorkspace);
+    m_menuFile->addSeparator();
+    m_menuFile->addAction(m_actionFile_import);
+    m_menuFile->addAction(m_actionFile_export);
+    m_menuFile->addSeparator();
+    m_menuFile->addAction(m_actionFile_quit);
+
+    menuBar()->addMenu(m_menuFile);
+
+    /* ----- Edit Menu ----- */
+
+    m_actionEdit_cut = new QAction(tr("Cut"));
+    m_actionEdit_cut->setEnabled(false);
+    m_actionEdit_cut->setIcon(QIcon(":/icons/toolbar/cut.svg"));
+    connect(m_actionEdit_cut,
+            &QAction::triggered,
+            this,
+            &MainWindow::cutActiveObject);
+
+    m_actionEdit_copy = new QAction(tr("Copy"));
+    m_actionEdit_copy->setEnabled(false);
+    m_actionEdit_copy->setIcon(QIcon(":/icons/toolbar/copy.svg"));
+    connect(m_actionEdit_copy,
+            &QAction::triggered,
+            this,
+            &MainWindow::copyActiveObject);
+
+    m_actionEdit_paste = new QAction(tr("Paste"));
+    m_actionEdit_paste->setEnabled(false);
+    m_actionEdit_paste->setIcon(QIcon(":/icons/toolbar/paste.svg"));
+    connect(m_actionEdit_paste,
+            &QAction::triggered,
+            this,
+            &MainWindow::pasteObject);
+
+    m_actionEdit_undo = new QAction(tr("Undo"));
+    m_actionEdit_undo->setEnabled(false);
+    m_actionEdit_undo->setIcon(QIcon(":/icons/toolbar/undo.svg"));
+    connect(m_actionEdit_undo,
+            &QAction::triggered,
+            this,
+            &MainWindow::undo);
+
+    m_actionEdit_redo = new QAction(tr("Redo"));
+    m_actionEdit_redo->setEnabled(false);
+    m_actionEdit_redo->setIcon(QIcon(":/icons/toolbar/redo.svg"));
+    connect(m_actionEdit_redo,
+            &QAction::triggered,
+            this,
+            &MainWindow::redo);
+
+    m_actionEdit_delete = new QAction(tr("Delete"));
+    m_actionEdit_delete->setEnabled(false);
+    connect(m_actionEdit_delete,
+            &QAction::triggered,
+            this,
+            &MainWindow::deleteActiveObject);
+
+    m_actionEdit_properties = new QAction(tr("Properties..."));
+    m_actionEdit_properties->setEnabled(false);
+    connect(m_actionEdit_properties,
+            &QAction::triggered,
+            this,
+            &MainWindow::showActiveObjectPropertyPage);
+
+    m_menuEdit = new QMenu(tr("&Edit"));
+    m_menuEdit->addAction(m_actionEdit_undo);
+    m_menuEdit->addAction(m_actionEdit_redo);
+    m_menuEdit->addSeparator();
+    m_menuEdit->addAction(m_actionEdit_cut);
+    m_menuEdit->addAction(m_actionEdit_copy);
+    m_menuEdit->addAction(m_actionEdit_paste);
+    m_menuEdit->addAction(m_actionEdit_delete);
+    m_menuEdit->addSeparator();
+    m_menuEdit->addAction(m_actionEdit_properties);
+
+    menuBar()->addMenu(m_menuEdit);
+
+    /* ----- Layer Menu ----- */
+
+    m_actionLayer_new = new QAction(tr("New..."));
+    connect(m_actionLayer_new,
+            &QAction::triggered,
+            this,
+            &MainWindow::createNewLayer);
+
+    m_actionLayer_rename = new QAction(tr("Rename..."));
+    connect(m_actionLayer_rename,
+            &QAction::triggered,
+            this,
+            &MainWindow::renameActiveLayer);
+
+    m_actionLayer_delete = new QAction(tr("Delete"));
+    connect(m_actionLayer_delete,
+        &QAction::triggered,
+        this,
+        &MainWindow::deleteSelectedLayer);
+
+    m_actionLayer_sortAscending = new QAction(tr("Sort Ascending"));
+    connect(m_actionLayer_sortAscending,
+            &QAction::triggered,
+            [this]() {
+                m_layerManager->sort(SlippyMapLayerManager::LayerSortName, Qt::AscendingOrder);
+            });
+
+    m_actionLayer_sortDescending = new QAction(tr("Sort Descending"));
+    connect(m_actionLayer_sortDescending,
+            &QAction::triggered,
+            [this]() {
+                m_layerManager->sort(SlippyMapLayerManager::LayerSortName, Qt::DescendingOrder);
+            });
+
+    m_actionLayer_nextFrame = new QAction(tr("Previous Frame"));
+    connect(m_actionLayer_nextFrame,
+            &QAction::triggered,
+            [this]() {
+        ui->slippyMap->nextFrame();
+    });
+
+    m_actionLayer_previousFrame = new QAction(tr("Auto"));
+    connect(m_actionLayer_previousFrame,
+            &QAction::triggered,
+            [this]() {
+        ui->slippyMap->previousFrame();
+    });
+
+    m_actionLayer_play = new QAction(tr("Next Frame"));
+    m_actionLayer_play->setCheckable(true);
+    connect(m_actionLayer_play,
+            &QAction::toggled,
+            [this](bool state) {
+        if (state)
+            m_animationState = Forward;
+        else
+            m_animationState = Paused;
+    });
+
+    auto *sortActionGroup = new QActionGroup(this);
+    sortActionGroup->addAction(m_actionLayer_sortAscending);
+    sortActionGroup->addAction(m_actionLayer_sortDescending);
+    sortActionGroup->setExclusive(true);
+
+    m_menuLayer_tileLayersMenu = new QMenu(tr("Tile Layers"));
+
+    m_menuLayer = new QMenu(tr("&Layer"));
+    m_menuLayer->addAction(m_actionLayer_new);
+    m_menuLayer->addAction(m_actionLayer_rename);
+    m_menuLayer->addAction(m_actionLayer_delete);
+    m_menuLayer->addSeparator();
+    m_menuLayer->addActions(sortActionGroup->actions());
+    m_menuLayer->addSeparator();
+    m_menuLayer->addMenu(m_menuLayer_tileLayersMenu);
+
+    menuBar()->addMenu(m_menuLayer);
+
+    /* ----- Object Menu ----- */
+
+    m_actionObject_addMarker = new QAction(tr("New Marker"));
+    m_actionObject_addMarker->setCheckable(true);
+    m_actionObject_addMarker->setIcon(QIcon(":/icons/toolbar/marker-add.svg"));
+    connect(m_actionObject_addMarker,
+        &QAction::triggered,
+        this,
+        &MainWindow::createMarkerAtCurrentPosition);
+
+    m_actionObject_addLine = new QAction(tr("New Line"));
+    m_actionObject_addLine->setCheckable(true);
+    m_actionObject_addLine->setIcon(QIcon(":/icons/toolbar/path-add.svg"));
+    connect(m_actionObject_addLine,
+        &QAction::triggered,
+        this,
+        &MainWindow::setDrawLineMode);
+
+    m_actionObject_addRectangle = new QAction(tr("New Rectangle"));
+    m_actionObject_addRectangle->setCheckable(true);
+    m_actionObject_addRectangle->setIcon(QIcon(":/icons/toolbar/rect-add.svg"));
+    connect(m_actionObject_addRectangle,
+        &QAction::triggered,
+        this,
+        &MainWindow::setDrawRectMode);
+
+    m_actionObject_addEllipse = new QAction(tr("New Ellipse"));
+    m_actionObject_addEllipse->setCheckable(true);
+    m_actionObject_addEllipse->setIcon(QIcon(":/icons/toolbar/ellipse-add-extent.svg"));
+    connect(m_actionObject_addEllipse,
+        &QAction::triggered,
+        this,
+        &MainWindow::setDrawEllipseMode);
+
+    m_actionObject_addPolygon = new QAction(tr("New Polygon"));
+    m_actionObject_addPolygon->setCheckable(true);
+    m_actionObject_addPolygon->setIcon(QIcon(":/icons/toolbar/polygon-add.svg"));
+    connect(m_actionObject_addPolygon,
+        &QAction::triggered,
+        this,
+        &MainWindow::setDrawPolygonMode);
+
+    m_actionObject_properties = new QAction(tr("Properties..."));
+    connect(m_actionEdit_properties,
+        &QAction::triggered,
+        this,
+        &MainWindow::showActiveObjectPropertyPage);
+
+    m_actionObject_delete = new QAction(tr("Delete"));
+    connect(m_actionObject_delete,
+        &QAction::triggered,
+        this,
+        &MainWindow::deleteActiveObject);
+
+    m_actionObject_browser = new QAction(tr("Browser..."));
+    connect(m_actionObject_browser,
+        &QAction::triggered,
+        this,
+        &MainWindow::showObjectBrowserDialog);
+
+    m_actionObject_importGpx = new QAction(tr("GPX"));
+    connect(m_actionObject_importGpx,
+        &QAction::triggered,
+        this,
+        &MainWindow::importGpx);
+
+    m_actionObject_importCsv = new QAction(tr("CSV"));
+    connect(m_actionObject_importCsv,
+        &QAction::triggered,
+        [this]() {
+            QMessageBox::information(
+                this,
+                tr("Not Implemented"),
+                tr("This feature has not been implemented."));
+        });
+
+    m_actionObject_importSvg = new QAction(tr("SVG"));
+    connect(m_actionObject_importSvg,
+        &QAction::triggered,
+        [this]() {
+            QMessageBox::information(
+                this,
+                tr("Not Implemented"),
+                tr("This feature has not been implemented."));
+    });
+
+    m_actionObject_importGeoJson = new QAction(tr("GeoJSON"));
+    connect(m_actionObject_importGeoJson,
+        &QAction::triggered,
+        [this]() {
+            QMessageBox::information(
+                this,
+                tr("Not Implemented"),
+                tr("This feature has not been implemented."));
+        });
+
+    m_menuObject_importMenu = new QMenu(tr("&Import"));
+    m_menuObject_importMenu->addAction(m_actionObject_importGpx);
+    m_menuObject_importMenu->addAction(m_actionObject_importCsv);
+    m_menuObject_importMenu->addAction(m_actionObject_importSvg);
+    m_menuObject_importMenu->addAction(m_actionObject_importGeoJson);
+
+    m_menuObject = new QMenu(tr("&Object"));
+    m_menuObject->addAction(m_actionObject_addMarker);
+    m_menuObject->addAction(m_actionObject_addLine);
+    m_menuObject->addAction(m_actionObject_addRectangle);
+    m_menuObject->addAction(m_actionObject_addPolygon);
+    m_menuObject->addMenu(m_menuObject_importMenu);
+    m_menuObject->addSeparator();
+    m_menuObject->addAction(m_actionObject_properties);
+    m_menuObject->addAction(m_actionObject_delete);
+    m_menuObject->addAction(m_actionObject_browser);
+
+    menuBar()->addMenu(m_menuObject);
+
+    /* ----- Tools Menu ----- */
+
+    bool crosshairs = QSettings().value("map/crosshairs", false).toBool();
+
+    m_actionTools_crosshairs = new QAction(tr("Crosshairs"));
+    m_actionTools_crosshairs->setCheckable(true);
+    m_actionTools_crosshairs->setChecked(crosshairs);
+    connect(m_actionTools_crosshairs,
+            &QAction::toggled,
+            [this](bool state) {
+                QSettings().setValue("map/crosshairs", state);
+                ui->slippyMap->setCrosshairsEnabled(state);
+            });
+
+    m_actionTools_sidebar = new QAction(tr("Sidebar"));
+    m_actionTools_sidebar->setCheckable(true);
+    connect(m_actionTools_sidebar,
+            &QAction::toggled,
+            [this](bool state) {
+        QSettings().setValue("dock/visibility", state);
+        ui->dockWidget->setVisible(state);
+    });
+
+    m_actionTools_settings = new QAction(tr("Settings"));
+    connect(m_actionTools_settings,
+        &QAction::triggered,
+        this,
+        &MainWindow::showSettingsDialog);
+
+    m_actionTools_connectGps = new QAction(tr("Connect GPS..."));
+    m_actionTools_connectGps->setIcon(QIcon(":/icons/toolbar/gps-add.svg"));
+    connect(m_actionTools_connectGps,
+        &QAction::triggered,
+        this,
+        &MainWindow::showAddGpsSourceDialog);
+
+    m_actionTools_disconnectGps = new QAction(tr("Disconnect GPS"));
+    m_actionTools_disconnectGps->setEnabled(false);
+    m_actionTools_disconnectGps->setIcon(QIcon(":/icons/toolbar/gps-disconnect.svg"));
+    connect(m_actionTools_disconnectGps,
+            &QAction::triggered,
+            [this]() {
+                QMessageBox::information(
+                    this,
+                    tr("Not Implemented"),
+                    tr("This feature has not been implemented."));
+            });
+
+    m_actionTools_viewGpsLog = new QAction(tr("View GPS Log"));
+    m_actionTools_viewGpsLog->setEnabled(false);
+    connect(m_actionTools_viewGpsLog,
+            &QAction::triggered,
+            this,
+            &MainWindow::showGpsLogDialog);
+
+    m_actionTools_centerGps = new QAction(tr("Follow GPS"));
+    m_actionTools_centerGps->setCheckable(true);
+    m_actionTools_centerGps->setIcon(QIcon(":/icons/toolbar/gps-recenter.svg"));
+    connect(m_actionTools_centerGps,
+        &QAction::triggered,
+        [this]() {
+            QSettings().setValue("gps/followGps", true);
+        });
+    m_actionTools_centerGps->setChecked(
+        QSettings().value("gps/followGps", false).toBool());
+
+    m_actionTools_recordGpsPosition = new QAction(tr("Record Track"));
+    m_actionTools_recordGpsPosition->setCheckable(true);
+    m_actionTools_recordGpsPosition->setIcon(QIcon(":/icons/toolbar/record.svg"));
+
+    m_menuTools = new QMenu(tr("&Tools"));
+    m_menuTools->addAction(m_actionTools_sidebar);
+    m_menuTools->addAction(m_actionTools_crosshairs);
+    m_menuTools->addSeparator();
+    m_menuTools->addAction(m_actionTools_connectGps);
+    m_menuTools->addAction(m_actionTools_disconnectGps);
+    m_menuTools->addAction(m_actionTools_viewGpsLog);
+    m_menuTools->addAction(m_actionTools_centerGps);
+    m_menuTools->addAction(m_actionTools_recordGpsPosition);
+    m_menuTools->addSeparator();
+    m_menuTools->addAction(m_actionTools_settings);
+
+    menuBar()->addMenu(m_menuTools);
+
+    /* ----- Plugin Menus ----- */
+
+    for (auto *plugin : m_plugins) {
+        for (auto *menu : plugin->mainMenuList())
+            menuBar()->addMenu(menu);
+    }
+
+    /* ----- Help Menu ----- */
+
+    m_actionHelp_about = new QAction(tr("&About"));
+    m_menuHelp = new QMenu(tr("&Help"));
+    m_menuHelp->addAction(m_actionHelp_about);
+
+    menuBar()->addMenu(m_menuHelp);
 }
 
 void MainWindow::onSlippyMapZoomLevelChanged(int zoom)
@@ -1079,17 +1335,17 @@ void MainWindow::onSlippyMapCursorPositionChanged(double latitude, double longit
     QString lat;
 
     if (latitude > 0) {
-        lat = tpl.arg(fabs(latitude), 8, 'f', 4, '0').arg("N");
+        lat = tpl.arg(fabs(latitude), 8, 'f', 7, '0').arg("N");
     }
     else {
-        lat = tpl.arg(fabs(latitude), 8, 'f', 4, '0').arg("S");
+        lat = tpl.arg(fabs(latitude), 8, 'f', 7, '0').arg("S");
     }
 
     if (longitude < 0) {
-        lon = tpl.arg(fabs(longitude), 8, 'f', 4, '0').arg("W");
+        lon = tpl.arg(fabs(longitude), 8, 'f', 7, '0').arg("W");
     }
     else {
-        lon = tpl.arg(fabs(longitude), 8, 'f', 4, '0').arg("E");
+        lon = tpl.arg(fabs(longitude), 8, 'f', 7, '0').arg("E");
     }
 
     m_statusBarPositionLabel->setText(
@@ -1195,28 +1451,34 @@ void MainWindow::onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode)
 {
     switch (mode) {
     case SlippyMapWidget::NoDrawing:
-        ui->actionDrawMarker->setChecked(false);
-        ui->actionDrawLine->setChecked(false);
-        ui->actionDrawRectangle->setChecked(false);
-        ui->actionDrawPolygon->setChecked(false);
-        ui->actionDrawEllipse->setChecked(false);
+        m_actionObject_addMarker->setChecked(false);
+        m_actionObject_addLine->setChecked(false);
+        m_actionObject_addRectangle->setChecked(false);
+        m_actionObject_addPolygon->setChecked(false);
+        m_actionObject_addEllipse->setChecked(false);
+        statusBar()->clearMessage();
         break;
     case SlippyMapWidget::MarkerDrawing:
-        ui->actionDrawMarker->setChecked(true);
+        //m_actionObject_addMarker->setChecked(true);
         break;
     case SlippyMapWidget::PathDrawing:
-        ui->actionDrawLine->setChecked(true);
+        m_actionObject_addLine->setChecked(true);
+        statusBar()->showMessage(tr("Click to set path points. Double-click to finish drawing. Esc to cancel."));
         break;
     case SlippyMapWidget::RectDrawing:
-        ui->actionDrawRectangle->setChecked(true);
+        m_actionObject_addRectangle->setChecked(true);
+        statusBar()->showMessage(tr("Drag to draw rectangle. Esc to cancel."));
         break;
     case SlippyMapWidget::EllipseDrawing:
-        ui->actionDrawEllipse->setChecked(true);
+        m_actionObject_addEllipse->setChecked(true);
+        statusBar()->showMessage(tr("Drag to draw ellipse. Esc to cancel."));
         break;
     case SlippyMapWidget::PolygonDrawing:
-        ui->actionDrawPolygon->setChecked(true);
+        m_actionObject_addPolygon->setChecked(true);
+        statusBar()->showMessage(tr("Click to set polygon points. Double-click to finish drawing. Esc to cancel."));
     default:
         ui->slippyMap->setCursor(Qt::CrossCursor);
+        statusBar()->clearMessage();
         break;
     }
 }
@@ -1224,6 +1486,13 @@ void MainWindow::onSlippyMapDrawModeChanged(SlippyMapWidget::DrawMode mode)
 void MainWindow::onSlippyMapLayerObjectActivated(const SlippyMapLayerObject::Ptr& object)
 {
     static QMetaObject::Connection saveButtonConnection;
+
+    for (const auto& layer: m_layerManager->layers()) {
+        if (layer->objects().contains(object)) {
+            m_layerManager->setActiveLayer(layer);
+            break;
+        }
+    }
 
     if (m_selectedObject == object) return;
 
@@ -1237,6 +1506,7 @@ void MainWindow::onSlippyMapLayerObjectActivated(const SlippyMapLayerObject::Ptr
 
     QList<SlippyMapLayerObjectPropertyPage*> propertyPages;
     propertyPages.append(commonPropertyPage);
+    propertyPages.append(new SlippyMapLayerObjectFilesPropertyPage(object, this));
 
     for (auto *propertyPage : object->propertyPages(object)) {
         propertyPages.append(propertyPage);
@@ -1289,11 +1559,11 @@ void MainWindow::onSlippyMapLayerObjectActivated(const SlippyMapLayerObject::Ptr
     m_selectedObjectCopy = SlippyMapLayerObject::Ptr(object->clone());
     m_selectedObject = object;
 
-    ui->actionEdit_Copy->setEnabled(true);
-    ui->actionEdit_Cut->setEnabled(true);
-    ui->actionEdit_Delete->setEnabled(true);
-    ui->actionEdit_Rename->setEnabled(true);
-    ui->actionEdit_Properties->setEnabled(true);
+    m_actionEdit_cut->setEnabled(true);
+    m_actionEdit_copy->setEnabled(true);
+    m_actionEdit_paste->setEnabled(true);
+    m_actionEdit_delete->setEnabled(true);
+    m_actionEdit_properties->setEnabled(true);
     m_addMarkerAction->setEnabled(true);
     m_deleteObjectAction->setEnabled(true);
 }
@@ -1309,11 +1579,12 @@ void MainWindow::onSlippyMapLayerObjectDeactivated(const SlippyMapLayerObject::P
         ui->sidebarResetButton->setVisible(false);
         ui->sidebarSaveButton->setVisible(false);
         m_selectedObject = nullptr;
-        ui->actionEdit_Copy->setEnabled(false);
-        ui->actionEdit_Cut->setEnabled(false);
-        ui->actionEdit_Delete->setEnabled(false);
-        ui->actionEdit_Rename->setEnabled(false);
-        ui->actionEdit_Properties->setEnabled(false);
+
+        m_actionEdit_cut->setEnabled(false);
+        m_actionEdit_copy->setEnabled(false);
+        m_actionEdit_paste->setEnabled(false);
+        m_actionEdit_delete->setEnabled(false);
+        m_actionEdit_properties->setEnabled(false);
         m_addMarkerAction->setEnabled(false);
         m_deleteObjectAction->setEnabled(false);
     }
@@ -1335,12 +1606,12 @@ void MainWindow::onSlippyMapLayerObjectDoubleClicked(const SlippyMapLayerObject:
 
 void MainWindow::onSlippyMapDragFinished()
 {
-    if (ui->actionWeather_ShowWFOGrid->isChecked()) {
-        m_weatherService->getWeatherStationList(
-                QPointF(
-                        ui->slippyMap->longitude(),
-                        ui->slippyMap->latitude()));
-    }
+    // if (ui->actionWeather_ShowWFOGrid->isChecked()) {
+    //     m_weatherService->getWeatherStationList(
+    //             QPointF(
+    //                     ui->slippyMap->longitude(),
+    //                     ui->slippyMap->latitude()));
+    // }
 
     loadViewportData();
 }
@@ -1350,23 +1621,48 @@ void MainWindow::showPropertiesDialog(const SlippyMapLayerObject::Ptr& object)
     static QMetaObject::Connection saveButtonConnection;
     QList<SlippyMapLayerObjectPropertyPage*> propertyPages;
 
+    SlippyMapGpsMarker::Ptr gpsMarker = object.dynamicCast<SlippyMapGpsMarker>();
+    if (!gpsMarker.isNull())
+        qDebug() << "Got a GPS marker!";
+
     //
     // we don't show these for GPS markers
     //
-    auto gpsMarker = object.dynamicCast<SlippyMapGpsMarker::Ptr>();
-    if (gpsMarker.isNull()) {
-        propertyPages.append(new SlippyMapLayerObjectCommonPropertyPage(object, m_layerManager));
-        propertyPages.append(new SlippyMapLayerObjectFilesPropertyPage(object, this));
+    if (object->isEditable()) {
+        auto *commonPropertyPage = new SlippyMapLayerObjectCommonPropertyPage(object, m_layerManager, this);
+        auto *filesPropertyPage = new SlippyMapLayerObjectFilesPropertyPage(object, this);
+        propertyPages.append(commonPropertyPage);
+        propertyPages.append(filesPropertyPage);
+
+        connect(object.get(),
+            &SlippyMapLayerObject::updated,
+            commonPropertyPage,
+            &SlippyMapLayerObjectPropertyPage::updateUi);
+
+        connect(object.get(),
+            &SlippyMapLayerObject::updated,
+            filesPropertyPage,
+            &SlippyMapLayerObjectPropertyPage::updateUi);
     }
 
-    for (auto *propertyPage : object->propertyPages(object))
+    for (auto *propertyPage : object->propertyPages(object)) {
         propertyPages.append(propertyPage);
+        connect(object.get(),
+            &SlippyMapLayerObject::updated,
+            propertyPage,
+            &SlippyMapLayerObjectPropertyPage::updateUi);
+    }
 
-    if (gpsMarker.isNull()) {
+    if (object->isEditable()) {
         propertyPages.append(new DatabaseObjectPropertyPage(object));
 
-        for (auto *propertyPage : ExplorerApplication::pluginManager()->getPropertyPages())
+        for (auto *propertyPage : ExplorerApplication::pluginManager()->getPropertyPages()) {
             propertyPages.append(propertyPage);
+            connect(object.get(),
+                &SlippyMapLayerObject::updated,
+                propertyPage,
+                &SlippyMapLayerObjectPropertyPage::updateUi);
+        }
     }
 
     auto *tabWidget = new QTabWidget();
@@ -1533,50 +1829,56 @@ void MainWindow::weatherNetworkAccessManager_onRequestFinished(QNetworkReply* re
     QString forecastZoneUrl = properties["forecastZone"].toString();
 }
 
-void MainWindow::onGpsDataProviderPositionUpdated(QString identifier, QPointF position, QHash<QString, QVariant> metadata)
+void MainWindow::updateGpsData(const NmeaSerialLocationDataProvider::PositionData& position)
 {
-    SlippyMapGpsMarker::Ptr marker;
+    if (m_gpsMarker.isNull()) {
+        m_gpsMarker = SlippyMapGpsMarker::Ptr::create(position.position());
+        m_gpsMarker->setLabel(tr("GPS"));
+        m_gpsMarker->setEditable(false);
+        m_gpsMarker->setMovable(false);
+        m_gpsMarker->setColor(Qt::green);
+        m_layerManager->addLayerObject(m_gpsMarkerLayer, m_gpsMarker);
+    }
 
-    if (m_gpsMarkers.contains(identifier)) {
-        marker = m_gpsMarkers[identifier];
-        marker->setLabel(metadata["gps_label"].toString());
-        marker->setPosition(position);
+    m_gpsMarker->setGpsData(position);
+    m_gpsMarker->setPosition(position.position());
+    m_gpsMarker->setSatellites(position.satellites());
+    m_gpsMarker->setGpsTime(position.gpsTime());
+
+    if (m_actionTools_centerGps->isChecked()) {
+        ui->slippyMap->setCenter(position.position());
+    }
+
+    if (m_actionTools_recordGpsPosition->isChecked()) {
+        if (m_gpsTrack.isNull()) {
+            m_gpsTrack = SlippyMapLayerTrack::Ptr::create();
+            m_gpsTrack->setLabel(tr("GPS"));
+            m_layerManager->addLayerObject(m_gpsMarkerLayer, m_gpsTrack);
+        }
+
+        m_gpsTrack->appendPoint(position.position());
     }
     else {
-        marker = SlippyMapGpsMarker::Ptr::create(position);
-        marker->setLabel(metadata["gps_label"].toString());
-        marker->setColor(Qt::green);
-        marker->setEditable(false);
-        marker->setMovable(false);
-        m_gpsMarkers[identifier] = marker;
-        m_layerManager->addLayerObject(m_gpsMarkerLayer, marker);
+        if (!m_gpsTrack.isNull()) {
+            m_layerManager->removeLayerObject(m_gpsMarkerLayer, m_gpsTrack);
+            m_gpsTrack.clear();
+        }
     }
 
     QString cardinal_lat;
     QString cardinal_lon;
 
-    if (position.y() >= 0) cardinal_lat = "N";
+    if (position.position().y() >= 0) cardinal_lat = "N";
     else cardinal_lat = "S";
 
-    if (position.x() >= 0) cardinal_lon = "E";
+    if (position.position().x() >= 0) cardinal_lon = "E";
     else cardinal_lon = "W";
 
     m_statusBarGpsStatusLabel->setText(tr("GPS Postion: %1 %2 %3 %4")
-        .arg(position.y(), 0, 'f', 7)
+        .arg(position.position().y(), 0, 'f', 7)
         .arg(cardinal_lat)
-        .arg(position.x(), 0, 'f', 7)
+        .arg(position.position().x(), 0, 'f', 7)
         .arg(cardinal_lon));
-}
-
-void MainWindow::onGpsDataProviderSatellitesUpdated(QString identifier,
-                                                    const QList<NmeaSerialLocationDataProvider::SatelliteStatus> &satellites,
-                                                    QHash<QString, QVariant> metadata)
-{
-    SlippyMapGpsMarker::Ptr marker;
-    if (m_gpsMarkers.contains(identifier)) {
-        marker = m_gpsMarkers[identifier];
-        marker->setSatellites(satellites);
-    }
 }
 
 void MainWindow::onTvwMarkersContextMenuRequested(const QPoint &point)
@@ -1718,60 +2020,39 @@ void MainWindow::showAddGpsSourceDialog()
 
     if (source.isValid) {
         if (source.sourceType == GpsSourceDialog::NmeaSource) {
-            NmeaSerialLocationDataProvider *provider =
-                    new NmeaSerialLocationDataProvider();
-            provider->setLabelText(source.label);
-            provider->setPortName(source.portName);
-            provider->setBaudRate(source.baudRate);
-            provider->setDataBits(source.dataBits);
-            provider->setStopBits(source.stopBits);
-            provider->setParity(source.parity);
-            provider->setFlowControl(source.flowControl);
+            m_gpsLocationProvider = new NmeaSerialLocationDataProvider();
+            m_gpsLocationProvider->setLabelText(source.label);
+            m_gpsLocationProvider->setPortName(source.portName);
+            m_gpsLocationProvider->setBaudRate(source.baudRate);
+            m_gpsLocationProvider->setDataBits(source.dataBits);
+            m_gpsLocationProvider->setStopBits(source.stopBits);
+            m_gpsLocationProvider->setParity(source.parity);
+            m_gpsLocationProvider->setFlowControl(source.flowControl);
 
-            connect(provider,
-                    &LocationDataProvider::positionUpdated,
-                    this,
-                    &MainWindow::onGpsDataProviderPositionUpdated);
+            connect(m_gpsLocationProvider,
+                &NmeaSerialLocationDataProvider::gpsUpdated,
+                this,
+                &MainWindow::updateGpsData);
 
-            connect(provider,
-                    &NmeaSerialLocationDataProvider::satellitesUpdated,
-                    this,
-                    &MainWindow::onGpsDataProviderSatellitesUpdated);
-
-            provider->start();
-            m_gpsProviders.append(provider);
-
-            QAction *configAction = new QAction(this);
-            configAction->setText(QString("%1 (%2)").arg(source.label).arg(source.portName));
-            configAction->setCheckable(true);
-            configAction->setChecked(true);
-            ui->menuFileGps->addAction(configAction);
-            connect(configAction, &QAction::toggled, [=](bool value){
-                if (value) {
-                    provider->start();
-                }
-                else {
-                    provider->stop();
-                }
-            });
+            m_gpsLocationProvider->start();
+            m_actionTools_connectGps->setEnabled(false);
+            m_actionTools_disconnectGps->setEnabled(true);
+            m_actionTools_viewGpsLog->setEnabled(true);
         }
     }
 }
 
 void MainWindow::showGpsLogDialog()
 {
+    Q_ASSERT(m_gpsLocationProvider != nullptr);
+
     if (m_nmeaLog == nullptr) {
         m_nmeaLog = new TextLogViewerForm();
         m_nmeaLog->setWindowTitle(tr("NMEA Log"));
-        for (LocationDataProvider *provider : m_gpsProviders) {
-            NmeaSerialLocationDataProvider *gpsProvider
-                    = qobject_cast<NmeaSerialLocationDataProvider*>(provider);
-            connect(
-                        gpsProvider,
-                        &NmeaSerialLocationDataProvider::lineReceived,
-                        m_nmeaLog,
-                        &TextLogViewerForm::addLine);
-        }
+        connect(m_gpsLocationProvider,
+                &NmeaSerialLocationDataProvider::lineReceived,
+                m_nmeaLog,
+                &TextLogViewerForm::addLine);
     }
 
     m_nmeaLog->show();
@@ -1804,22 +2085,22 @@ void MainWindow::activateLayerAtIndex(const QModelIndex &index)
     }
 }
 
-void MainWindow::on_actionDrawRectangle_triggered()
+void MainWindow::setDrawRectMode()
 {
     ui->slippyMap->setDrawMode(SlippyMapWidget::RectDrawing);
 }
 
-void MainWindow::on_actionDrawEllipse_triggered()
+void MainWindow::setDrawEllipseMode()
 {
     ui->slippyMap->setDrawMode(SlippyMapWidget::EllipseDrawing);
 }
 
-void MainWindow::on_actionDrawMarker_triggered()
+void MainWindow::setDrawMarkerMode()
 {
     ui->slippyMap->setDrawMode(SlippyMapWidget::MarkerDrawing);
 }
 
-void MainWindow::on_actionImport_GPX_triggered()
+void MainWindow::importGpx()
 {
     if (m_layerManager->activeLayer() == nullptr) {
         QMessageBox::warning(
@@ -1926,7 +2207,7 @@ void MainWindow::setWorkspaceDirty(bool dirty)
     m_workspaceDirty = dirty;
 
     if (dirty) {
-        ui->actionFile_SaveWorkspace->setEnabled(true);
+        m_actionFile_saveWorkspace->setEnabled(true);
         if (m_databaseMode)
             setWindowTitle(
                     tr("Online Workspace") + " - " + \
@@ -1935,7 +2216,7 @@ void MainWindow::setWorkspaceDirty(bool dirty)
             setWindowTitle(fileName + "*");
     }
     else {
-        ui->actionFile_SaveWorkspace->setEnabled(false);
+        m_actionFile_saveWorkspace->setEnabled(false);
         if (m_databaseMode)
             setWindowTitle(
                     tr("Online Workspace") + " - " + \
@@ -1955,6 +2236,7 @@ bool MainWindow::closeWorkspace()
 
         if (result == QMessageBox::Yes) {
             saveWorkspace();
+            m_historyManager->clearUndoHistory();
             return true;
         }
         if (result == QMessageBox::Cancel)
@@ -1962,7 +2244,6 @@ bool MainWindow::closeWorkspace()
     }
 
     m_workspaceId = QUuid();
-
 
     for (const auto& layer : m_layerManager->layers()) {
         if (layer->isEditable()) {
@@ -1972,18 +2253,9 @@ bool MainWindow::closeWorkspace()
     }
 
     m_workspaceFileName.clear();
+    m_historyManager->clearUndoHistory();
     setWorkspaceDirty(true);
     return true;
-}
-
-void MainWindow::onActionFileCloseWorkspaceTriggered()
-{
-    closeWorkspace();
-}
-
-void MainWindow::updateRecentFileList()
-{
-    ui->menuRecent->clear();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -2091,6 +2363,7 @@ void MainWindow::deleteActiveObject()
                 m_layerManager->activeLayer(),
                 object);
 
+        qDebug() << "Removing object" << object->label() << "from layerManager";
         m_layerManager->removeLayerObject(
                 m_layerManager->activeLayer(),
                 object);
@@ -2115,18 +2388,30 @@ void MainWindow::onTvwMarkersClicked(const QModelIndex &index)
         m_layerManager->deactivateLayer();
     }
 
+    auto mappedIndex = m_layerManagerProxy->mapToSource(index);
+
     //
     // set the selected layer to active
     //
     if (!index.parent().isValid()) {
-        auto mappedIndex = m_layerManagerProxy->mapToSource(index);
         const auto& layer = m_layerManager->layers().at(mappedIndex.row());
         m_layerManager->setActiveLayer(layer);
+        ui->slippyMap->deactivateActiveObject();
+
         if (layer->isEditable())
             enableDrawing();
         else
             disableDrawing();
+
+        return;
     }
+
+    const auto& layer = m_layerManager->layers().at(mappedIndex.parent().row());
+    const auto& object = layer->objects().at(mappedIndex.row());
+    QPointF position = object->position();
+    m_layerManager->setActiveLayer(layer);
+    ui->slippyMap->setActiveObject(object);
+    ui->slippyMap->setCenter(position);
 }
 
 void MainWindow::renameActiveLayer()
@@ -2199,7 +2484,7 @@ void MainWindow::onSlippyMapPolygonSelected(const QList<QPointF>& points)
     saveObject(polygon);
 }
 
-void MainWindow::startPolygonSelection()
+void MainWindow::setDrawPolygonMode()
 {
     ui->slippyMap->setDrawMode(SlippyMapWidget::PolygonDrawing);
 }
@@ -2244,7 +2529,7 @@ void MainWindow::onSlippyMapLayerObjectUpdated(const SlippyMapLayerObject::Ptr& 
     ui->slippyMap->update();
 }
 
-void MainWindow::on_actionDrawLine_triggered()
+void MainWindow::setDrawLineMode()
 {
     ui->slippyMap->setDrawMode(SlippyMapWidget::PathDrawing);
 }
@@ -2321,11 +2606,11 @@ void MainWindow::undo()
         setWorkspaceDirty(true);
     }
 
-    ui->actionEdit_Redo->setEnabled(true);
-    ui->actionEdit_Redo->setText(tr("Redo") + " " + m_historyManager->currentRedoDescription());
-    ui->actionEdit_Undo->setEnabled(m_historyManager->undoCount() > 0);
+    m_actionEdit_redo->setEnabled(true);
+    m_actionEdit_redo->setText(tr("Redo") + " " + m_historyManager->currentRedoDescription());
+    m_actionEdit_undo->setEnabled(m_historyManager->undoCount() > 0);
     if (m_historyManager->undoCount() > 0)
-        ui->actionEdit_Undo->setText(tr("Undo") + " " + m_historyManager->currentUndoDescription());
+        m_actionEdit_undo->setText(tr("Undo") + " " + m_historyManager->currentUndoDescription());
 }
 
 void MainWindow::redo()
@@ -2396,12 +2681,12 @@ void MainWindow::redo()
         setWorkspaceDirty(true);
     }
 
-    ui->actionEdit_Redo->setEnabled(m_historyManager->redoCount() > 0);
+    m_actionEdit_redo->setEnabled(m_historyManager->redoCount() > 0);
     if (m_historyManager->redoCount() > 0)
-        ui->actionEdit_Redo->setText(tr("Redo") + " " + m_historyManager->currentRedoDescription());
-    ui->actionEdit_Undo->setEnabled(true);
+        m_actionEdit_redo->setText(tr("Redo") + " " + m_historyManager->currentRedoDescription());
+    m_actionEdit_undo->setEnabled(true);
     if (m_historyManager->undoCount() > 0)
-        ui->actionEdit_Undo->setText(tr("Undo") + " " + m_historyManager->currentUndoDescription());
+        m_actionEdit_undo->setText(tr("Undo") + " " + m_historyManager->currentUndoDescription());
 }
 
 void MainWindow::createUndoAddObject(const QString &description, SlippyMapLayer::Ptr layer, const SlippyMapLayerObject::Ptr& object)
@@ -2413,8 +2698,8 @@ void MainWindow::createUndoAddObject(const QString &description, SlippyMapLayer:
     event.copy = nullptr;
     event.description = description;
     m_historyManager->addEvent(event);
-    ui->actionEdit_Undo->setEnabled(true);
-    ui->actionEdit_Undo->setText(tr("Undo") + " " + description);
+    m_actionEdit_undo->setEnabled(true);
+    m_actionEdit_undo->setText(tr("Undo") + " " + description);
     setWorkspaceDirty(true);
 }
 
@@ -2470,18 +2755,18 @@ void MainWindow::createUndoDeleteLayer(const QString &description, SlippyMapLaye
 void MainWindow::undoEventAdded(HistoryManager::HistoryEvent event)
 {
     auto *hist = m_historyManager;
-    ui->actionEdit_Redo->setEnabled(hist->redoCount() > 0);
+    m_actionEdit_redo->setEnabled(hist->redoCount() > 0);
     if (hist->redoCount() > 0)
-        ui->actionEdit_Redo->setText(tr("Redo") + " " + hist->currentRedoDescription());
-    ui->actionEdit_Undo->setEnabled(hist->undoCount() > 0);
+        m_actionEdit_redo->setText(tr("Redo") + " " + hist->currentRedoDescription());
+    m_actionEdit_undo->setEnabled(hist->undoCount() > 0);
     if (hist->undoCount() > 0)
-        ui->actionEdit_Undo->setText(tr("Undo") + " " + hist->currentUndoDescription());
+        m_actionEdit_undo->setText(tr("Undo") + " " + hist->currentUndoDescription());
 }
 
 void MainWindow::redoHistoryCleared()
 {
-    ui->actionEdit_Redo->setEnabled(false);
-    ui->actionEdit_Redo->setText(tr("Redo"));
+    m_actionEdit_redo->setEnabled(false);
+    m_actionEdit_redo->setText(tr("Redo"));
 }
 
 void MainWindow::cutActiveObject()
@@ -2495,7 +2780,7 @@ void MainWindow::cutActiveObject()
     m_clipBoard.object = m_selectedObject;
 
     // activate paste menu entry
-    ui->actionEdit_Paste->setEnabled(true);
+    m_actionEdit_paste->setEnabled(true);
 
     // create a delete object undo item
     createUndoDeleteObject(
@@ -2527,7 +2812,7 @@ void MainWindow::copyActiveObject()
     m_clipBoard.object = SlippyMapLayerObject::Ptr(object->clone());
 
     // activate paste menu entry
-    ui->actionEdit_Paste->setEnabled(true);
+    m_actionEdit_paste->setEnabled(true);
 }
 
 void MainWindow::pasteObject()
@@ -2565,41 +2850,46 @@ void MainWindow::pasteObject()
 
 void MainWindow::startServerLogin()
 {
-    m_serverInterface->login(
-        this,
-        [this](const QString& token) {
-            // get the workspaces
-            setDatabaseMode(true);
-            loadWorkspaces();
-        },
-        [this](ServerInterface::RequestError error) {
-            switch (error) {
-            case ServerInterface::RequestFailedError:
-            case ServerInterface::InvalidRequestError:
-                QMessageBox::critical(
-                    this,
-                    tr("Server Error"),
-                    tr("There was an error performing the request. Please try again."));
-                break;
-            case ServerInterface::AuthenticationError:
-                QMessageBox::critical(
-                    this,
-                    tr("Login Error"),
-                    tr("Username and/or password incorrect. Please try again."));
-                break;
-            case ServerInterface::UserCancelledError:
-                return;
-            default:
-                break;
-            }
-
-            startServerLogin();
-        });
+    // m_serverInterface->login(
+    //     this,
+    //     [this](const QString& token) {
+    //         // get the workspaces
+    //         setDatabaseMode(true);
+    //         loadWorkspaces();
+    //     },
+    //     [this](ServerInterface::RequestError error) {
+    //         switch (error) {
+    //         case ServerInterface::RequestFailedError:
+    //         case ServerInterface::InvalidRequestError:
+    //             QMessageBox::critical(
+    //                 this,
+    //                 tr("Server Error"),
+    //                 tr("There was an error performing the request. Please try again."));
+    //             break;
+    //         case ServerInterface::AuthenticationError:
+    //             QMessageBox::critical(
+    //                 this,
+    //                 tr("Login Error"),
+    //                 tr("Username and/or password incorrect. Please try again."));
+    //             break;
+    //         case ServerInterface::UserCancelledError:
+    //             return;
+    //         default:
+    //             break;
+    //         }
+    //
+    //         startServerLogin();
+    //     });
 }
 
 void MainWindow::loadViewportData()
 {
     auto boundingBox = ui->slippyMap->boundingBoxLatLon();
+
+    // for (const auto& layer: m_layerManager->layers()) {
+    //     if (layer->isEditable())
+    //         m_layerManager->removeLayerObjects(layer);
+    // }
 
     m_serverInterface->getLayersForViewport(
         m_workspaceId,
@@ -2711,6 +3001,7 @@ void MainWindow::processDatabaseUpdates()
             sync.layer = layer;
             m_serverSyncRequestQueue.append(sync);
         }
+        m_databaseLayerDeleteList.clear();
     }
 
     if (!m_databaseLayerUpdateList.isEmpty()) {
@@ -2727,6 +3018,7 @@ void MainWindow::processDatabaseUpdates()
             sync.layer = layer;
             m_serverSyncRequestQueue.append(sync);
         }
+        m_databaseLayerUpdateList.clear();
     }
 
     if (!m_databaseObjectDeleteList.isEmpty()) {
@@ -2736,6 +3028,7 @@ void MainWindow::processDatabaseUpdates()
             sync.object = object;
             m_serverSyncRequestQueue.append(sync);
         }
+        m_databaseObjectDeleteList.clear();
     }
 
     if (!m_databaseObjectUpdateList.isEmpty()) {
@@ -2755,6 +3048,8 @@ void MainWindow::processDatabaseUpdates()
 
             m_serverSyncRequestQueue.append(sync);
         }
+        // all items on the queue, can clear this list
+        m_databaseObjectUpdateList.clear();
     }
 
     // kick off the requests
@@ -2937,12 +3232,13 @@ void MainWindow::openOrCreateWorkspace(const QList<ServerInterface::Workspace>& 
             setWorkspaceDirty(false);
         }
     }
+    else
+        close();
 }
 
 void MainWindow::setDatabaseMode(bool databaseMode)
 {
     m_databaseMode = databaseMode;
-    ui->actionFile_SaveWorkspaceAs->setEnabled(!databaseMode);
 }
 
 void MainWindow::loadWorkspaces()
@@ -2954,6 +3250,17 @@ void MainWindow::loadWorkspaces()
         },
         [this](ServerInterface::RequestError error) {
             // todo: show error indicating loading workspaces failed
+        });
+}
+
+void MainWindow::startLocalServer()
+{
+    m_localServer = new QLocalServer(this);
+    connect(m_localServer,
+        &QLocalServer::newConnection,
+        [this]() {
+            auto *socket = m_localServer->nextPendingConnection();
+            qDebug() << "Got local connection!";
         });
 }
 

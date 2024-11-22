@@ -23,9 +23,17 @@ public:
     void updateUi() override;
 
 protected:
+    QLabel *m_fixTypeLabel;
     QLabel *m_numSatsLabel;
     QLabel *m_gpsTimeLabel;
-    QList<QProgressBar*> m_satellites;
+    QLabel *m_gpsLatitudeLabel;
+    QLabel *m_gpsLongitudeLabel;
+    QLabel *m_gpsAltitudeLabel;
+    QLabel *m_hdopLabel;
+    QLabel *m_vdopLabel;
+    QLabel *m_pdopLabel;
+    QList<QProgressBar*> m_satelliteProgressBars;
+    QList<QLabel*> m_satellitePrnLabels;
 };
 
 

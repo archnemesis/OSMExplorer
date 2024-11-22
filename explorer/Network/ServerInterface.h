@@ -92,7 +92,8 @@ public:
      * @param onFailure
      */
     void login(
-        QWidget *parent,
+        const QString& username,
+        const QString& password,
         const std::function<void(const QString&)> &onSuccess,
         const std::function<void(ServerInterface::RequestError)> &onFailure);
 

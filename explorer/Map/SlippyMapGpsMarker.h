@@ -22,12 +22,16 @@ public:
     void setGpsTime(const QDateTime& time);
     void setSatellites(const QList<NmeaSerialLocationDataProvider::SatelliteStatus>& satellites);
     const QList<NmeaSerialLocationDataProvider::SatelliteStatus>& satellites() const;
+    const QDateTime& gpsTime() const;
+    void setGpsData(const NmeaSerialLocationDataProvider::PositionData& positionData);
+    const NmeaSerialLocationDataProvider::PositionData& gpsData() const;
 
 private:
     QDateTime m_gpsTime;
     QBrush m_whiteBrush;
     QList<NmeaSerialLocationDataProvider::SatelliteStatus> m_satellites;
     int m_numSats;
+    NmeaSerialLocationDataProvider::PositionData m_positionData;
 };
 
 
